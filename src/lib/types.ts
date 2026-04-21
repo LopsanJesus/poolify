@@ -4,9 +4,21 @@ export interface Database {
   public: {
     Tables: {
       profiles: {
-        Row: { id: string; username: string; created_at: string }
-        Insert: { id: string; username: string; created_at?: string }
-        Update: { id?: string; username?: string; created_at?: string }
+        Row: {
+          id: string; username: string; created_at: string
+          default_clan_id: string | null
+          language: 'en' | 'es' | 'de'
+        }
+        Insert: {
+          id: string; username: string; created_at?: string
+          default_clan_id?: string | null
+          language?: 'en' | 'es' | 'de'
+        }
+        Update: {
+          id?: string; username?: string; created_at?: string
+          default_clan_id?: string | null
+          language?: 'en' | 'es' | 'de'
+        }
         Relationships: []
       }
       clans: {

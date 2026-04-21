@@ -3,15 +3,17 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { getDict } from '@/lib/i18n/server'
 import type { Clan } from '@/lib/types'
 
 export async function createClan(_: unknown, formData: FormData) {
   const supabase = await createClient()
+  const { dict } = await getDict()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'No autorizado' }
+  if (!user) return { error: dict.common.error }
 
   const name = (formData.get('name') as string)?.trim()
-  if (!name || name.length < 2) return { error: 'El nombre debe tener al menos 2 caracteres.' }
+  if (!name || name.length < 2) return { error: dict.create_clan.error_short }
 
   const { data: clanData, error } = await supabase
     .from('clans')
@@ -29,8 +31,9 @@ export async function createClan(_: unknown, formData: FormData) {
 
 export async function joinClan(_: unknown, formData: FormData) {
   const supabase = await createClient()
+  const { dict } = await getDict()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'No autorizado' }
+  if (!user) return { error: dict.common.error }
 
   const code = (formData.get('code') as string)?.trim().toUpperCase()
 
@@ -40,7 +43,7 @@ export async function joinClan(_: unknown, formData: FormData) {
     .eq('invite_code', code)
     .single()
 
-  if (clanError || !clanData) return { error: 'Código de invitación inválido.' }
+  if (clanError || !clanData) return { error: dict.join_clan.error_invalid }
 
   const clan = clanData as Pick<Clan, 'id' | 'name'>
 
@@ -49,7 +52,7 @@ export async function joinClan(_: unknown, formData: FormData) {
     .insert({ clan_id: clan.id, user_id: user.id })
 
   if (joinError) {
-    if (joinError.code === '23505') return { error: 'Ya eres miembro de este clan.' }
+    if (joinError.code === '23505') return { error: dict.join_clan.error_duplicate }
     return { error: joinError.message }
   }
 
@@ -100,6 +103,18 @@ export async function getClanRanking(clanId: string) {
   return [...map.entries()]
     .map(([user_id, v]) => ({ user_id, ...v }))
     .sort((a, b) => b.total - a.total)
+}
+
+export async function getClanMembers(clanId: string) {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('clan_members')
+    .select('user_id, profiles(username)')
+    .eq('clan_id', clanId)
+
+  type Row = { user_id: string; profiles: { username: string } | null }
+  const rows = (data ?? []) as unknown as Row[]
+  return rows.map((r) => ({ user_id: r.user_id, username: r.profiles?.username ?? r.user_id }))
 }
 
 export async function getClanData(clanId: string): Promise<Pick<Clan, 'id' | 'name' | 'invite_code' | 'owner_id'> | null> {

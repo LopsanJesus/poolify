@@ -1,25 +1,20 @@
-'use client'
-
-import { useActionState } from 'react'
 import Link from 'next/link'
-import { createClan } from '@/app/actions/clans'
-import { ArrowLeft, Loader2, Shield } from 'lucide-react'
+import { ArrowLeft, Shield } from 'lucide-react'
+import { getDict } from '@/lib/i18n/server'
+import { CreateClanForm } from './_components/CreateClanForm'
 
-export default function CreateClanPage() {
-  const [state, action, pending] = useActionState(createClan, undefined)
+export default async function CreateClanPage() {
+  const { dict } = await getDict()
 
   return (
     <div className="max-w-md mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <Link
-          href="/dashboard"
-          className="text-blue-300 hover:text-white transition"
-        >
+        <Link href="/dashboard?all=1" className="text-blue-300 hover:text-white transition">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-white">Crear Clan</h1>
-          <p className="text-blue-300 text-sm">Crea tu grupo de porras</p>
+          <h1 className="text-2xl font-bold text-white">{dict.create_clan.title}</h1>
+          <p className="text-blue-300 text-sm">{dict.create_clan.subtitle}</p>
         </div>
       </div>
 
@@ -30,38 +25,7 @@ export default function CreateClanPage() {
           </div>
         </div>
 
-        {state?.error && (
-          <div className="mb-4 rounded-lg bg-red-500/20 border border-red-500/40 px-4 py-3 text-red-300 text-sm">
-            {state.error}
-          </div>
-        )}
-
-        <form action={action} className="space-y-4">
-          <div>
-            <label htmlFor="name" className="block text-sm font-medium text-blue-200 mb-1">
-              Nombre del clan
-            </label>
-            <input
-              id="name"
-              name="name"
-              type="text"
-              required
-              minLength={2}
-              maxLength={40}
-              placeholder="Los Craks del Mundial"
-              className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-blue-300/50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={pending}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white font-semibold transition disabled:opacity-60"
-          >
-            {pending && <Loader2 className="w-4 h-4 animate-spin" />}
-            {pending ? 'Creando...' : 'Crear Clan'}
-          </button>
-        </form>
+        <CreateClanForm dict={dict.create_clan} />
       </div>
     </div>
   )
