@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import { savePredictions } from '@/app/actions/predictions'
 import type { Match, Prediction } from '@/lib/types'
+import type { Dict, Locale } from '@/lib/i18n/dictionaries'
 import { Loader2, Check } from 'lucide-react'
 
 type MatchWithPrediction = Match & { prediction: Prediction | null }
@@ -12,12 +13,20 @@ const FLAG: Record<string, string> = {
   'Argentina': '🇦🇷', 'Brasil': '🇧🇷', 'Francia': '🇫🇷',
 }
 
+const DATE_LOCALE: Record<Locale, string> = { en: 'en-US', es: 'es-ES', de: 'de-DE' }
+
 export function PredictionsForm({
   clanId,
   matchesWithPreds,
+  dict,
+  commonDict,
+  locale,
 }: {
   clanId: string
   matchesWithPreds: MatchWithPrediction[]
+  dict: Dict['predictions']
+  commonDict: Dict['common']
+  locale: Locale
 }) {
   const [state, action, pending] = useActionState(savePredictions, undefined)
 
@@ -38,15 +47,12 @@ export function PredictionsForm({
           >
             <input type="hidden" name="match_id" value={match.id} />
 
-            {/* Match header */}
             <div className="flex items-center justify-between">
               <span className="text-xs text-blue-400 font-medium">{match.stage}</span>
-              <StatusPill status={match.status} />
+              <StatusPill status={match.status} dict={dict} />
             </div>
 
-            {/* Teams & Score Inputs */}
             <div className="flex items-center gap-3">
-              {/* Home */}
               <div className="flex-1 text-right space-y-1">
                 <p className="text-white font-semibold text-sm">
                   {FLAG[match.home_team] ?? '🏳️'} {match.home_team}
@@ -73,7 +79,6 @@ export function PredictionsForm({
                 )}
               </div>
 
-              {/* Away */}
               <div className="flex-1 space-y-1">
                 <p className="text-white font-semibold text-sm">
                   {FLAG[match.away_team] ?? '🏳️'} {match.away_team}
@@ -92,24 +97,21 @@ export function PredictionsForm({
               </div>
             </div>
 
-            {/* Match date */}
             <p className="text-center text-xs text-blue-400">
-              {new Date(match.match_date).toLocaleDateString('es-MX', {
+              {new Date(match.match_date).toLocaleDateString(DATE_LOCALE[locale], {
                 weekday: 'long', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit',
               })}
             </p>
 
-            {/* Points badge if finished */}
             {match.prediction && match.status === 'finished' && (
               <div className="text-center">
-                <PointsBadge points={match.prediction.points} />
+                <PointsBadge points={match.prediction.points} dict={dict} />
               </div>
             )}
           </div>
         )
       })}
 
-      {/* Feedback */}
       {state?.error && (
         <div className="rounded-lg bg-red-500/20 border border-red-500/40 px-4 py-3 text-red-300 text-sm">
           {state.error}
@@ -117,7 +119,7 @@ export function PredictionsForm({
       )}
       {state?.success && (
         <div className="rounded-lg bg-emerald-500/20 border border-emerald-500/40 px-4 py-3 text-emerald-300 text-sm flex items-center gap-2">
-          <Check className="w-4 h-4" /> ¡Pronósticos guardados correctamente!
+          <Check className="w-4 h-4" /> {dict.saved}
         </div>
       )}
 
@@ -127,24 +129,60 @@ export function PredictionsForm({
         className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-semibold transition disabled:opacity-60"
       >
         {pending && <Loader2 className="w-4 h-4 animate-spin" />}
-        {pending ? 'Guardando...' : 'Guardar Pronósticos'}
+        {pending ? commonDict.saving : dict.save_cta}
       </button>
     </form>
   )
 }
 
-function StatusPill({ status }: { status: string }) {
+function StatusPill({
+  status,
+  dict,
+}: {
+  status: string
+  dict: Dict['predictions']
+}) {
   if (status === 'live')
-    return <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-500/30 text-red-300 animate-pulse">EN VIVO</span>
+    return (
+      <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-500/30 text-red-300 animate-pulse">
+        {dict.status_live}
+      </span>
+    )
   if (status === 'finished')
-    return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-white/10 text-blue-300">Finalizado · Solo lectura</span>
-  return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300">Abierto</span>
+    return (
+      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-white/10 text-blue-300">
+        {dict.status_finished_ro}
+      </span>
+    )
+  return (
+    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300">
+      {dict.status_open}
+    </span>
+  )
 }
 
-function PointsBadge({ points }: { points: number }) {
+function PointsBadge({
+  points,
+  dict,
+}: {
+  points: number
+  dict: Dict['predictions']
+}) {
   if (points === 4)
-    return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-500/30 text-emerald-300 text-sm font-bold">⭐ Resultado exacto · 4 pts</span>
+    return (
+      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-500/30 text-emerald-300 text-sm font-bold">
+        {dict.pill_exact}
+      </span>
+    )
   if (points === 1)
-    return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-500/30 text-blue-300 text-sm font-bold">✅ Ganador correcto · 1 pt</span>
-  return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-red-500/20 text-red-400 text-sm">❌ Sin acierto · 0 pts</span>
+    return (
+      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-500/30 text-blue-300 text-sm font-bold">
+        {dict.pill_winner}
+      </span>
+    )
+  return (
+    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-red-500/20 text-red-400 text-sm">
+      {dict.pill_miss}
+    </span>
+  )
 }

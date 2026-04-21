@@ -33,9 +33,11 @@ create extension if not exists "pgcrypto";
 -- ── Profiles ────────────────────────────────────────────────
 -- Mirrors auth.users; populated via a trigger on signup.
 create table public.profiles (
-  id         uuid primary key references auth.users(id) on delete cascade,
-  username   text not null unique,
-  created_at timestamptz not null default now()
+  id              uuid primary key references auth.users(id) on delete cascade,
+  username        text not null unique,
+  default_clan_id uuid,                             -- set on demand; FK added below after clans exists
+  language        text not null default 'en' check (language in ('en','es','de')),
+  created_at      timestamptz not null default now()
 );
 alter table public.profiles enable row level security;
 
@@ -94,6 +96,11 @@ create policy "Authenticated users can join clans"
 create policy "Members can leave clans"
   on public.clan_members for delete
   using (auth.uid() = user_id);
+
+-- Now that clans exists, wire the optional default_clan_id FK on profiles.
+alter table public.profiles
+  add constraint profiles_default_clan_id_fkey
+  foreign key (default_clan_id) references public.clans(id) on delete set null;
 
 -- Helper: check membership without triggering RLS recursion
 -- Defined after clan_members table exists, before policies that use it
@@ -162,3 +169,15 @@ insert into public.matches (home_team, away_team, match_date, stage) values
   ('México',    'Estados Unidos', '2026-06-15 20:00:00+00', 'Grupo A'),
   ('España',    'Argentina',      '2026-06-17 20:00:00+00', 'Grupo B'),
   ('Brasil',    'Francia',        '2026-06-19 20:00:00+00', 'Grupo C');
+
+-- ── Incremental Migration Notes ─────────────────────────────
+-- If a previous version of this schema is already deployed, run the
+-- following statements (they are no-ops on a fresh install):
+--
+--   alter table public.profiles
+--     add column if not exists default_clan_id uuid
+--       references public.clans(id) on delete set null;
+--
+--   alter table public.profiles
+--     add column if not exists language text not null default 'en'
+--       check (language in ('en','es','de'));

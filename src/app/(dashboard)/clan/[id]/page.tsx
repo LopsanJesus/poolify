@@ -1,31 +1,19 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { getClanData, getClanRanking } from '@/app/actions/clans'
+import { getClanData, getClanRanking, getUserClans } from '@/app/actions/clans'
 import { getMatchesWithPredictions } from '@/app/actions/predictions'
 import {
   ArrowLeft, Trophy, Users, Star,
-  Target, Calendar, ChevronRight, Medal,
+  Target, Calendar, ChevronRight, Medal, AlertCircle, BarChart3,
 } from 'lucide-react'
 import { CopyButton } from './_components/CopyButton'
+import { PoolSwitcher } from './_components/PoolSwitcher'
+import { MatchCard } from './_components/MatchCard'
+import { format, getDict } from '@/lib/i18n/server'
+import type { Dict } from '@/lib/i18n/dictionaries'
 
 const MEDALS = ['🥇', '🥈', '🥉']
-const FLAG: Record<string, string> = {
-  'México': '🇲🇽', 'Estados Unidos': '🇺🇸', 'España': '🇪🇸',
-  'Argentina': '🇦🇷', 'Brasil': '🇧🇷', 'Francia': '🇫🇷',
-}
-
-function TeamFlag({ team }: { team: string }) {
-  return <span title={team}>{FLAG[team] ?? '🏳️'}</span>
-}
-
-function StatusBadge({ status }: { status: string }) {
-  if (status === 'live')
-    return <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-500/30 text-red-300 animate-pulse">EN VIVO</span>
-  if (status === 'finished')
-    return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-white/10 text-blue-300">Finalizado</span>
-  return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300">Próximo</span>
-}
 
 export default async function ClanPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -33,10 +21,11 @@ export default async function ClanPage({ params }: { params: Promise<{ id: strin
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
 
-  const [clan, ranking, matchesWithPreds] = await Promise.all([
+  const [clan, ranking, matchesWithPreds, clans] = await Promise.all([
     getClanData(id),
     getClanRanking(id),
     getMatchesWithPredictions(id),
+    getUserClans(),
   ])
 
   if (!clan) notFound()
@@ -44,175 +33,265 @@ export default async function ClanPage({ params }: { params: Promise<{ id: strin
   const myRank = ranking.findIndex((r) => r.user_id === user.id)
   const myStats = ranking[myRank]
 
+  const { dict, locale } = await getDict()
+
+  const pastMatches = matchesWithPreds.filter((m) => m.status !== 'upcoming')
+  const upcomingMatches = matchesWithPreds.filter((m) => m.status === 'upcoming')
+  const missingUpcoming = upcomingMatches.filter((m) => !m.prediction).length
+
+  const totalPredictions = ranking.reduce((acc, r) => acc + r.exact + r.winner, 0)
+  const avgPoints =
+    ranking.length > 0
+      ? Math.round((ranking.reduce((acc, r) => acc + r.total, 0) / ranking.length) * 10) / 10
+      : 0
+
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link href="/dashboard" className="text-blue-300 hover:text-white transition">
+        <div className="flex items-center gap-3 min-w-0">
+          <Link
+            href="/dashboard?all=1"
+            className="text-blue-300 hover:text-white transition shrink-0"
+            aria-label={dict.common.back}
+          >
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-white">{clan.name}</h1>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-white truncate">{clan.name}</h1>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-blue-400 text-sm font-mono">{clan.invite_code}</span>
-              <CopyButton code={clan.invite_code} />
+              <CopyButton code={clan.invite_code} label={dict.clan.copy_code} />
             </div>
           </div>
         </div>
-        <Link
-          href={`/clan/${id}/predictions`}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold transition shrink-0"
-        >
-          <Target className="w-4 h-4" />
-          <span className="hidden sm:inline">Mis Pronósticos</span>
-          <ChevronRight className="w-4 h-4" />
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          <PoolSwitcher
+            currentId={clan.id}
+            clans={clans}
+            clanDict={dict.clan}
+            navDict={dict.nav}
+            dashboardDict={dict.dashboard}
+          />
+          <Link
+            href={`/clan/${id}/predictions`}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold transition"
+          >
+            <Target className="w-4 h-4" />
+            <span className="hidden sm:inline">{dict.clan.my_predictions}</span>
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
       </div>
 
-      {/* My stats */}
+      {missingUpcoming > 0 && (
+        <Link
+          href={`/clan/${id}/predictions`}
+          className="flex items-start gap-3 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/40 hover:bg-yellow-500/15 transition"
+        >
+          <AlertCircle className="w-5 h-5 text-yellow-300 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-yellow-200 font-semibold text-sm">
+              {format(dict.clan.missing_banner_title, { n: missingUpcoming })}
+            </p>
+            <p className="text-yellow-200/80 text-xs mt-0.5">{dict.clan.missing_banner_desc}</p>
+          </div>
+          <span className="flex items-center gap-1 text-yellow-200 text-sm font-medium shrink-0">
+            {dict.clan.missing_banner_cta}
+            <ChevronRight className="w-4 h-4" />
+          </span>
+        </Link>
+      )}
+
       {myStats && (
         <div className="grid grid-cols-3 gap-3">
           <StatCard
             icon={<Trophy className="w-5 h-5 text-yellow-400" />}
-            label="Puntos"
+            label={dict.clan.stats_points}
             value={myStats.total}
             accent="yellow"
           />
           <StatCard
             icon={<Star className="w-5 h-5 text-emerald-400" />}
-            label="Exactos"
+            label={dict.clan.stats_exact}
             value={myStats.exact}
             accent="emerald"
           />
           <StatCard
             icon={<Medal className="w-5 h-5 text-blue-400" />}
-            label="Posición"
+            label={dict.clan.stats_position}
             value={myRank === -1 ? '–' : `#${myRank + 1}`}
             accent="blue"
           />
         </div>
       )}
 
-      {/* Ranking */}
+      {/* 1. Past matches */}
       <section>
-        <div className="flex items-center gap-2 mb-4">
-          <Users className="w-5 h-5 text-blue-300" />
-          <h2 className="text-lg font-semibold text-white">Clasificación</h2>
-        </div>
-
-        {ranking.length === 0 ? (
-          <div className="text-center py-12 rounded-2xl border border-dashed border-white/20">
-            <Trophy className="w-10 h-10 text-blue-500/40 mx-auto mb-2" />
-            <p className="text-blue-300">Aún no hay pronósticos. ¡Sé el primero!</p>
-          </div>
+        <SectionHeader icon={<Calendar className="w-5 h-5 text-blue-300" />} title={dict.clan.past_matches} />
+        {pastMatches.length === 0 ? (
+          <EmptyState text={dict.clan.no_past} />
         ) : (
-          <div className="space-y-2">
-            {ranking.map((entry, i) => (
-              <div
-                key={entry.user_id}
-                className={`flex items-center gap-4 px-5 py-4 rounded-xl border transition ${
-                  entry.user_id === user.id
-                    ? 'bg-emerald-500/15 border-emerald-500/40'
-                    : 'bg-white/5 border-white/10 hover:bg-white/10'
-                }`}
-              >
-                <span className="w-8 text-center text-lg">
-                  {i < 3 ? MEDALS[i] : <span className="text-blue-400 font-mono text-sm">#{i + 1}</span>}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className={`font-semibold truncate ${entry.user_id === user.id ? 'text-emerald-300' : 'text-white'}`}>
-                    {entry.username}
-                    {entry.user_id === user.id && <span className="text-xs text-emerald-400 ml-2">(tú)</span>}
-                  </p>
-                  <p className="text-xs text-blue-400">
-                    {entry.exact} exactos · {entry.winner} ganadores
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-white font-bold text-lg">{entry.total}</p>
-                  <p className="text-blue-400 text-xs">pts</p>
-                </div>
-              </div>
+          <div className="space-y-3">
+            {pastMatches.map((m) => (
+              <MatchCard
+                key={m.id}
+                clanId={id}
+                match={m}
+                currentUserId={user.id}
+                clanDict={dict.clan}
+                commonDict={dict.common}
+                locale={locale}
+              />
             ))}
           </div>
         )}
       </section>
 
-      {/* Matches */}
+      {/* 2. Upcoming matches */}
       <section>
-        <div className="flex items-center gap-2 mb-4">
-          <Calendar className="w-5 h-5 text-blue-300" />
-          <h2 className="text-lg font-semibold text-white">Partidos</h2>
-        </div>
+        <SectionHeader icon={<Calendar className="w-5 h-5 text-blue-300" />} title={dict.clan.upcoming_matches} />
+        {upcomingMatches.length === 0 ? (
+          <EmptyState text={dict.clan.no_upcoming} />
+        ) : (
+          <div className="space-y-3">
+            {upcomingMatches.map((m) => (
+              <MatchCard
+                key={m.id}
+                clanId={id}
+                match={m}
+                currentUserId={user.id}
+                clanDict={dict.clan}
+                commonDict={dict.common}
+                locale={locale}
+              />
+            ))}
+          </div>
+        )}
+      </section>
 
-        <div className="space-y-3">
-          {matchesWithPreds.map((match) => (
-            <div
-              key={match.id}
-              className="p-4 rounded-xl bg-white/5 border border-white/10"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-blue-400">{match.stage}</span>
-                <StatusBadge status={match.status} />
-              </div>
+      {/* 3. Ranking */}
+      <section>
+        <SectionHeader icon={<Users className="w-5 h-5 text-blue-300" />} title={dict.clan.ranking} />
+        {ranking.length === 0 ? (
+          <div className="text-center py-12 rounded-2xl border border-dashed border-white/20">
+            <Trophy className="w-10 h-10 text-blue-500/40 mx-auto mb-2" />
+            <p className="text-blue-300">{dict.clan.no_ranking}</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {ranking.map((entry, i) => (
+              <RankingRow
+                key={entry.user_id}
+                entry={entry}
+                position={i}
+                isMe={entry.user_id === user.id}
+                clanDict={dict.clan}
+              />
+            ))}
+          </div>
+        )}
+      </section>
 
-              <div className="flex items-center gap-4">
-                <div className="flex-1 text-right">
-                  <p className="text-white font-semibold flex items-center justify-end gap-2">
-                    {match.home_team} <TeamFlag team={match.home_team} />
-                  </p>
-                </div>
-
-                <div className="text-center px-3">
-                  {match.status === 'finished' ? (
-                    <p className="text-white font-bold text-lg">
-                      {match.home_score} – {match.away_score}
-                    </p>
-                  ) : (
-                    <p className="text-blue-400 font-mono text-sm">
-                      {new Date(match.match_date).toLocaleDateString('es-MX', {
-                        day: '2-digit', month: 'short',
-                      })}
-                    </p>
-                  )}
-                </div>
-
-                <div className="flex-1">
-                  <p className="text-white font-semibold flex items-center gap-2">
-                    <TeamFlag team={match.away_team} /> {match.away_team}
-                  </p>
-                </div>
-              </div>
-
-              {match.prediction && (
-                <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between">
-                  <span className="text-xs text-blue-400">Tu pronóstico:</span>
-                  <span className="text-sm text-blue-200 font-mono">
-                    {match.prediction.home_score} – {match.prediction.away_score}
-                  </span>
-                  {match.status === 'finished' && (
-                    <PointsBadge points={match.prediction.points} />
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+      {/* 4. Pool stats */}
+      <section>
+        <SectionHeader icon={<BarChart3 className="w-5 h-5 text-blue-300" />} title={dict.clan.pool_stats} />
+        <div className="grid grid-cols-3 gap-3">
+          <StatCard
+            icon={<Users className="w-5 h-5 text-blue-300" />}
+            label={dict.clan.players}
+            value={ranking.length}
+            accent="blue"
+          />
+          <StatCard
+            icon={<Target className="w-5 h-5 text-emerald-300" />}
+            label={dict.clan.total_predictions}
+            value={totalPredictions}
+            accent="emerald"
+          />
+          <StatCard
+            icon={<Trophy className="w-5 h-5 text-yellow-300" />}
+            label={dict.clan.average_points}
+            value={avgPoints}
+            accent="yellow"
+          />
         </div>
       </section>
     </div>
   )
 }
 
+function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
+  return (
+    <div className="flex items-center gap-2 mb-4">
+      {icon}
+      <h2 className="text-lg font-semibold text-white">{title}</h2>
+    </div>
+  )
+}
+
+function EmptyState({ text }: { text: string }) {
+  return (
+    <div className="text-center py-8 rounded-2xl border border-dashed border-white/10 text-blue-400/70 text-sm">
+      {text}
+    </div>
+  )
+}
+
+function RankingRow({
+  entry,
+  position,
+  isMe,
+  clanDict,
+}: {
+  entry: { user_id: string; username: string; total: number; exact: number; winner: number }
+  position: number
+  isMe: boolean
+  clanDict: Dict['clan']
+}) {
+  return (
+    <div
+      className={`flex items-center gap-4 px-5 py-4 rounded-xl border transition ${
+        isMe
+          ? 'bg-emerald-500/15 border-emerald-500/40'
+          : 'bg-white/5 border-white/10 hover:bg-white/10'
+      }`}
+    >
+      <span className="w-8 text-center text-lg">
+        {position < 3 ? MEDALS[position] : <span className="text-blue-400 font-mono text-sm">#{position + 1}</span>}
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className={`font-semibold truncate ${isMe ? 'text-emerald-300' : 'text-white'}`}>
+          {entry.username}
+          {isMe && <span className="text-xs text-emerald-400 ml-2">({clanDict.you})</span>}
+        </p>
+        <p className="text-xs text-blue-400">
+          {format(clanDict.exact_count, { n: entry.exact })} · {format(clanDict.winner_count, { n: entry.winner })}
+        </p>
+      </div>
+      <div className="text-right">
+        <p className="text-white font-bold text-lg">{entry.total}</p>
+        <p className="text-blue-400 text-xs">pts</p>
+      </div>
+    </div>
+  )
+}
+
 function StatCard({
-  icon, label, value, accent,
+  icon,
+  label,
+  value,
+  accent,
 }: {
   icon: React.ReactNode
   label: string
   value: number | string
   accent: 'yellow' | 'emerald' | 'blue'
 }) {
-  const bg = { yellow: 'bg-yellow-500/10 border-yellow-500/20', emerald: 'bg-emerald-500/10 border-emerald-500/20', blue: 'bg-blue-500/10 border-blue-500/20' }
+  const bg = {
+    yellow: 'bg-yellow-500/10 border-yellow-500/20',
+    emerald: 'bg-emerald-500/10 border-emerald-500/20',
+    blue: 'bg-blue-500/10 border-blue-500/20',
+  }
   return (
     <div className={`p-4 rounded-xl border ${bg[accent]} text-center`}>
       <div className="flex justify-center mb-1">{icon}</div>
@@ -221,10 +300,3 @@ function StatCard({
     </div>
   )
 }
-
-function PointsBadge({ points }: { points: number }) {
-  if (points === 4) return <span className="px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 text-xs font-bold">+4 pts ⭐</span>
-  if (points === 1) return <span className="px-2 py-0.5 rounded-full bg-blue-500/30 text-blue-300 text-xs font-bold">+1 pt</span>
-  return <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 text-xs">0 pts</span>
-}
-

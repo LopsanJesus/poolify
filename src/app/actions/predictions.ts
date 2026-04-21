@@ -5,6 +5,53 @@ import { createClient } from '@/lib/supabase/server'
 import { calculatePoints } from '@/lib/scoring'
 import type { Match, Prediction } from '@/lib/types'
 
+export type ClanPredictionEntry = {
+  user_id: string
+  username: string
+  home_score: number
+  away_score: number
+  points: number
+}
+
+/**
+ * Returns all clan members' predictions for a given match.
+ * Other players' numeric picks are hidden until the match ends, so fair-play
+ * is preserved regardless of what the UI chooses to render.
+ */
+export async function getClanPredictionsForMatch(
+  clanId: string,
+  matchId: string
+): Promise<ClanPredictionEntry[]> {
+  const supabase = await createClient()
+
+  const { data } = await supabase
+    .from('predictions')
+    .select('user_id, home_score, away_score, points, profiles(username)')
+    .eq('clan_id', clanId)
+    .eq('match_id', matchId)
+
+  if (!data) return []
+
+  type Row = {
+    user_id: string
+    home_score: number
+    away_score: number
+    points: number
+    profiles: { username: string } | null
+  }
+  const rows = data as unknown as Row[]
+
+  return rows
+    .map((r) => ({
+      user_id: r.user_id,
+      username: r.profiles?.username ?? r.user_id,
+      home_score: r.home_score,
+      away_score: r.away_score,
+      points: r.points ?? 0,
+    }))
+    .sort((a, b) => b.points - a.points || a.username.localeCompare(b.username))
+}
+
 export async function getMatchesWithPredictions(clanId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
