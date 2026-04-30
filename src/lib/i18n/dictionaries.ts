@@ -182,6 +182,17 @@ const en = {
     fairplay_body:
       'Predictions of other players stay hidden until a match ends — no peeking allowed. Once it finishes, the full table becomes visible to every pool member.',
   },
+  landing: {
+    hero_subtitle: 'Predict every match. Compete with friends. Crown the real champion.',
+    cta_signup: 'Create free account',
+    cta_login: 'Sign in',
+    countdown_label: 'Kick-off in',
+    days: 'days',
+    hours: 'hours',
+    minutes: 'min',
+    seconds: 'sec',
+    countries_label: '48 nations · one champion',
+  },
 }
 
 const es: typeof en = {
@@ -357,6 +368,17 @@ const es: typeof en = {
     fairplay_title: 'Juego limpio',
     fairplay_body:
       'Los pronósticos del resto de jugadores permanecen ocultos hasta que el partido acaba — nada de espiar. Al terminar, la tabla completa queda visible para todos los miembros de la porra.',
+  },
+  landing: {
+    hero_subtitle: 'Predice cada partido. Compite con tus amigos. Proclama al campeón.',
+    cta_signup: 'Crear cuenta gratis',
+    cta_login: 'Iniciar sesión',
+    countdown_label: 'Arranca en',
+    days: 'días',
+    hours: 'horas',
+    minutes: 'min',
+    seconds: 'seg',
+    countries_label: '48 naciones · un campeón',
   },
 }
 
@@ -535,6 +557,17 @@ const de: typeof en = {
     fairplay_title: 'Fair Play',
     fairplay_body:
       'Die Tipps der anderen Mitspieler bleiben bis zum Spielende verborgen — kein Spicken. Nach Spielende sehen alle Mitglieder die komplette Tabelle.',
+  },
+  landing: {
+    hero_subtitle: 'Tippe jedes Spiel. Schlage deine Freunde. Kröne den echten Champion.',
+    cta_signup: 'Kostenloses Konto',
+    cta_login: 'Anmelden',
+    countdown_label: 'Anpfiff in',
+    days: 'Tage',
+    hours: 'Stunden',
+    minutes: 'Min',
+    seconds: 'Sek',
+    countries_label: '48 Nationen · ein Champion',
   },
 }
 
