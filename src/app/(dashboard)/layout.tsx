@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { BookOpen, UserCircle2 } from 'lucide-react'
 import Image from 'next/image'
 import { getDict } from '@/lib/i18n/server'
+import { PwaInstallModal } from '@/app/_components/PwaInstallModal'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -49,6 +50,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <main className="max-w-5xl mx-auto px-4 py-8">
         {children}
       </main>
+
+      <PwaInstallModal t={dict.pwa} />
     </div>
   )
 }

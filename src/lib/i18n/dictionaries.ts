@@ -193,6 +193,18 @@ const en = {
     seconds: 'sec',
     countries_label: '48 nations · one champion',
   },
+  pwa: {
+    title: 'Install Poolify',
+    subtitle: 'Better experience from your home screen',
+    ios_step1: 'Tap the Share button at the bottom of Safari',
+    ios_step2: 'Scroll down and tap "Add to Home Screen"',
+    ios_step3: 'Tap "Add" to confirm',
+    android_step1: 'Tap the menu (⋮) at the top right in Chrome',
+    android_step2: 'Tap "Add to Home Screen" or "Install app"',
+    android_step3: 'Tap "Install" to confirm',
+    install_btn: 'Install',
+    dismiss: 'Maybe later',
+  },
 }
 
 const es: typeof en = {
@@ -379,6 +391,18 @@ const es: typeof en = {
     minutes: 'min',
     seconds: 'seg',
     countries_label: '48 naciones · un campeón',
+  },
+  pwa: {
+    title: 'Instalar Poolify',
+    subtitle: 'Mejor experiencia desde tu pantalla de inicio',
+    ios_step1: 'Pulsa el botón Compartir abajo en Safari',
+    ios_step2: 'Desplázate y pulsa "Añadir a la pantalla de inicio"',
+    ios_step3: 'Pulsa "Añadir" para confirmar',
+    android_step1: 'Pulsa el menú (⋮) arriba a la derecha en Chrome',
+    android_step2: 'Pulsa "Añadir a pantalla de inicio" o "Instalar aplicación"',
+    android_step3: 'Pulsa "Instalar" para confirmar',
+    install_btn: 'Instalar',
+    dismiss: 'Quizás luego',
   },
 }
 
@@ -568,6 +592,18 @@ const de: typeof en = {
     minutes: 'Min',
     seconds: 'Sek',
     countries_label: '48 Nationen · ein Champion',
+  },
+  pwa: {
+    title: 'Poolify installieren',
+    subtitle: 'Besseres Erlebnis vom Startbildschirm',
+    ios_step1: 'Tippe unten in Safari auf Teilen',
+    ios_step2: 'Scrolle runter und tippe auf „Zum Home-Bildschirm"',
+    ios_step3: 'Tippe auf „Hinzufügen" zum Bestätigen',
+    android_step1: 'Tippe oben rechts in Chrome auf das Menü (⋮)',
+    android_step2: 'Tippe auf „Zum Startbildschirm" oder „App installieren"',
+    android_step3: 'Tippe auf „Installieren" zum Bestätigen',
+    install_btn: 'Installieren',
+    dismiss: 'Vielleicht später',
   },
 }
 
