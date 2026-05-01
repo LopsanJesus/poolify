@@ -6,9 +6,9 @@ import { Home, Calendar, Trophy, User } from 'lucide-react'
 
 const links = [
   { href: '/dashboard', icon: Home, label: 'Home' },
-  { href: '/partidos', icon: Calendar, label: 'Partidos' },
+  { href: '/matches', icon: Calendar, label: 'Matches' },
   { href: '/ranking', icon: Trophy, label: 'Ranking' },
-  { href: '/profile', icon: User, label: 'Perfil' },
+  { href: '/profile', icon: User, label: 'Profile' },
 ]
 
 export function NavBar() {
@@ -42,7 +42,7 @@ export function NavBar() {
 
       {/* Desktop: left sidebar */}
       <aside className="hidden md:flex flex-col items-center gap-1 fixed left-0 top-0 bottom-0 w-16 z-30 bg-blue-950/60 backdrop-blur-sm border-r border-white/10 py-4">
-        <Link href="/dashboard" aria-label="Inicio" className="mb-6 mt-1">
+        <Link href="/dashboard" aria-label="Home" className="mb-6 mt-1">
           <Image src="/logo.jpeg" alt="Poolify" width={36} height={36} className="rounded-xl" />
         </Link>
         {links.map(({ href, icon: Icon, label }) => (
