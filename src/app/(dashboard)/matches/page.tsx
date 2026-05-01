@@ -5,22 +5,19 @@ import { getUserClans } from '@/app/actions/clans'
 import { getMatchesWithPredictions } from '@/app/actions/predictions'
 import { Calendar, Target, ChevronRight, AlertCircle, Users } from 'lucide-react'
 import { MatchCard } from '@/app/(dashboard)/clan/[id]/_components/MatchCard'
-import { MatchesPoolSwitcher } from './_components/MatchesPoolSwitcher'
+import { GroupSwitcher } from '@/app/(dashboard)/_components/GroupSwitcher'
 import { getDict, format } from '@/lib/i18n/server'
+import { getActiveClanId } from '@/lib/active-clan'
 
-export default async function MatchesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ clan?: string }>
-}) {
-  const { clan: clanParam } = await searchParams
+export default async function MatchesPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, clans] = await Promise.all([
+  const [{ data: profile }, clans, activeClanId] = await Promise.all([
     supabase.from('profiles').select('default_clan_id').eq('id', user.id).single(),
     getUserClans(),
+    getActiveClanId(),
   ])
 
   if (clans.length === 0) {
@@ -28,7 +25,7 @@ export default async function MatchesPage({
   }
 
   const clanId =
-    (clanParam && clans.some((c) => c.id === clanParam) ? clanParam : null) ??
+    (activeClanId && clans.some((c) => c.id === activeClanId) ? activeClanId : null) ??
     profile?.default_clan_id ??
     clans[0].id
 
@@ -52,10 +49,10 @@ export default async function MatchesPage({
           <span className="text-blue-400 text-sm font-medium truncate max-w-[140px]">· {clan.name}</span>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <MatchesPoolSwitcher
+          <GroupSwitcher
             currentId={clan.id}
             clans={clans}
-            switchLabel={dict.clan.switch_pool}
+            label={dict.clan.switch_pool}
           />
           <Link
             href={`/clan/${clan.id}/predictions`}

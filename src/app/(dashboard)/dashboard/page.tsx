@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getUserClans } from '@/app/actions/clans'
 import { Users, Plus, LogIn, ChevronRight, Shield, Star } from 'lucide-react'
 import { getDict } from '@/lib/i18n/server'
+import { getActiveClanId } from '@/lib/active-clan'
 
 export default async function DashboardPage({
   searchParams,
@@ -15,19 +16,23 @@ export default async function DashboardPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, clans] = await Promise.all([
+  const [{ data: profile }, clans, activeClanId] = await Promise.all([
     supabase
       .from('profiles')
       .select('default_clan_id')
       .eq('id', user.id)
       .single(),
     getUserClans(),
+    getActiveClanId(),
   ])
 
-  // If the user has a default pool and still belongs to it, jump there.
-  // `?all=1` overrides the redirect so the pool list is always reachable.
-  if (!all && profile?.default_clan_id && clans.some((c) => c.id === profile.default_clan_id)) {
-    redirect(`/clan/${profile.default_clan_id}`)
+  if (!all) {
+    const targetId =
+      (activeClanId && clans.some((c) => c.id === activeClanId) ? activeClanId : null) ??
+      (profile?.default_clan_id && clans.some((c) => c.id === profile.default_clan_id)
+        ? profile.default_clan_id
+        : null)
+    if (targetId) redirect(`/clan/${targetId}`)
   }
 
   const { dict } = await getDict()

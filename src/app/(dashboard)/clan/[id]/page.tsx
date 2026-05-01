@@ -10,6 +10,7 @@ import {
 import { CopyButton } from './_components/CopyButton'
 import { PoolSwitcher } from './_components/PoolSwitcher'
 import { MatchCard } from './_components/MatchCard'
+import { ClanCookieSync } from './_components/ClanCookieSync'
 import { format, getDict } from '@/lib/i18n/server'
 import type { Dict } from '@/lib/i18n/dictionaries'
 
@@ -47,6 +48,7 @@ export default async function ClanPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="space-y-8">
+      <ClanCookieSync clanId={id} />
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <Link
