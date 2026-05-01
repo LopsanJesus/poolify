@@ -90,3 +90,11 @@ a, button {
 a:active, button:not(:disabled):active {
   filter: brightness(0.8);
 }
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

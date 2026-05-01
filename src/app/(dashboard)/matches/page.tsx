@@ -3,9 +3,9 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getUserClans } from '@/app/actions/clans'
 import { getMatchesWithPredictions } from '@/app/actions/predictions'
-import { Calendar, Target, ChevronRight, AlertCircle, Users } from 'lucide-react'
-import { MatchCard } from '@/app/(dashboard)/clan/[id]/_components/MatchCard'
+import { Calendar, Target, ChevronRight, AlertCircle } from 'lucide-react'
 import { GroupSwitcher } from '@/app/(dashboard)/_components/GroupSwitcher'
+import { DateCarousel } from '@/app/(dashboard)/matches/_components/DateCarousel'
 import { getDict, format } from '@/lib/i18n/server'
 import { getActiveClanId } from '@/lib/active-clan'
 
@@ -36,7 +36,6 @@ export default async function MatchesPage() {
     getDict(),
   ])
 
-  const pastMatches = matchesWithPreds.filter((m) => m.status !== 'upcoming')
   const upcomingMatches = matchesWithPreds.filter((m) => m.status === 'upcoming')
   const missingUpcoming = upcomingMatches.filter((m) => !m.prediction).length
 
@@ -84,57 +83,14 @@ export default async function MatchesPage() {
         </Link>
       )}
 
-      <section>
-        <div className="flex items-center gap-2 mb-4">
-          <Calendar className="w-5 h-5 text-blue-300" />
-          <h2 className="text-lg font-semibold text-white">{dict.clan.upcoming_matches}</h2>
-        </div>
-        {upcomingMatches.length === 0 ? (
-          <div className="text-center py-8 rounded-2xl border border-dashed border-white/10 text-blue-400/70 text-sm">
-            {dict.clan.no_upcoming}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {upcomingMatches.map((m) => (
-              <MatchCard
-                key={m.id}
-                clanId={clan.id}
-                match={m}
-                currentUserId={user.id}
-                clanDict={dict.clan}
-                commonDict={dict.common}
-                locale={locale}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section>
-        <div className="flex items-center gap-2 mb-4">
-          <Users className="w-5 h-5 text-blue-300" />
-          <h2 className="text-lg font-semibold text-white">{dict.clan.past_matches}</h2>
-        </div>
-        {pastMatches.length === 0 ? (
-          <div className="text-center py-8 rounded-2xl border border-dashed border-white/10 text-blue-400/70 text-sm">
-            {dict.clan.no_past}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {pastMatches.map((m) => (
-              <MatchCard
-                key={m.id}
-                clanId={clan.id}
-                match={m}
-                currentUserId={user.id}
-                clanDict={dict.clan}
-                commonDict={dict.common}
-                locale={locale}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+      <DateCarousel
+        matches={matchesWithPreds}
+        clanId={clan.id}
+        currentUserId={user.id}
+        clanDict={dict.clan}
+        commonDict={dict.common}
+        locale={locale}
+      />
     </div>
   )
 }

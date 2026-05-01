@@ -10,16 +10,14 @@ export default function MatchesLoading() {
         <div className="skeleton h-9 w-28 rounded-lg" />
       </div>
 
-      <div className="space-y-3">
-        <div className="skeleton h-5 w-40 rounded" />
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="skeleton h-28 rounded-xl" />
+      <div className="flex gap-2 overflow-hidden -mx-4 px-4">
+        {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+          <div key={i} className="skeleton w-[52px] h-[72px] rounded-xl shrink-0" />
         ))}
       </div>
 
       <div className="space-y-3">
-        <div className="skeleton h-5 w-36 rounded" />
-        {[1, 2].map((i) => (
+        {[1, 2, 3].map((i) => (
           <div key={i} className="skeleton h-28 rounded-xl" />
         ))}
       </div>
