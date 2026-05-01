@@ -69,11 +69,18 @@ export function MatchCard({
                 {match.home_score} – {match.away_score}
               </p>
             ) : (
-              <p className="text-blue-400 font-mono text-sm">
-                {new Date(match.match_date).toLocaleDateString(DATE_LOCALE[locale], {
-                  day: '2-digit', month: 'short',
-                })}
-              </p>
+              <div>
+                <p className="text-blue-400 font-mono text-sm">
+                  {new Date(match.match_date).toLocaleDateString(DATE_LOCALE[locale], {
+                    day: '2-digit', month: 'short',
+                  })}
+                </p>
+                <p className="text-blue-300/60 font-mono text-xs text-center">
+                  {new Date(match.match_date).toLocaleTimeString(DATE_LOCALE[locale], {
+                    hour: '2-digit', minute: '2-digit',
+                  })}
+                </p>
+              </div>
             )}
           </div>
 
