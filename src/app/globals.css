@@ -74,6 +74,14 @@ body {
   animation: fade-in 0.3s ease both;
 }
 
+/* Bottom nav safe-area padding — mobile only */
+.pb-nav {
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 768px) {
+  .pb-nav { padding-bottom: 0; }
+}
+
 /* Remove mobile tap highlight & add press feedback */
 a, button {
   -webkit-tap-highlight-color: transparent;
