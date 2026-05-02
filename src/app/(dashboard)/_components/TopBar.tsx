@@ -7,7 +7,7 @@ export function TopBar({ clanName }: { clanName?: string | null }) {
       <Link href="/dashboard" className="flex items-center gap-2">
         <Image src="/logo.jpeg" alt="Poolify" width={32} height={32} className="rounded-xl" />
         <span className="font-semibold text-white text-lg tracking-tight">
-          {clanName ? clanName.toUpperCase() : 'Poolify'}
+          {clanName ? clanName.replace(/\b\w/g, (c) => c.toUpperCase()) : 'Poolify'}
         </span>
       </Link>
     </header>
