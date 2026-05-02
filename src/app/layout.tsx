@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Poolify – World Cup 2026 pools',
+  title: 'Poolify',
   description: 'Private pools platform for friends. Predict the World Cup 2026 results!',
 }
 
