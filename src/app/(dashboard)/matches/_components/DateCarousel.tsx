@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { MatchCard } from '@/app/(dashboard)/clan/[id]/_components/MatchCard'
 import type { Match, Prediction } from '@/lib/types'
 import type { Dict, Locale } from '@/lib/i18n/dictionaries'
@@ -88,15 +89,29 @@ export function DateCarousel({
   }
 
   const [selected, setSelected] = useState(initialDate)
+  const [direction, setDirection] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
   const selectedRef = useRef<HTMLButtonElement>(null)
+  const isFirstRender = useRef(true)
 
   useEffect(() => {
     const container = scrollRef.current
     const item = selectedRef.current
     if (!container || !item) return
-    container.scrollLeft = item.offsetLeft - container.offsetWidth / 2 + item.offsetWidth / 2
-  }, [])
+    const scrollTo = item.offsetLeft - container.offsetWidth / 2 + item.offsetWidth / 2
+    if (isFirstRender.current) {
+      container.scrollLeft = scrollTo
+      isFirstRender.current = false
+    } else {
+      container.scrollTo({ left: scrollTo, behavior: 'smooth' })
+    }
+  }, [selected])
+
+  function handleSelect(date: string) {
+    if (date === selected) return
+    setDirection(date > selected ? 1 : -1)
+    setSelected(date)
+  }
 
   const dayMatches = byDate.get(selected) ?? []
 
@@ -118,7 +133,7 @@ export function DateCarousel({
               key={date}
               ref={isSelected ? selectedRef : undefined}
               type="button"
-              onClick={() => setSelected(date)}
+              onClick={() => handleSelect(date)}
               className={`flex flex-col items-center min-w-[52px] px-2 py-2.5 rounded-xl transition shrink-0 ${
                 isSelected
                   ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
@@ -144,25 +159,36 @@ export function DateCarousel({
         })}
       </div>
 
-      {dayMatches.length === 0 ? (
-        <div className="text-center py-8 rounded-2xl border border-dashed border-white/10 text-blue-400/40 text-sm">
-          {clanDict.no_matches_day}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {dayMatches.map((m) => (
-            <MatchCard
-              key={m.id}
-              clanId={clanId}
-              match={m}
-              currentUserId={currentUserId}
-              clanDict={clanDict}
-              commonDict={commonDict}
-              locale={locale}
-            />
-          ))}
-        </div>
-      )}
+      <AnimatePresence mode="wait" custom={direction}>
+        <motion.div
+          key={selected}
+          custom={direction}
+          initial={{ x: direction > 0 ? 32 : -32, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: direction > 0 ? -32 : 32, opacity: 0 }}
+          transition={{ duration: 0.18, ease: 'easeOut' }}
+        >
+          {dayMatches.length === 0 ? (
+            <div className="text-center py-8 rounded-2xl border border-dashed border-white/10 text-blue-400/40 text-sm">
+              {clanDict.no_matches_day}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {dayMatches.map((m) => (
+                <MatchCard
+                  key={m.id}
+                  clanId={clanId}
+                  match={m}
+                  currentUserId={currentUserId}
+                  clanDict={clanDict}
+                  commonDict={commonDict}
+                  locale={locale}
+                />
+              ))}
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   )
 }
