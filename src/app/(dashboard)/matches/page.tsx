@@ -1,12 +1,11 @@
 import { GroupSwitcher } from "@/app/(dashboard)/_components/GroupSwitcher";
 import { DateCarousel } from "@/app/(dashboard)/matches/_components/DateCarousel";
+import { MissingPredictionsBanner } from "@/app/_components/MissingPredictionsBanner";
 import { getUserClans } from "@/app/actions/clans";
 import { getMatchesWithPredictions } from "@/app/actions/predictions";
 import { getActiveClanId } from "@/lib/active-clan";
 import { format, getDict } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
-import { AlertCircle, ChevronRight } from "lucide-react";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export default async function MatchesPage() {
@@ -50,35 +49,23 @@ export default async function MatchesPage() {
   const missingUpcoming = upcomingMatches.filter((m) => !m.prediction).length;
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-end gap-4">
-        <GroupSwitcher
-          currentId={clan.id}
-          clans={clans}
-          label={dict.clan.switch_pool}
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <div className="flex items-center justify-end">
+          <GroupSwitcher
+            currentId={clan.id}
+            clans={clans}
+            label={dict.clan.switch_pool}
+          />
+        </div>
+
+        <MissingPredictionsBanner
+          clanId={clan.id}
+          count={missingUpcoming}
+          dict={dict.clan}
+          format={format}
         />
       </div>
-
-      {missingUpcoming > 0 && (
-        <Link
-          href={`/clan/${clan.id}/predictions`}
-          className="flex items-start gap-3 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/40 hover:bg-yellow-500/15 transition"
-        >
-          <AlertCircle className="w-5 h-5 text-yellow-300 shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <p className="text-yellow-200 font-semibold text-sm">
-              {format(dict.clan.missing_banner_title, { n: missingUpcoming })}
-            </p>
-            <p className="text-yellow-200/80 text-xs mt-0.5">
-              {dict.clan.missing_banner_desc}
-            </p>
-          </div>
-          <span className="flex items-center gap-1 text-yellow-200 text-sm font-medium shrink-0">
-            {dict.clan.missing_banner_cta}
-            <ChevronRight className="w-4 h-4" />
-          </span>
-        </Link>
-      )}
 
       <DateCarousel
         matches={matchesWithPreds}

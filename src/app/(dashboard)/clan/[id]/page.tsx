@@ -1,12 +1,11 @@
+import { MissingPredictionsBanner } from "@/app/_components/MissingPredictionsBanner";
 import { getClanData, getClanRanking, getUserClans } from "@/app/actions/clans";
 import { getMatchesWithPredictions } from "@/app/actions/predictions";
 import { format, getDict } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_CLAN_SETTINGS } from "@/lib/types";
 import {
-  AlertCircle,
   BarChart3,
-  ChevronRight,
   Medal,
   Settings,
   Star,
@@ -67,59 +66,48 @@ export default async function ClanPage({
       : 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <ClanCookieSync clanId={id} />
-      <div className="flex items-center justify-between gap-4">
-        <div className="min-w-0">
-          {showInviteCode && (
-            <div className="flex items-center gap-2">
-              <span className="text-blue-400 text-sm font-mono">
-                {clan.invite_code}
-              </span>
-              <CopyButton code={clan.invite_code} label={dict.clan.copy_code} />
-            </div>
-          )}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            {showInviteCode && (
+              <div className="flex items-center gap-2">
+                <span className="text-blue-400 text-sm font-mono">
+                  {clan.invite_code}
+                </span>
+                <CopyButton
+                  code={clan.invite_code}
+                  label={dict.clan.copy_code}
+                />
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <PoolSwitcher
+              currentId={clan.id}
+              clans={clans}
+              clanDict={dict.clan}
+              navDict={dict.nav}
+              dashboardDict={dict.dashboard}
+            />
+            <Link
+              href={`/clan/${id}/settings`}
+              className="flex items-center justify-center w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 text-blue-300 hover:text-white transition"
+              aria-label={dict.clan_settings.title}
+            >
+              <Settings className="w-4 h-4" />
+            </Link>
+          </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <PoolSwitcher
-            currentId={clan.id}
-            clans={clans}
-            clanDict={dict.clan}
-            navDict={dict.nav}
-            dashboardDict={dict.dashboard}
-          />
-          <Link
-            href={`/clan/${id}/settings`}
-            className="flex items-center justify-center w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 text-blue-300 hover:text-white transition"
-            aria-label={dict.clan_settings.title}
-          >
-            <Settings className="w-4 h-4" />
-          </Link>
-        </div>
-      </div>
 
-      {missingUpcoming > 0 && (
-        <Link
-          href={`/clan/${id}/predictions`}
-          className="flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-4 p-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/30 hover:bg-yellow-500/15 transition group text-center sm:text-left"
-        >
-          <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center shrink-0">
-            <AlertCircle className="w-5 h-5 text-yellow-400" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-yellow-200 font-bold text-sm sm:text-base">
-              {format(dict.clan.missing_banner_title, { n: missingUpcoming })}
-            </p>
-            <p className="text-yellow-200/70 text-xs sm:text-sm mt-0.5">
-              {dict.clan.missing_banner_desc}
-            </p>
-          </div>
-          <div className="flex items-center gap-1.5 text-yellow-400 text-sm font-bold bg-yellow-500/10 px-3 py-1.5 rounded-lg group-hover:bg-yellow-500/20 transition shrink-0 mt-2 sm:mt-0">
-            {dict.clan.missing_banner_cta}
-            <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-          </div>
-        </Link>
-      )}
+        <MissingPredictionsBanner
+          clanId={id}
+          count={missingUpcoming}
+          dict={dict.clan}
+          format={format}
+        />
+      </div>
 
       {myStats && (
         <div className="grid grid-cols-3 gap-3">
