@@ -15,8 +15,8 @@ export default async function ClanSettingsPage({ params }: { params: Promise<{ i
 
   const clan = await getClanData(id)
   if (!clan) notFound()
-  if (clan.owner_id !== user.id) redirect(`/clan/${id}`)
 
+  const isOwner = clan.owner_id === user.id
   const { dict } = await getDict()
   const settings = clan.settings ?? DEFAULT_CLAN_SETTINGS
 
@@ -37,6 +37,7 @@ export default async function ClanSettingsPage({ params }: { params: Promise<{ i
         settings={settings}
         dict={dict.clan_settings}
         commonDict={dict.common}
+        readOnly={!isOwner}
       />
     </div>
   )

@@ -11,16 +11,18 @@ export function ClanSettingsForm({
   settings,
   dict,
   commonDict,
+  readOnly = false,
 }: {
   clanId: string
   settings: ClanSettings
   dict: Dict['clan_settings']
   commonDict: Dict['common']
+  readOnly?: boolean
 }) {
   const [state, action, pending] = useActionState(updateClanSettings, undefined)
 
   return (
-    <form action={action} className="space-y-6">
+    <form action={readOnly ? undefined : action} className="space-y-6">
       <input type="hidden" name="clan_id" value={clanId} />
 
       {state?.error && (
@@ -51,7 +53,8 @@ export function ClanSettingsForm({
               min={0}
               max={100}
               defaultValue={settings.points_exact}
-              className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+              disabled={readOnly}
+              className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition disabled:opacity-60 disabled:cursor-default"
             />
           </div>
           <div>
@@ -64,7 +67,8 @@ export function ClanSettingsForm({
               min={0}
               max={100}
               defaultValue={settings.points_sign}
-              className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+              disabled={readOnly}
+              className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition disabled:opacity-60 disabled:cursor-default"
             />
           </div>
         </div>
@@ -76,12 +80,13 @@ export function ClanSettingsForm({
           <h2 className="text-white font-semibold">{dict.section_access}</h2>
         </div>
 
-        <label className="flex items-start gap-3 cursor-pointer">
+        <label className={`flex items-start gap-3 ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}>
           <input
             type="checkbox"
             name="can_members_invite"
             defaultChecked={settings.can_members_invite}
-            className="mt-0.5 w-4 h-4 accent-emerald-500"
+            disabled={readOnly}
+            className="mt-0.5 w-4 h-4 accent-emerald-500 disabled:opacity-60"
           />
           <div>
             <p className="text-white text-sm font-medium">{dict.can_members_invite_label}</p>
@@ -90,14 +95,16 @@ export function ClanSettingsForm({
         </label>
       </section>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white font-semibold transition disabled:opacity-60"
-      >
-        {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-        {pending ? commonDict.saving : dict.save}
-      </button>
+      {!readOnly && (
+        <button
+          type="submit"
+          disabled={pending}
+          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white font-semibold transition disabled:opacity-60"
+        >
+          {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+          {pending ? commonDict.saving : dict.save}
+        </button>
+      )}
     </form>
   )
 }
