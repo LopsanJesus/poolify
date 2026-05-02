@@ -1,42 +1,41 @@
-import Link from 'next/link'
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { getUserClans } from '@/app/actions/clans'
-import { Users, Plus, LogIn, ChevronRight, Shield, Star } from 'lucide-react'
-import { getDict } from '@/lib/i18n/server'
-import { getActiveClanId } from '@/lib/active-clan'
+import { getUserClans } from "@/app/actions/clans";
+import { getDict } from "@/lib/i18n/server";
+import { createClient } from "@/lib/supabase/server";
+import { ChevronRight, LogIn, Plus, Shield, Star, Users } from "lucide-react";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+
+import { getHomeRedirectPath } from "@/lib/home-redirect";
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ all?: string }>
+  searchParams: Promise<{ all?: string }>;
 }) {
-  const { all } = await searchParams
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const [{ data: profile }, clans, activeClanId] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select('default_clan_id')
-      .eq('id', user.id)
-      .single(),
-    getUserClans(),
-    getActiveClanId(),
-  ])
+  const { all } = await searchParams;
 
   if (!all) {
-    const targetId =
-      (activeClanId && clans.some((c) => c.id === activeClanId) ? activeClanId : null) ??
-      (profile?.default_clan_id && clans.some((c) => c.id === profile.default_clan_id)
-        ? profile.default_clan_id
-        : null)
-    if (targetId) redirect(`/clan/${targetId}`)
+    const path = await getHomeRedirectPath();
+    if (path !== "/dashboard") redirect(path);
   }
 
-  const { dict } = await getDict()
-  const defaultClanId = profile?.default_clan_id ?? null
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const [{ data: profile }, clans] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("default_clan_id")
+      .eq("id", user.id)
+      .single(),
+    getUserClans(),
+  ]);
+
+  const { dict } = await getDict();
+  const defaultClanId = profile?.default_clan_id ?? null;
 
   return (
     <div className="space-y-8">
@@ -49,8 +48,12 @@ export default async function DashboardPage({
             <Plus className="w-6 h-6 text-emerald-400" />
           </div>
           <div>
-            <p className="text-white font-semibold">{dict.dashboard.create_pool}</p>
-            <p className="text-blue-300 text-sm">{dict.dashboard.create_pool_desc}</p>
+            <p className="text-white font-semibold">
+              {dict.dashboard.create_pool}
+            </p>
+            <p className="text-blue-300 text-sm">
+              {dict.dashboard.create_pool_desc}
+            </p>
           </div>
           <ChevronRight className="w-5 h-5 text-blue-400 ml-auto group-hover:translate-x-1 transition-transform" />
         </Link>
@@ -63,8 +66,12 @@ export default async function DashboardPage({
             <LogIn className="w-6 h-6 text-blue-400" />
           </div>
           <div>
-            <p className="text-white font-semibold">{dict.dashboard.join_pool}</p>
-            <p className="text-blue-300 text-sm">{dict.dashboard.join_pool_desc}</p>
+            <p className="text-white font-semibold">
+              {dict.dashboard.join_pool}
+            </p>
+            <p className="text-blue-300 text-sm">
+              {dict.dashboard.join_pool_desc}
+            </p>
           </div>
           <ChevronRight className="w-5 h-5 text-blue-400 ml-auto group-hover:translate-x-1 transition-transform" />
         </Link>
@@ -72,7 +79,9 @@ export default async function DashboardPage({
 
       {clans.length > 0 ? (
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-white">{dict.dashboard.your_groups}</h2>
+          <h2 className="text-lg font-semibold text-white">
+            {dict.dashboard.your_groups}
+          </h2>
           {clans.map((clan) => (
             <Link
               key={clan.id}
@@ -92,7 +101,9 @@ export default async function DashboardPage({
                     </span>
                   )}
                 </div>
-                <p className="text-blue-400 text-xs font-mono">{clan.invite_code}</p>
+                <p className="text-blue-400 text-xs font-mono">
+                  {clan.invite_code}
+                </p>
               </div>
               <ChevronRight className="w-5 h-5 text-blue-400 shrink-0 group-hover:translate-x-1 transition-transform" />
             </Link>
@@ -101,10 +112,14 @@ export default async function DashboardPage({
       ) : (
         <div className="text-center py-16 rounded-2xl border border-dashed border-white/20">
           <Users className="w-12 h-12 text-blue-500/50 mx-auto mb-3" />
-          <p className="text-blue-300 font-medium">{dict.dashboard.empty_title}</p>
-          <p className="text-blue-400/70 text-sm mt-1">{dict.dashboard.empty_desc}</p>
+          <p className="text-blue-300 font-medium">
+            {dict.dashboard.empty_title}
+          </p>
+          <p className="text-blue-400/70 text-sm mt-1">
+            {dict.dashboard.empty_desc}
+          </p>
         </div>
       )}
     </div>
-  )
+  );
 }

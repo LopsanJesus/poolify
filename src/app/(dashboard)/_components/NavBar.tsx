@@ -3,20 +3,24 @@ import { Calendar, Home, Trophy, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const links = [
-  { href: "/dashboard", icon: Home, label: "Home" },
-  { href: "/matches", icon: Calendar, label: "Matches" },
-  { href: "/ranking", icon: Trophy, label: "Ranking" },
-  { href: "/profile", icon: User, label: "Profile" },
-];
-
-export function NavBar() {
+export function NavBar({ activeClanId }: { activeClanId: string | null }) {
   const pathname = usePathname();
 
-  const isActive = (href: string) =>
-    href === "/dashboard"
-      ? pathname === "/dashboard" || pathname.startsWith("/clan")
-      : pathname === href || pathname.startsWith(href + "/");
+  const homeHref = activeClanId ? `/clan/${activeClanId}` : "/dashboard";
+
+  const links = [
+    { href: homeHref, icon: Home, label: "Home" },
+    { href: "/matches", icon: Calendar, label: "Matches" },
+    { href: "/ranking", icon: Trophy, label: "Ranking" },
+    { href: "/profile", icon: User, label: "Profile" },
+  ];
+
+  const isActive = (href: string) => {
+    if (href === homeHref) {
+      return pathname === "/dashboard" || pathname.startsWith("/clan");
+    }
+    return pathname === href || pathname.startsWith(href + "/");
+  };
 
   return (
     <>

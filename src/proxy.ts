@@ -40,7 +40,9 @@ export async function proxy(request: NextRequest) {
   }
 
   if (user && isAuthRoute) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+    const activeClanId = request.cookies.get('active_clan_id')?.value
+    const target = activeClanId ? `/clan/${activeClanId}` : '/dashboard'
+    return NextResponse.redirect(new URL(target, request.url))
   }
 
   return response

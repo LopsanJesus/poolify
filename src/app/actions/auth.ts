@@ -7,6 +7,8 @@ import { createClient } from '@/lib/supabase/server'
 import { LOCALES, type Locale } from '@/lib/i18n/dictionaries'
 import { LOCALE_COOKIE, getDict } from '@/lib/i18n/server'
 
+import { getHomeRedirectPath } from '@/lib/home-redirect'
+
 export async function login(_: unknown, formData: FormData) {
   const supabase = await createClient()
 
@@ -31,7 +33,8 @@ export async function login(_: unknown, formData: FormData) {
     }
   }
 
-  redirect('/dashboard')
+  const path = await getHomeRedirectPath()
+  redirect(path)
 }
 
 export async function signup(_: unknown, formData: FormData) {
