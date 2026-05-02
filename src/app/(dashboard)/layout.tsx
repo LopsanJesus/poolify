@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getDict } from '@/lib/i18n/server'
 import { PwaInstallModal } from '@/app/_components/PwaInstallModal'
 import { NavBar } from './_components/NavBar'
+import { TopBar } from './_components/TopBar'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -13,9 +14,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-emerald-900">
+      <TopBar />
       <NavBar />
 
-      <main className="md:pl-16 pb-nav">
+      <main className="pt-14 md:pl-16 pb-nav">
         <div className="max-w-5xl mx-auto px-4 py-8">
           {children}
         </div>

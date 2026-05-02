@@ -1,6 +1,5 @@
 'use client'
 import Link from 'next/link'
-import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { Home, Calendar, Trophy, User } from 'lucide-react'
 
@@ -41,10 +40,7 @@ export function NavBar() {
       </nav>
 
       {/* Desktop: left sidebar */}
-      <aside className="hidden md:flex flex-col items-center gap-1 fixed left-0 top-0 bottom-0 w-16 z-30 bg-blue-950/60 backdrop-blur-sm border-r border-white/10 py-4">
-        <Link href="/dashboard" aria-label="Home" className="mb-6 mt-1">
-          <Image src="/logo.jpeg" alt="Poolify" width={36} height={36} className="rounded-xl" />
-        </Link>
+      <aside className="hidden md:flex flex-col items-center gap-1 fixed left-0 top-14 bottom-0 w-16 z-30 bg-blue-950/60 backdrop-blur-sm border-r border-white/10 py-4">
         {links.map(({ href, icon: Icon, label }) => (
           <Link
             key={href}
