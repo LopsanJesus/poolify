@@ -12,9 +12,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { dict } = await getDict()
 
+  const { data: profileRow } = await supabase
+    .from('profiles')
+    .select('default_clan_id, clans(name)')
+    .eq('id', user.id)
+    .single()
+
+  type ProfileRow = { default_clan_id: string | null; clans: { name: string } | null }
+  const profile = profileRow as unknown as ProfileRow | null
+  const defaultClanName = profile?.clans?.name ?? null
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-emerald-900">
-      <TopBar />
+      <TopBar clanName={defaultClanName} />
       <NavBar />
 
       <main className="pt-14 md:pl-16 pb-nav">
