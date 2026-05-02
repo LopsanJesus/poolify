@@ -39,12 +39,7 @@ export default async function RankingPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <Trophy className="w-5 h-5 text-yellow-400" />
-          <h1 className="text-xl font-bold text-white">{dict.clan.ranking}</h1>
-          <span className="text-blue-400 text-sm font-medium truncate max-w-[140px]">· {clan.name}</span>
-        </div>
+      <div className="flex items-center justify-end gap-4">
         <GroupSwitcher
           currentId={clan.id}
           clans={clans}

@@ -27,16 +27,6 @@ export default async function ProfilePage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
-      <div className="flex items-center gap-3">
-        <Link href="/dashboard" className="text-blue-300 hover:text-white transition">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-white">{dict.profile.title}</h1>
-          <p className="text-blue-300 text-sm">{dict.profile.subtitle}</p>
-        </div>
-      </div>
-
       <section className="rounded-2xl bg-white/5 border border-white/10 p-5 flex items-center gap-4">
         <div className="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center">
           <UserCircle2 className="w-7 h-7 text-emerald-400" />

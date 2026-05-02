@@ -1,67 +1,62 @@
-import { redirect } from 'next/navigation'
-import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
-import { getUserClans } from '@/app/actions/clans'
-import { getMatchesWithPredictions } from '@/app/actions/predictions'
-import { Calendar, Target, ChevronRight, AlertCircle } from 'lucide-react'
-import { GroupSwitcher } from '@/app/(dashboard)/_components/GroupSwitcher'
-import { DateCarousel } from '@/app/(dashboard)/matches/_components/DateCarousel'
-import { getDict, format } from '@/lib/i18n/server'
-import { getActiveClanId } from '@/lib/active-clan'
+import { GroupSwitcher } from "@/app/(dashboard)/_components/GroupSwitcher";
+import { DateCarousel } from "@/app/(dashboard)/matches/_components/DateCarousel";
+import { getUserClans } from "@/app/actions/clans";
+import { getMatchesWithPredictions } from "@/app/actions/predictions";
+import { getActiveClanId } from "@/lib/active-clan";
+import { format, getDict } from "@/lib/i18n/server";
+import { createClient } from "@/lib/supabase/server";
+import { AlertCircle, ChevronRight } from "lucide-react";
+import Link from "next/link";
+import { redirect } from "next/navigation";
 
 export default async function MatchesPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
   const [{ data: profile }, clans, activeClanId] = await Promise.all([
-    supabase.from('profiles').select('default_clan_id').eq('id', user.id).single(),
+    supabase
+      .from("profiles")
+      .select("default_clan_id")
+      .eq("id", user.id)
+      .single(),
     getUserClans(),
     getActiveClanId(),
-  ])
+  ]);
 
   if (clans.length === 0) {
-    redirect('/dashboard')
+    redirect("/dashboard");
   }
 
   const clanId =
-    (activeClanId && clans.some((c) => c.id === activeClanId) ? activeClanId : null) ??
+    (activeClanId && clans.some((c) => c.id === activeClanId)
+      ? activeClanId
+      : null) ??
     profile?.default_clan_id ??
-    clans[0].id
+    clans[0].id;
 
-  const clan = clans.find((c) => c.id === clanId) ?? clans[0]
+  const clan = clans.find((c) => c.id === clanId) ?? clans[0];
 
   const [matchesWithPreds, { dict, locale }] = await Promise.all([
     getMatchesWithPredictions(clan.id),
     getDict(),
-  ])
+  ]);
 
-  const upcomingMatches = matchesWithPreds.filter((m) => m.status === 'upcoming')
-  const missingUpcoming = upcomingMatches.filter((m) => !m.prediction).length
+  const upcomingMatches = matchesWithPreds.filter(
+    (m) => m.status === "upcoming",
+  );
+  const missingUpcoming = upcomingMatches.filter((m) => !m.prediction).length;
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-blue-300" />
-          <h1 className="text-xl font-bold text-white">{dict.clan.matches}</h1>
-          <span className="text-blue-400 text-sm font-medium truncate max-w-[140px]">· {clan.name}</span>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <GroupSwitcher
-            currentId={clan.id}
-            clans={clans}
-            label={dict.clan.switch_pool}
-          />
-          <Link
-            href={`/clan/${clan.id}/predictions`}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold transition"
-          >
-            <Target className="w-4 h-4" />
-            <span className="hidden sm:inline">{dict.clan.my_predictions}</span>
-            <ChevronRight className="w-4 h-4" />
-          </Link>
-        </div>
+      <div className="flex items-center justify-end gap-4">
+        <GroupSwitcher
+          currentId={clan.id}
+          clans={clans}
+          label={dict.clan.switch_pool}
+        />
       </div>
 
       {missingUpcoming > 0 && (
@@ -74,7 +69,9 @@ export default async function MatchesPage() {
             <p className="text-yellow-200 font-semibold text-sm">
               {format(dict.clan.missing_banner_title, { n: missingUpcoming })}
             </p>
-            <p className="text-yellow-200/80 text-xs mt-0.5">{dict.clan.missing_banner_desc}</p>
+            <p className="text-yellow-200/80 text-xs mt-0.5">
+              {dict.clan.missing_banner_desc}
+            </p>
           </div>
           <span className="flex items-center gap-1 text-yellow-200 text-sm font-medium shrink-0">
             {dict.clan.missing_banner_cta}
@@ -92,5 +89,5 @@ export default async function MatchesPage() {
         locale={locale}
       />
     </div>
-  )
+  );
 }

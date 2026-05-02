@@ -40,11 +40,6 @@ export default async function DashboardPage({
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-white">{dict.dashboard.title}</h1>
-        <p className="text-blue-300 text-sm mt-1">{dict.dashboard.subtitle}</p>
-      </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Link
           href="/clan/create"
