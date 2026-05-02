@@ -206,6 +206,17 @@ const en = {
     install_btn: 'Install',
     dismiss: 'Maybe later',
   },
+  clan_settings: {
+    title: 'Group settings',
+    section_scoring: 'Scoring',
+    points_exact_label: 'Points for exact result',
+    points_sign_label: 'Points for correct winner / draw',
+    section_access: 'Access',
+    can_members_invite_label: 'Members can share the invite code',
+    can_members_invite_hint: 'If disabled, only the admin can share the invite code.',
+    save: 'Save settings',
+    saved: 'Settings saved.',
+  },
 }
 
 const es: typeof en = {
@@ -405,6 +416,17 @@ const es: typeof en = {
     android_step3: 'Pulsa "Instalar" para confirmar',
     install_btn: 'Instalar',
     dismiss: 'Quizás luego',
+  },
+  clan_settings: {
+    title: 'Ajustes del grupo',
+    section_scoring: 'Puntuación',
+    points_exact_label: 'Puntos por resultado exacto',
+    points_sign_label: 'Puntos por acertar el ganador / empate',
+    section_access: 'Acceso',
+    can_members_invite_label: 'Los miembros pueden compartir el código de invitación',
+    can_members_invite_hint: 'Si está desactivado, solo el admin puede compartir el código.',
+    save: 'Guardar ajustes',
+    saved: 'Ajustes guardados.',
   },
 }
 
@@ -607,6 +629,17 @@ const de: typeof en = {
     android_step3: 'Tippe auf „Installieren" zum Bestätigen',
     install_btn: 'Installieren',
     dismiss: 'Vielleicht später',
+  },
+  clan_settings: {
+    title: 'Gruppeneinstellungen',
+    section_scoring: 'Punktesystem',
+    points_exact_label: 'Punkte für genaues Ergebnis',
+    points_sign_label: 'Punkte für richtigen Ausgang / Unentschieden',
+    section_access: 'Zugang',
+    can_members_invite_label: 'Mitglieder können den Einladungscode teilen',
+    can_members_invite_hint: 'Wenn deaktiviert, kann nur der Admin den Code teilen.',
+    save: 'Einstellungen speichern',
+    saved: 'Einstellungen gespeichert.',
   },
 }
 

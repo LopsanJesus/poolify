@@ -1,5 +1,18 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
+export interface ClanSettings {
+  points_exact: number
+  points_sign: number
+  can_members_invite: boolean
+  [key: string]: Json
+}
+
+export const DEFAULT_CLAN_SETTINGS: ClanSettings = {
+  points_exact: 4,
+  points_sign: 1,
+  can_members_invite: true,
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -22,9 +35,9 @@ export interface Database {
         Relationships: []
       }
       clans: {
-        Row: { id: string; name: string; invite_code: string; owner_id: string; created_at: string }
-        Insert: { id?: string; name: string; invite_code?: string; owner_id: string; created_at?: string }
-        Update: { id?: string; name?: string; invite_code?: string; owner_id?: string }
+        Row: { id: string; name: string; invite_code: string; owner_id: string; created_at: string; settings: ClanSettings }
+        Insert: { id?: string; name: string; invite_code?: string; owner_id: string; created_at?: string; settings?: ClanSettings }
+        Update: { id?: string; name?: string; invite_code?: string; owner_id?: string; settings?: ClanSettings }
         Relationships: [
           { foreignKeyName: 'clans_owner_id_fkey'; columns: ['owner_id']; referencedRelation: 'profiles'; referencedColumns: ['id'] }
         ]

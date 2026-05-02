@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { calculatePoints } from '@/lib/scoring'
-import type { Match, Prediction } from '@/lib/types'
+import type { Match, Prediction, ClanSettings } from '@/lib/types'
+import { DEFAULT_CLAN_SETTINGS } from '@/lib/types'
 
 export type ClanPredictionEntry = {
   user_id: string
@@ -83,8 +84,13 @@ export async function savePredictions(_: unknown, formData: FormData) {
   const clanId = formData.get('clan_id') as string
   const matchIds = formData.getAll('match_id') as string[]
 
-  const { data: matchData } = await supabase.from('matches').select('*')
+  const [{ data: matchData }, { data: clanData }] = await Promise.all([
+    supabase.from('matches').select('*'),
+    supabase.from('clans').select('settings').eq('id', clanId).single(),
+  ])
+
   const matches = (matchData ?? []) as Match[]
+  const settings = ((clanData as { settings?: ClanSettings } | null)?.settings ?? DEFAULT_CLAN_SETTINGS)
 
   const upserts = matchIds.map((matchId) => {
     const homeScore = parseInt(formData.get(`home_${matchId}`) as string, 10)
@@ -97,7 +103,7 @@ export async function savePredictions(_: unknown, formData: FormData) {
       match.home_score != null &&
       match.away_score != null
     ) {
-      points = calculatePoints(homeScore, awayScore, match.home_score, match.away_score)
+      points = calculatePoints(homeScore, awayScore, match.home_score, match.away_score, settings)
     }
 
     return {

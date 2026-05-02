@@ -5,7 +5,7 @@ import { getClanData, getClanRanking, getUserClans } from '@/app/actions/clans'
 import { getMatchesWithPredictions } from '@/app/actions/predictions'
 import {
   ArrowLeft, Trophy, Users, Star,
-  Target, Calendar, ChevronRight, Medal, AlertCircle, BarChart3,
+  Target, Calendar, ChevronRight, Medal, AlertCircle, BarChart3, Settings,
 } from 'lucide-react'
 import { CopyButton } from './_components/CopyButton'
 import { PoolSwitcher } from './_components/PoolSwitcher'
@@ -13,6 +13,7 @@ import { MatchCard } from './_components/MatchCard'
 import { ClanCookieSync } from './_components/ClanCookieSync'
 import { format, getDict } from '@/lib/i18n/server'
 import type { Dict } from '@/lib/i18n/dictionaries'
+import { DEFAULT_CLAN_SETTINGS } from '@/lib/types'
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
@@ -22,14 +23,18 @@ export default async function ClanPage({ params }: { params: Promise<{ id: strin
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
 
-  const [clan, ranking, matchesWithPreds, clans] = await Promise.all([
-    getClanData(id),
-    getClanRanking(id),
+  const clan = await getClanData(id)
+  if (!clan) notFound()
+
+  const settings = clan.settings ?? DEFAULT_CLAN_SETTINGS
+  const isOwner = clan.owner_id === user.id
+  const showInviteCode = isOwner || settings.can_members_invite
+
+  const [ranking, matchesWithPreds, clans] = await Promise.all([
+    getClanRanking(id, settings),
     getMatchesWithPredictions(id),
     getUserClans(),
   ])
-
-  if (!clan) notFound()
 
   const myRank = ranking.findIndex((r) => r.user_id === user.id)
   const myStats = ranking[myRank]
@@ -60,10 +65,12 @@ export default async function ClanPage({ params }: { params: Promise<{ id: strin
           </Link>
           <div className="min-w-0">
             <h1 className="text-2xl font-bold text-white truncate">{clan.name}</h1>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-blue-400 text-sm font-mono">{clan.invite_code}</span>
-              <CopyButton code={clan.invite_code} label={dict.clan.copy_code} />
-            </div>
+            {showInviteCode && (
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-blue-400 text-sm font-mono">{clan.invite_code}</span>
+                <CopyButton code={clan.invite_code} label={dict.clan.copy_code} />
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -74,6 +81,15 @@ export default async function ClanPage({ params }: { params: Promise<{ id: strin
             navDict={dict.nav}
             dashboardDict={dict.dashboard}
           />
+          {isOwner && (
+            <Link
+              href={`/clan/${id}/settings`}
+              className="flex items-center justify-center w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 text-blue-300 hover:text-white transition"
+              aria-label={dict.clan_settings.title}
+            >
+              <Settings className="w-4 h-4" />
+            </Link>
+          )}
           <Link
             href={`/clan/${id}/predictions`}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold transition"

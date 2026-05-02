@@ -67,6 +67,7 @@ create table public.clans (
   name        text not null,
   invite_code text not null unique default upper(substring(gen_random_uuid()::text, 1, 8)),
   owner_id    uuid not null references public.profiles(id) on delete cascade,
+  settings    jsonb not null default '{"points_exact": 4, "points_sign": 1, "can_members_invite": true}'::jsonb,
   created_at  timestamptz not null default now()
 );
 alter table public.clans enable row level security;
@@ -181,3 +182,7 @@ insert into public.matches (home_team, away_team, match_date, stage) values
 --   alter table public.profiles
 --     add column if not exists language text not null default 'en'
 --       check (language in ('en','es','de'));
+--
+--   alter table public.clans
+--     add column if not exists settings jsonb not null
+--       default '{"points_exact": 4, "points_sign": 1, "can_members_invite": true}'::jsonb;

@@ -4,7 +4,8 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { getDict } from '@/lib/i18n/server'
-import type { Clan } from '@/lib/types'
+import type { Clan, ClanSettings } from '@/lib/types'
+import { DEFAULT_CLAN_SETTINGS } from '@/lib/types'
 
 export async function createClan(_: unknown, formData: FormData) {
   const supabase = await createClient()
@@ -75,7 +76,7 @@ export async function getUserClans(): Promise<Pick<Clan, 'id' | 'name' | 'invite
     .filter((c): c is ClanRow => c !== null)
 }
 
-export async function getClanRanking(clanId: string) {
+export async function getClanRanking(clanId: string, settings?: ClanSettings) {
   const supabase = await createClient()
 
   const { data } = await supabase
@@ -84,6 +85,8 @@ export async function getClanRanking(clanId: string) {
     .eq('clan_id', clanId)
 
   if (!data) return []
+
+  const exactPts = settings?.points_exact ?? DEFAULT_CLAN_SETTINGS.points_exact
 
   type PredRow = { user_id: string; points: number | null; profiles: { username: string } | null }
   const rows = data as unknown as PredRow[]
@@ -95,8 +98,8 @@ export async function getClanRanking(clanId: string) {
     const pts = row.points ?? 0
     const existing = map.get(uid) ?? { username, total: 0, exact: 0, winner: 0 }
     existing.total += pts
-    if (pts === 4) existing.exact += 1
-    if (pts === 1) existing.winner += 1
+    if (pts === exactPts) existing.exact += 1
+    else if (pts > 0) existing.winner += 1
     map.set(uid, existing)
   }
 
@@ -117,16 +120,50 @@ export async function getClanMembers(clanId: string) {
   return rows.map((r) => ({ user_id: r.user_id, username: r.profiles?.username ?? r.user_id }))
 }
 
-export async function getClanData(clanId: string): Promise<Pick<Clan, 'id' | 'name' | 'invite_code' | 'owner_id'> | null> {
+export async function getClanData(clanId: string): Promise<Pick<Clan, 'id' | 'name' | 'invite_code' | 'owner_id' | 'settings'> | null> {
   const supabase = await createClient()
 
   const { data } = await supabase
     .from('clans')
-    .select('id, name, invite_code, owner_id')
+    .select('id, name, invite_code, owner_id, settings')
     .eq('id', clanId)
     .single()
 
-  return data as Pick<Clan, 'id' | 'name' | 'invite_code' | 'owner_id'> | null
+  return data as Pick<Clan, 'id' | 'name' | 'invite_code' | 'owner_id' | 'settings'> | null
+}
+
+export async function updateClanSettings(_: unknown, formData: FormData) {
+  const supabase = await createClient()
+  const { dict } = await getDict()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: dict.common.error }
+
+  const clanId = formData.get('clan_id') as string
+  const pointsExact = parseInt(formData.get('points_exact') as string, 10)
+  const pointsSign = parseInt(formData.get('points_sign') as string, 10)
+  const canMembersInvite = formData.get('can_members_invite') === 'on'
+
+  if (isNaN(pointsExact) || pointsExact < 0) return { error: dict.common.error }
+  if (isNaN(pointsSign) || pointsSign < 0) return { error: dict.common.error }
+
+  const settings: ClanSettings = {
+    points_exact: pointsExact,
+    points_sign: pointsSign,
+    can_members_invite: canMembersInvite,
+  }
+
+  const { error } = await supabase
+    .from('clans')
+    .update({ settings })
+    .eq('id', clanId)
+    .eq('owner_id', user.id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/clan/${clanId}`)
+  revalidatePath(`/clan/${clanId}/settings`)
+
+  return { success: 'settings_saved' as const }
 }
 
 export async function refreshClanPage(clanId: string) {
