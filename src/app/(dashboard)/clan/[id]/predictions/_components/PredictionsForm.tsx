@@ -4,6 +4,7 @@ import { useActionState } from 'react'
 import { savePredictions } from '@/app/actions/predictions'
 import type { Match, Prediction } from '@/lib/types'
 import type { Dict, Locale } from '@/lib/i18n/dictionaries'
+import { stageLabel } from '@/lib/stages'
 import { Loader2, Check } from 'lucide-react'
 
 type MatchWithPrediction = Match & { prediction: Prediction | null }
@@ -48,14 +49,14 @@ export function PredictionsForm({
             <input type="hidden" name="match_id" value={match.id} />
 
             <div className="flex items-center justify-between">
-              <span className="text-xs text-blue-400 font-medium">{match.stage}</span>
+              <span className="text-xs text-blue-400 font-medium">{stageLabel(match.stage, locale)}</span>
               <StatusPill status={match.status} dict={dict} />
             </div>
 
             <div className="flex items-center gap-3">
               <div className="flex-1 text-right space-y-1">
                 <p className="text-white font-semibold text-sm">
-                  {FLAG[match.home_team] ?? '🏳️'} {match.home_team}
+                  {match.home_team ? (FLAG[match.home_team] ?? '🏳️') + ' ' + match.home_team : <span className="text-blue-400/60">?</span>}
                 </p>
                 <input
                   type="number"
@@ -81,7 +82,7 @@ export function PredictionsForm({
 
               <div className="flex-1 space-y-1">
                 <p className="text-white font-semibold text-sm">
-                  {FLAG[match.away_team] ?? '🏳️'} {match.away_team}
+                  {match.away_team ? (FLAG[match.away_team] ?? '🏳️') + ' ' + match.away_team : <span className="text-blue-400/60">?</span>}
                 </p>
                 <input
                   type="number"

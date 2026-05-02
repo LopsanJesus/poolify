@@ -5,6 +5,7 @@ import { ChevronDown, Loader2, Users } from 'lucide-react'
 import { getClanPredictionsForMatch, type ClanPredictionEntry } from '@/app/actions/predictions'
 import type { Match, Prediction } from '@/lib/types'
 import type { Dict, Locale } from '@/lib/i18n/dictionaries'
+import { stageLabel } from '@/lib/stages'
 
 const FLAG: Record<string, string> = {
   'México': '🇲🇽', 'Estados Unidos': '🇺🇸', 'España': '🇪🇸',
@@ -52,14 +53,14 @@ export function MatchCard({
     <div className="rounded-xl bg-white/5 border border-white/10 overflow-hidden">
       <div className="p-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs text-blue-400">{match.stage}</span>
+          <span className="text-xs text-blue-400">{stageLabel(match.stage, locale)}</span>
           <StatusBadge status={match.status} clanDict={clanDict} />
         </div>
 
         <div className="flex items-center gap-4">
           <div className="flex-1 text-right">
             <p className="text-white font-semibold flex items-center justify-end gap-2">
-              {match.home_team} <TeamFlag team={match.home_team} />
+              {match.home_team ?? <TBD />} <TeamFlag team={match.home_team} />
             </p>
           </div>
 
@@ -86,7 +87,7 @@ export function MatchCard({
 
           <div className="flex-1">
             <p className="text-white font-semibold flex items-center gap-2">
-              <TeamFlag team={match.away_team} /> {match.away_team}
+              <TeamFlag team={match.away_team} /> {match.away_team ?? <TBD />}
             </p>
           </div>
         </div>
@@ -162,8 +163,13 @@ export function MatchCard({
   )
 }
 
-function TeamFlag({ team }: { team: string }) {
+function TeamFlag({ team }: { team: string | null }) {
+  if (!team) return null
   return <span title={team}>{FLAG[team] ?? '🏳️'}</span>
+}
+
+function TBD() {
+  return <span className="text-blue-400/60 font-normal text-sm">?</span>
 }
 
 function StatusBadge({

@@ -40,12 +40,12 @@ export interface Database {
       }
       matches: {
         Row: {
-          id: string; home_team: string; away_team: string; match_date: string
+          id: string; home_team: string | null; away_team: string | null; match_date: string
           home_score: number | null; away_score: number | null
           stage: string; status: 'upcoming' | 'live' | 'finished'; created_at: string
         }
         Insert: {
-          id?: string; home_team: string; away_team: string; match_date: string
+          id?: string; home_team?: string | null; away_team?: string | null; match_date: string
           home_score?: number | null; away_score?: number | null
           stage?: string; status?: 'upcoming' | 'live' | 'finished'
         }
