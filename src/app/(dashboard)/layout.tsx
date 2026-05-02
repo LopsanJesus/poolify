@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getDict } from '@/lib/i18n/server'
+import { getActiveClanId } from '@/lib/active-clan'
 import { PwaInstallModal } from '@/app/_components/PwaInstallModal'
 import { NavBar } from './_components/NavBar'
 import { TopBar } from './_components/TopBar'
@@ -12,19 +13,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { dict } = await getDict()
 
-  const { data: profileRow } = await supabase
-    .from('profiles')
-    .select('default_clan_id, clans(name)')
-    .eq('id', user.id)
-    .single()
-
-  type ProfileRow = { default_clan_id: string | null; clans: { name: string } | null }
-  const profile = profileRow as unknown as ProfileRow | null
-  const defaultClanName = profile?.clans?.name ?? null
+  const activeClanId = await getActiveClanId()
+  let activeClanName: string | null = null
+  if (activeClanId) {
+    const { data } = await supabase.from('clans').select('name').eq('id', activeClanId).single()
+    activeClanName = data?.name ?? null
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-emerald-900">
-      <TopBar clanName={defaultClanName} />
+      <TopBar clanName={activeClanName} />
       <NavBar />
 
       <main className="pt-14 md:pl-16 pb-nav">
