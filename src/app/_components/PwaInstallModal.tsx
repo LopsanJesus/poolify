@@ -114,7 +114,7 @@ export function PwaInstallModal({ t }: { t: Dict['pwa'] }) {
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={() => setOpen(false)}
       />
-      <div className="animate-slide-up relative w-full max-w-md bg-blue-950 border border-white/10 rounded-t-2xl p-6 pb-10 shadow-2xl">
+      <div className="animate-slide-up relative w-full max-w-md bg-blue-900 border border-white/10 rounded-t-2xl p-6 pb-10 shadow-2xl">
         <button
           onClick={() => setOpen(false)}
           className="absolute top-4 right-4 p-1 text-blue-400 hover:text-white transition"

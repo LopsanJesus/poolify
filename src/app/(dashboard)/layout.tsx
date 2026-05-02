@@ -21,7 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-950 via-blue-900 to-emerald-900">
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-emerald-900">
       <TopBar clanName={activeClanName} />
       <NavBar />
 

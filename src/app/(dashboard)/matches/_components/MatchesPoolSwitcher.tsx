@@ -41,7 +41,7 @@ export function MatchesPoolSwitcher({
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-64 rounded-xl border border-white/15 bg-blue-950/95 backdrop-blur-md shadow-2xl overflow-hidden z-30">
+        <div className="absolute right-0 mt-2 w-64 rounded-xl border border-white/15 bg-blue-900/95 backdrop-blur-md shadow-2xl overflow-hidden z-30">
           <ul className="max-h-72 overflow-y-auto">
             {clans.map((c) => (
               <li key={c.id}>

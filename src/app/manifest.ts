@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Private pools platform for friends. Predict the World Cup 2026 results!',
     start_url: '/',
     display: 'standalone',
-    background_color: '#172554',
-    theme_color: '#172554',
+    background_color: '#1e3a8a',
+    theme_color: '#1e3a8a',
     icons: [
       {
         src: '/icon-192.png',

@@ -7,7 +7,7 @@ import { FlagCarousel } from './FlagCarousel'
 export function Landing({ dict }: { dict: Dict }) {
   const t = dict.landing
   return (
-    <main className="fixed inset-0 flex flex-col overflow-hidden bg-gradient-to-br from-blue-950 via-blue-900 to-emerald-950 text-white">
+    <main className="fixed inset-0 flex flex-col overflow-hidden bg-gradient-to-br from-blue-900 via-blue-800 to-emerald-900 text-white">
       {/* Hero — dominant section */}
       <section
         className="flex flex-col items-center justify-center text-center px-6 min-h-0"

@@ -120,7 +120,7 @@ export function MatchCard({
       </button>
 
       {expanded && (
-        <div className="p-4 bg-blue-950/40 border-t border-white/10">
+        <div className="p-4 bg-blue-900/40 border-t border-white/10">
           {pending && !rows ? (
             <div className="flex items-center gap-2 text-sm text-blue-300">
               <Loader2 className="w-4 h-4 animate-spin" />
