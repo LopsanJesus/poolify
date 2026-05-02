@@ -27,6 +27,21 @@ function todayKey() {
   ].join('-')
 }
 
+function buildDateRange(first: string, last: string): string[] {
+  const dates: string[] = []
+  const cursor = new Date(first + 'T12:00:00')
+  const end = new Date(last + 'T12:00:00')
+  while (cursor <= end) {
+    dates.push([
+      cursor.getFullYear(),
+      String(cursor.getMonth() + 1).padStart(2, '0'),
+      String(cursor.getDate()).padStart(2, '0'),
+    ].join('-'))
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  return dates
+}
+
 export function DateCarousel({
   matches,
   clanId,
@@ -49,16 +64,27 @@ export function DateCarousel({
     if (existing) existing.push(m)
     else byDate.set(key, [m])
   }
-  const dates = Array.from(byDate.keys()).sort()
+
+  const matchDates = Array.from(byDate.keys()).sort()
+
+  if (matchDates.length === 0) {
+    return (
+      <div className="text-center py-8 rounded-2xl border border-dashed border-white/10 text-blue-400/70 text-sm">
+        {clanDict.no_upcoming}
+      </div>
+    )
+  }
+
+  const allDates = buildDateRange(matchDates[0], matchDates[matchDates.length - 1])
 
   const today = todayKey()
   let initialDate: string
-  if (dates.includes(today)) {
+  if (allDates.includes(today)) {
     initialDate = today
+  } else if (today < allDates[0]) {
+    initialDate = allDates[0]
   } else {
-    const future = dates.find((d) => d > today)
-    const past = [...dates].reverse().find((d) => d < today)
-    initialDate = future ?? past ?? dates[0]
+    initialDate = allDates[allDates.length - 1]
   }
 
   const [selected, setSelected] = useState(initialDate)
@@ -72,23 +98,16 @@ export function DateCarousel({
     container.scrollLeft = item.offsetLeft - container.offsetWidth / 2 + item.offsetWidth / 2
   }, [])
 
-  if (dates.length === 0) {
-    return (
-      <div className="text-center py-8 rounded-2xl border border-dashed border-white/10 text-blue-400/70 text-sm">
-        {clanDict.no_upcoming}
-      </div>
-    )
-  }
-
   const dayMatches = byDate.get(selected) ?? []
 
   return (
     <div className="space-y-5">
       <div ref={scrollRef} className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
-        {dates.map((date) => {
+        {allDates.map((date) => {
           const d = new Date(date + 'T12:00:00')
           const isToday = date === today
           const isSelected = date === selected
+          const hasMatches = byDate.has(date)
           const hasLive = (byDate.get(date) ?? []).some((m) => m.status === 'live')
           const dayName = d.toLocaleDateString(DATE_LOCALE[locale], { weekday: 'short' })
           const dayNum = d.getDate()
@@ -105,33 +124,45 @@ export function DateCarousel({
                   ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/25'
                   : isToday
                     ? 'bg-white/10 text-blue-200 ring-1 ring-blue-400/50'
-                    : 'bg-white/5 text-blue-300 hover:bg-white/10'
+                    : hasMatches
+                      ? 'bg-white/5 text-blue-300 hover:bg-white/10'
+                      : 'bg-white/[0.02] text-blue-300/40 hover:bg-white/5'
               }`}
             >
               <span className="text-[10px] uppercase opacity-70 leading-none">{dayName}</span>
               <span className="text-lg font-bold leading-tight mt-0.5">{dayNum}</span>
               <span className="text-[10px] opacity-70 leading-none mt-0.5">{month}</span>
-              {hasLive && (
+              {hasLive ? (
                 <span className="mt-1 w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+              ) : hasMatches ? (
+                <span className="mt-1 w-1 h-1 rounded-full bg-blue-400/60" />
+              ) : (
+                <span className="mt-1 w-1 h-1" />
               )}
             </button>
           )
         })}
       </div>
 
-      <div className="space-y-3">
-        {dayMatches.map((m) => (
-          <MatchCard
-            key={m.id}
-            clanId={clanId}
-            match={m}
-            currentUserId={currentUserId}
-            clanDict={clanDict}
-            commonDict={commonDict}
-            locale={locale}
-          />
-        ))}
-      </div>
+      {dayMatches.length === 0 ? (
+        <div className="text-center py-8 rounded-2xl border border-dashed border-white/10 text-blue-400/40 text-sm">
+          {clanDict.no_matches_day}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {dayMatches.map((m) => (
+            <MatchCard
+              key={m.id}
+              clanId={clanId}
+              match={m}
+              currentUserId={currentUserId}
+              clanDict={clanDict}
+              commonDict={commonDict}
+              locale={locale}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
