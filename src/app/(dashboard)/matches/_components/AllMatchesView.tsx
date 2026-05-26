@@ -131,38 +131,44 @@ function MatchRow({
         className="relative w-full text-left"
       >
         {/* ── Flag backgrounds ── */}
-        {/* Home flag */}
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: homeImg ? `url(${homeImg})` : undefined,
-            backgroundColor: homeImg ? undefined : '#172554',
-            clipPath: leftClip,
-          }}
-        />
-        {/* Home dark overlay for readability */}
+        {/* Home flag — anchored left, natural proportions */}
         <div
           className="absolute inset-0"
           style={{
-            background: 'linear-gradient(to right, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 100%)',
+            backgroundImage: homeImg ? `url(${homeImg})` : undefined,
+            backgroundColor: homeImg ? undefined : '#172554',
+            backgroundSize: 'auto 100%',
+            backgroundPosition: 'left center',
+            backgroundRepeat: 'no-repeat',
+            clipPath: leftClip,
+          }}
+        />
+        {/* Home gradient overlay — dark bottom for text, slight diagonal fade */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(to top, rgba(0,0,0,0.80) 0%, rgba(0,0,0,0.40) 50%, rgba(0,0,0,0.15) 100%)',
             clipPath: leftClip,
           }}
         />
 
-        {/* Away flag */}
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: awayImg ? `url(${awayImg})` : undefined,
-            backgroundColor: awayImg ? undefined : '#172554',
-            clipPath: rightClip,
-          }}
-        />
-        {/* Away dark overlay */}
+        {/* Away flag — also anchored left */}
         <div
           className="absolute inset-0"
           style={{
-            background: 'linear-gradient(to left, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 100%)',
+            backgroundImage: awayImg ? `url(${awayImg})` : undefined,
+            backgroundColor: awayImg ? undefined : '#172554',
+            backgroundSize: 'auto 100%',
+            backgroundPosition: 'left center',
+            backgroundRepeat: 'no-repeat',
+            clipPath: rightClip,
+          }}
+        />
+        {/* Away gradient overlay */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(to top, rgba(0,0,0,0.80) 0%, rgba(0,0,0,0.40) 50%, rgba(0,0,0,0.15) 100%)',
             clipPath: rightClip,
           }}
         />
