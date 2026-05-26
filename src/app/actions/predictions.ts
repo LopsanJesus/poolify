@@ -53,6 +53,21 @@ export async function getClanPredictionsForMatch(
     .sort((a, b) => b.points - a.points || a.username.localeCompare(b.username))
 }
 
+export async function getUserPredictionsForClan(clanId: string): Promise<Record<string, Prediction>> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return {}
+
+  const { data } = await supabase
+    .from('predictions')
+    .select('*')
+    .eq('clan_id', clanId)
+    .eq('user_id', user.id)
+
+  if (!data) return {}
+  return Object.fromEntries((data as Prediction[]).map((p) => [p.match_id, p]))
+}
+
 export async function getAllMatches() {
   const supabase = await createClient()
   const { data } = await supabase.from('matches').select('*').order('match_date')
@@ -98,11 +113,18 @@ export async function savePredictions(_: unknown, formData: FormData) {
   const matches = (matchData ?? []) as Match[]
   const settings = ((clanData as { settings?: ClanSettings } | null)?.settings ?? DEFAULT_CLAN_SETTINGS)
 
-  const upserts = matchIds.map((matchId) => {
-    const homeScore = parseInt(formData.get(`home_${matchId}`) as string, 10)
-    const awayScore = parseInt(formData.get(`away_${matchId}`) as string, 10)
-    const match = matches.find((m) => m.id === matchId)
+  const upserts = matchIds.flatMap((matchId) => {
+    const homeRaw = formData.get(`home_${matchId}`) as string
+    const awayRaw = formData.get(`away_${matchId}`) as string
+    const homeScore = parseInt(homeRaw, 10)
+    const awayScore = parseInt(awayRaw, 10)
 
+    // Skip if either field is blank
+    if (homeRaw.trim() === '' || awayRaw.trim() === '' || isNaN(homeScore) || isNaN(awayScore)) {
+      return []
+    }
+
+    const match = matches.find((m) => m.id === matchId)
     let points = 0
     if (
       match?.status === 'finished' &&
@@ -112,16 +134,18 @@ export async function savePredictions(_: unknown, formData: FormData) {
       points = calculatePoints(homeScore, awayScore, match.home_score, match.away_score, settings)
     }
 
-    return {
+    return [{
       user_id: user.id,
       match_id: matchId,
       clan_id: clanId,
-      home_score: isNaN(homeScore) ? 0 : homeScore,
-      away_score: isNaN(awayScore) ? 0 : awayScore,
+      home_score: homeScore,
+      away_score: awayScore,
       points,
       updated_at: new Date().toISOString(),
-    }
+    }]
   })
+
+  if (upserts.length === 0) return { success: true }
 
   const { error } = await supabase
     .from('predictions')
