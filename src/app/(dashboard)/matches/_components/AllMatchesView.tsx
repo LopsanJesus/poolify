@@ -8,7 +8,14 @@ import { stageLabel } from '@/lib/stages'
 
 const DATE_LOCALE: Record<Locale, string> = { en: 'en-US', es: 'es-ES', de: 'de-DE' }
 
-const FLAG: Record<string, string> = {
+// Flag images — add more as they become available
+const FLAG_IMAGES: Record<string, string> = {
+  'México': '/mexico.webp',
+  'España': '/spain.png',
+}
+
+// Emoji fallback for teams without a flag image
+const FLAG_EMOJI: Record<string, string> = {
   'México': '🇲🇽', 'Estados Unidos': '🇺🇸', 'España': '🇪🇸',
   'Argentina': '🇦🇷', 'Brasil': '🇧🇷', 'Francia': '🇫🇷',
 }
@@ -106,72 +113,161 @@ function MatchRow({
   isExpanded: boolean
   onToggle: () => void
 }) {
+  const homeImg = FLAG_IMAGES[match.home_team ?? ''] ?? null
+  const awayImg = FLAG_IMAGES[match.away_team ?? ''] ?? null
+  const homeEmoji = FLAG_EMOJI[match.home_team ?? '']
+  const awayEmoji = FLAG_EMOJI[match.away_team ?? '']
   const isFinished = match.status === 'finished'
 
+  // diagonal split: left half goes from x=55% at top to x=45% at bottom
+  const leftClip  = 'polygon(0 0, 55% 0, 45% 100%, 0 100%)'
+  const rightClip = 'polygon(55% 0, 100% 0, 100% 100%, 45% 100%)'
+
   return (
-    <div className="rounded-xl bg-white/5 border border-white/10 overflow-hidden">
+    <div className="rounded-xl overflow-hidden border border-white/10">
       <button
         type="button"
         onClick={onToggle}
-        className="w-full px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition text-left"
+        className="relative w-full text-left"
       >
-        {/* Home */}
-        <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
-          <span className="text-white font-medium truncate text-sm">
-            {match.home_team ?? '?'}
-          </span>
-          <span className="shrink-0 text-base">{FLAG[match.home_team ?? ''] ?? (match.home_team ? '🏳️' : '')}</span>
-        </div>
-
-        {/* Score / time */}
-        <div className="shrink-0 w-20 text-center">
-          {isFinished ? (
-            <span className="text-white font-bold tabular-nums">
-              {match.home_score} – {match.away_score}
-            </span>
-          ) : match.status === 'live' ? (
-            <span className="text-red-400 font-bold text-xs animate-pulse">{clanDict.status_live}</span>
-          ) : (
-            <span className="text-blue-300/70 font-mono text-sm tabular-nums">
-              {new Date(match.match_date).toLocaleTimeString(DATE_LOCALE[locale], {
-                hour: '2-digit', minute: '2-digit',
-              })}
-            </span>
-          )}
-        </div>
-
-        {/* Away */}
-        <div className="flex-1 flex items-center gap-1.5 min-w-0">
-          <span className="shrink-0 text-base">{FLAG[match.away_team ?? ''] ?? (match.away_team ? '🏳️' : '')}</span>
-          <span className="text-white font-medium truncate text-sm">
-            {match.away_team ?? '?'}
-          </span>
-        </div>
-
-        <ChevronDown
-          className={`shrink-0 w-4 h-4 text-blue-400/60 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+        {/* ── Flag backgrounds ── */}
+        {/* Home flag */}
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: homeImg ? `url(${homeImg})` : undefined,
+            backgroundColor: homeImg ? undefined : '#172554',
+            clipPath: leftClip,
+          }}
         />
+        {/* Home dark overlay for readability */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(to right, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 100%)',
+            clipPath: leftClip,
+          }}
+        />
+
+        {/* Away flag */}
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: awayImg ? `url(${awayImg})` : undefined,
+            backgroundColor: awayImg ? undefined : '#172554',
+            clipPath: rightClip,
+          }}
+        />
+        {/* Away dark overlay */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(to left, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 100%)',
+            clipPath: rightClip,
+          }}
+        />
+
+        {/* ── Content ── */}
+        <div className="relative px-3 pt-3 pb-2 space-y-2">
+          {/* Stage + status row */}
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-white/50 uppercase tracking-wide">
+              {stageLabel(match.stage, locale)}
+            </span>
+            <StatusChip status={match.status} clanDict={clanDict} />
+          </div>
+
+          {/* Teams + score row */}
+          <div className="flex items-center gap-2">
+            {/* Home team */}
+            <div className="flex-1 flex flex-col items-start gap-0.5 min-w-0">
+              {!homeImg && homeEmoji && (
+                <span className="text-xl leading-none">{homeEmoji}</span>
+              )}
+              <span
+                className="text-white font-bold text-sm leading-tight truncate w-full"
+                style={{ textShadow: '0 1px 8px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,1)' }}
+              >
+                {match.home_team ?? '?'}
+              </span>
+            </div>
+
+            {/* Center score / time */}
+            <div className="shrink-0 flex flex-col items-center gap-0.5 min-w-[64px]">
+              {isFinished ? (
+                <span className="bg-black/60 backdrop-blur-sm text-white font-bold px-2.5 py-0.5 rounded-lg text-base tabular-nums ring-1 ring-white/10">
+                  {match.home_score} – {match.away_score}
+                </span>
+              ) : match.status === 'live' ? (
+                <span className="bg-red-500/80 text-white font-bold text-xs px-2.5 py-1 rounded-lg animate-pulse">
+                  {clanDict.status_live}
+                </span>
+              ) : (
+                <span className="bg-black/50 backdrop-blur-sm text-blue-200 font-mono text-sm px-2.5 py-0.5 rounded-lg tabular-nums">
+                  {new Date(match.match_date).toLocaleTimeString(DATE_LOCALE[locale], {
+                    hour: '2-digit', minute: '2-digit',
+                  })}
+                </span>
+              )}
+            </div>
+
+            {/* Away team */}
+            <div className="flex-1 flex flex-col items-end gap-0.5 min-w-0">
+              {!awayImg && awayEmoji && (
+                <span className="text-xl leading-none">{awayEmoji}</span>
+              )}
+              <span
+                className="text-white font-bold text-sm leading-tight truncate w-full text-right"
+                style={{ textShadow: '0 1px 8px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,1)' }}
+              >
+                {match.away_team ?? '?'}
+              </span>
+            </div>
+
+            <ChevronDown
+              className={`shrink-0 w-4 h-4 text-white/50 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            />
+          </div>
+        </div>
       </button>
 
+      {/* ── Prediction dropdown ── */}
       {isExpanded && (
-        <div className="px-4 pb-3 pt-1 border-t border-white/10 bg-blue-900/30 space-y-1.5">
-          <p className="text-xs text-blue-400/60">{stageLabel(match.stage, locale)}</p>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-blue-300">{clanDict.your_prediction}</span>
-            {prediction ? (
-              <div className="flex items-center gap-2">
-                <span className="font-mono font-semibold text-white tabular-nums">
-                  {prediction.home_score} – {prediction.away_score}
-                </span>
-                {isFinished && <PointsBadge points={prediction.points} />}
-              </div>
-            ) : (
-              <span className="text-sm text-red-300/80">{clanDict.not_submitted}</span>
-            )}
-          </div>
+        <div className="px-4 py-3 border-t border-white/10 bg-blue-950/80 flex items-center justify-between">
+          <span className="text-sm text-blue-300">{clanDict.your_prediction}</span>
+          {prediction ? (
+            <div className="flex items-center gap-2">
+              <span className="font-mono font-semibold text-white tabular-nums">
+                {prediction.home_score} – {prediction.away_score}
+              </span>
+              {isFinished && <PointsBadge points={prediction.points} />}
+            </div>
+          ) : (
+            <span className="text-sm text-red-300/80">{clanDict.not_submitted}</span>
+          )}
         </div>
       )}
     </div>
+  )
+}
+
+function StatusChip({ status, clanDict }: { status: string; clanDict: Dict['clan'] }) {
+  if (status === 'live')
+    return (
+      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/40 text-red-200 animate-pulse ring-1 ring-red-500/30">
+        {clanDict.status_live}
+      </span>
+    )
+  if (status === 'finished')
+    return (
+      <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-black/40 text-white/50">
+        {clanDict.status_finished}
+      </span>
+    )
+  return (
+    <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/30 text-emerald-300">
+      {clanDict.status_upcoming}
+    </span>
   )
 }
 
