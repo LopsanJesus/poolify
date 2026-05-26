@@ -6,6 +6,15 @@ import { revalidatePath } from "next/cache";
 
 const TEST_USER_PREFIX = "test-user-";
 const TEST_USER_DOMAIN = "poolify.test";
+const FIXED_TEST_DOMAIN = "test.com";
+
+const FIXED_TEST_USERS = [
+  { username: "Juan",   email: "juan@test.com",   password: "juan" },
+  { username: "Pedro",  email: "pedro@test.com",  password: "pedro" },
+  { username: "Maria",  email: "maria@test.com",  password: "maria" },
+  { username: "Luis",   email: "luis@test.com",   password: "luis" },
+  { username: "Ana",    email: "ana@test.com",    password: "ana" },
+];
 
 // Helper to check if the current user is authorized to use dev tools
 // ONLY ALLOWED IN LOCAL DEVELOPMENT
@@ -29,8 +38,8 @@ export async function getTestUsers() {
 
   const testUsers = users.filter(
     (u) =>
-      u.email?.startsWith(TEST_USER_PREFIX) &&
-      u.email?.endsWith(TEST_USER_DOMAIN),
+      (u.email?.startsWith(TEST_USER_PREFIX) && u.email?.endsWith(TEST_USER_DOMAIN)) ||
+      u.email?.endsWith(`@${FIXED_TEST_DOMAIN}`),
   );
 
   // Get profiles for these users to get usernames
@@ -110,8 +119,8 @@ export async function deleteAllTestUsers() {
 
   const testUsers = users.filter(
     (u) =>
-      u.email?.startsWith(TEST_USER_PREFIX) &&
-      u.email?.endsWith(TEST_USER_DOMAIN),
+      (u.email?.startsWith(TEST_USER_PREFIX) && u.email?.endsWith(TEST_USER_DOMAIN)) ||
+      u.email?.endsWith(`@${FIXED_TEST_DOMAIN}`),
   );
 
   for (const user of testUsers) {
@@ -154,6 +163,40 @@ export async function getClans() {
 
   if (error) throw error;
   return data;
+}
+
+export async function seedTestUsers() {
+  await checkAuth();
+  const admin = createAdminClient();
+
+  const { data: { users: allUsers } } = await admin.auth.admin.listUsers();
+  const existingEmails = new Set(allUsers.map((u) => u.email));
+
+  const results: { email: string; status: "created" | "exists" | "error"; error?: string }[] = [];
+
+  for (const u of FIXED_TEST_USERS) {
+    if (existingEmails.has(u.email)) {
+      results.push({ email: u.email, status: "exists" });
+      continue;
+    }
+
+    const { data: { user }, error } = await admin.auth.admin.createUser({
+      email: u.email,
+      password: u.password,
+      email_confirm: true,
+    });
+
+    if (error || !user) {
+      results.push({ email: u.email, status: "error", error: error?.message });
+      continue;
+    }
+
+    await admin.from("profiles").upsert({ id: user.id, username: u.username });
+    results.push({ email: u.email, status: "created" });
+  }
+
+  revalidatePath("/dev-shell");
+  return { success: true, results };
 }
 
 export async function addUserToClan(userId: string, clanId: string) {

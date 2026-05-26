@@ -6,11 +6,13 @@ import {
   deleteAllTestUsers,
   deleteTestUser,
   impersonateUser,
+  seedTestUsers,
 } from "@/app/actions/dev";
 import {
   AlertTriangle,
   Loader2,
   LogIn,
+  Sprout,
   Trash2,
   UserPlus,
   Users,
@@ -55,6 +57,21 @@ export function DevShellClient({
       }
     } catch (err) {
       alert("Error creating user");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleSeed = async () => {
+    setLoading("seeding");
+    try {
+      const res = await seedTestUsers();
+      const created = res.results.filter((r) => r.status === "created").length;
+      const exists = res.results.filter((r) => r.status === "exists").length;
+      alert(`Seeded: ${created} created, ${exists} already existed.`);
+      router.refresh();
+    } catch {
+      alert("Error seeding users");
     } finally {
       setLoading(null);
     }
@@ -145,33 +162,48 @@ export function DevShellClient({
           <h2 className="text-xl font-bold text-white">Create Test User</h2>
         </div>
 
-        <form
-          onSubmit={handleCreate}
-          className="flex flex-col sm:flex-row gap-3"
-        >
-          <input
-            type="text"
-            value={newUsername}
-            onChange={(e) => setNewUsername(e.target.value)}
-            placeholder="Enter username (e.g. TestPlayer1)"
-            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
-            disabled={!!loading}
-          />
-          <button
-            type="submit"
-            disabled={!!loading || !newUsername}
-            className="bg-emerald-500 hover:bg-emerald-400 disabled:bg-emerald-500/50 text-blue-950 font-bold px-6 py-3 rounded-xl transition-all flex items-center justify-center gap-2 min-w-[140px]"
+        <div className="flex flex-col gap-3">
+          <form
+            onSubmit={handleCreate}
+            className="flex flex-col sm:flex-row gap-3"
           >
-            {loading === "creating" ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+            <input
+              type="text"
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value)}
+              placeholder="Enter username (e.g. TestPlayer1)"
+              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
+              disabled={!!loading}
+            />
+            <button
+              type="submit"
+              disabled={!!loading || !newUsername}
+              className="bg-emerald-500 hover:bg-emerald-400 disabled:bg-emerald-500/50 text-blue-950 font-bold px-6 py-3 rounded-xl transition-all flex items-center justify-center gap-2 min-w-[140px]"
+            >
+              {loading === "creating" ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <>
+                  <UserPlus className="w-5 h-5" />
+                  Create
+                </>
+              )}
+            </button>
+          </form>
+          <button
+            type="button"
+            onClick={handleSeed}
+            disabled={!!loading}
+            className="flex items-center gap-2 px-4 py-2.5 bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border border-violet-500/30 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 self-start"
+          >
+            {loading === "seeding" ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <>
-                <UserPlus className="w-5 h-5" />
-                Create
-              </>
+              <Sprout className="w-4 h-4" />
             )}
+            Seed users (juan / pedro / maria / luis / ana)
           </button>
-        </form>
+        </div>
       </section>
 
       {/* Users List Section */}
