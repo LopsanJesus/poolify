@@ -111,7 +111,7 @@ function MatchRow({
   const isFinished = match.status === 'finished'
 
   return (
-    <div className="rounded-xl overflow-hidden border border-white/10 bg-blue-950/60">
+    <div className="rounded-xl overflow-hidden border border-white/10 bg-white/5">
       <button
         type="button"
         onClick={onToggle}
