@@ -7,22 +7,19 @@ import { logout } from '@/app/actions/auth'
 import { getDict } from '@/lib/i18n/server'
 import { DefaultClanForm } from './_components/DefaultClanForm'
 import { LanguageForm } from './_components/LanguageForm'
-import { ThemeForm } from './_components/ThemeForm'
-import { getTheme } from '@/lib/theme/server'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, clans, theme] = await Promise.all([
+  const [{ data: profile }, clans] = await Promise.all([
     supabase
       .from('profiles')
       .select('username, default_clan_id, language')
       .eq('id', user.id)
       .single(),
     getUserClans(),
-    getTheme(),
   ])
 
   const { dict, locale } = await getDict()
@@ -59,8 +56,6 @@ export default async function ProfilePage() {
       />
 
       <LanguageForm key={locale} dict={dict.profile} commonDict={dict.common} current={locale} />
-
-      <ThemeForm key={theme} dict={dict.profile} commonDict={dict.common} current={theme} />
 
       <section className="rounded-2xl bg-white/5 border border-white/10 p-5 space-y-3">
         <h2 className="text-white font-semibold">{dict.profile.section_session}</h2>

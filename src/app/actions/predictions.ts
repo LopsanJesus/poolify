@@ -53,6 +53,12 @@ export async function getClanPredictionsForMatch(
     .sort((a, b) => b.points - a.points || a.username.localeCompare(b.username))
 }
 
+export async function getAllMatches() {
+  const supabase = await createClient()
+  const { data } = await supabase.from('matches').select('*').order('match_date')
+  return (data ?? []) as Match[]
+}
+
 export async function getMatchesWithPredictions(clanId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

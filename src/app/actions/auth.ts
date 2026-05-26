@@ -6,7 +6,6 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { LOCALES, type Locale } from '@/lib/i18n/dictionaries'
 import { LOCALE_COOKIE, getDict } from '@/lib/i18n/server'
-import { THEME_COOKIE, type Theme } from '@/lib/theme/server'
 
 import { getHomeRedirectPath } from '@/lib/home-redirect'
 
@@ -128,15 +127,4 @@ export async function updateLanguage(_: unknown, formData: FormData) {
 
   revalidatePath('/', 'layout')
   return { success: 'language_saved' }
-}
-
-export async function updateTheme(_: unknown, formData: FormData) {
-  const raw = formData.get('theme') as string
-  const theme: Theme = raw === 'light' ? 'light' : 'dark'
-
-  const cookieStore = await cookies()
-  cookieStore.set(THEME_COOKIE, theme, { path: '/', maxAge: 60 * 60 * 24 * 365 })
-
-  revalidatePath('/', 'layout')
-  return { success: 'theme_saved' }
 }
