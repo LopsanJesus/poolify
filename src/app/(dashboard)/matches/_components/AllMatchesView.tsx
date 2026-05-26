@@ -8,13 +8,6 @@ import { stageLabel } from '@/lib/stages'
 
 const DATE_LOCALE: Record<Locale, string> = { en: 'en-US', es: 'es-ES', de: 'de-DE' }
 
-// Flag images — add more as they become available
-const FLAG_IMAGES: Record<string, string> = {
-  'México': '/mexico.webp',
-  'España': '/spain.png',
-}
-
-// Emoji fallback for teams without a flag image
 const FLAG_EMOJI: Record<string, string> = {
   'México': '🇲🇽', 'Estados Unidos': '🇺🇸', 'España': '🇪🇸',
   'Argentina': '🇦🇷', 'Brasil': '🇧🇷', 'Francia': '🇫🇷',
@@ -113,127 +106,65 @@ function MatchRow({
   isExpanded: boolean
   onToggle: () => void
 }) {
-  const homeImg = FLAG_IMAGES[match.home_team ?? ''] ?? null
-  const awayImg = FLAG_IMAGES[match.away_team ?? ''] ?? null
   const homeEmoji = FLAG_EMOJI[match.home_team ?? '']
   const awayEmoji = FLAG_EMOJI[match.away_team ?? '']
   const isFinished = match.status === 'finished'
 
-  // diagonal split: left half goes from x=55% at top to x=45% at bottom
-  const leftClip  = 'polygon(0 0, 55% 0, 45% 100%, 0 100%)'
-  const rightClip = 'polygon(55% 0, 100% 0, 100% 100%, 45% 100%)'
-
   return (
-    <div className="rounded-xl overflow-hidden border border-white/10">
+    <div className="rounded-xl overflow-hidden border border-white/10 bg-blue-950/60">
       <button
         type="button"
         onClick={onToggle}
-        className="relative w-full text-left"
+        className="w-full text-left px-3 pt-3 pb-2 space-y-2"
       >
-        {/* ── Flag backgrounds ── */}
-        {/* Home flag — anchored left, natural proportions */}
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: homeImg ? `url(${homeImg})` : undefined,
-            backgroundColor: homeImg ? undefined : '#172554',
-            backgroundSize: 'auto 100%',
-            backgroundPosition: 'left center',
-            backgroundRepeat: 'no-repeat',
-            clipPath: leftClip,
-          }}
-        />
-        {/* Home gradient overlay — dark bottom for text, slight diagonal fade */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: 'linear-gradient(to top, rgba(0,0,0,0.80) 0%, rgba(0,0,0,0.40) 50%, rgba(0,0,0,0.15) 100%)',
-            clipPath: leftClip,
-          }}
-        />
+        {/* Stage + status row */}
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-white/50 uppercase tracking-wide">
+            {stageLabel(match.stage, locale)}
+          </span>
+          <StatusChip status={match.status} clanDict={clanDict} />
+        </div>
 
-        {/* Away flag — also anchored left */}
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: awayImg ? `url(${awayImg})` : undefined,
-            backgroundColor: awayImg ? undefined : '#172554',
-            backgroundSize: 'auto 100%',
-            backgroundPosition: 'left center',
-            backgroundRepeat: 'no-repeat',
-            clipPath: rightClip,
-          }}
-        />
-        {/* Away gradient overlay */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: 'linear-gradient(to top, rgba(0,0,0,0.80) 0%, rgba(0,0,0,0.40) 50%, rgba(0,0,0,0.15) 100%)',
-            clipPath: rightClip,
-          }}
-        />
-
-        {/* ── Content ── */}
-        <div className="relative px-3 pt-3 pb-2 space-y-2">
-          {/* Stage + status row */}
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] text-white/50 uppercase tracking-wide">
-              {stageLabel(match.stage, locale)}
+        {/* Teams + score row */}
+        <div className="flex items-center gap-2">
+          {/* Home team */}
+          <div className="flex-1 flex flex-col items-start gap-0.5 min-w-0">
+            {homeEmoji && <span className="text-xl leading-none">{homeEmoji}</span>}
+            <span className="text-white font-bold text-sm leading-tight truncate w-full">
+              {match.home_team ?? '?'}
             </span>
-            <StatusChip status={match.status} clanDict={clanDict} />
           </div>
 
-          {/* Teams + score row */}
-          <div className="flex items-center gap-2">
-            {/* Home team */}
-            <div className="flex-1 flex flex-col items-start gap-0.5 min-w-0">
-              {!homeImg && homeEmoji && (
-                <span className="text-xl leading-none">{homeEmoji}</span>
-              )}
-              <span
-                className="text-white font-bold text-sm leading-tight truncate w-full"
-                style={{ textShadow: '0 1px 8px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,1)' }}
-              >
-                {match.home_team ?? '?'}
+          {/* Center score / time */}
+          <div className="shrink-0 flex flex-col items-center gap-0.5 min-w-[64px]">
+            {isFinished ? (
+              <span className="bg-black/60 backdrop-blur-sm text-white font-bold px-2.5 py-0.5 rounded-lg text-base tabular-nums ring-1 ring-white/10">
+                {match.home_score} – {match.away_score}
               </span>
-            </div>
-
-            {/* Center score / time */}
-            <div className="shrink-0 flex flex-col items-center gap-0.5 min-w-[64px]">
-              {isFinished ? (
-                <span className="bg-black/60 backdrop-blur-sm text-white font-bold px-2.5 py-0.5 rounded-lg text-base tabular-nums ring-1 ring-white/10">
-                  {match.home_score} – {match.away_score}
-                </span>
-              ) : match.status === 'live' ? (
-                <span className="bg-red-500/80 text-white font-bold text-xs px-2.5 py-1 rounded-lg animate-pulse">
-                  {clanDict.status_live}
-                </span>
-              ) : (
-                <span className="bg-black/50 backdrop-blur-sm text-blue-200 font-mono text-sm px-2.5 py-0.5 rounded-lg tabular-nums">
-                  {new Date(match.match_date).toLocaleTimeString(DATE_LOCALE[locale], {
-                    hour: '2-digit', minute: '2-digit',
-                  })}
-                </span>
-              )}
-            </div>
-
-            {/* Away team */}
-            <div className="flex-1 flex flex-col items-end gap-0.5 min-w-0">
-              {!awayImg && awayEmoji && (
-                <span className="text-xl leading-none">{awayEmoji}</span>
-              )}
-              <span
-                className="text-white font-bold text-sm leading-tight truncate w-full text-right"
-                style={{ textShadow: '0 1px 8px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,1)' }}
-              >
-                {match.away_team ?? '?'}
+            ) : match.status === 'live' ? (
+              <span className="bg-red-500/80 text-white font-bold text-xs px-2.5 py-1 rounded-lg animate-pulse">
+                {clanDict.status_live}
               </span>
-            </div>
-
-            <ChevronDown
-              className={`shrink-0 w-4 h-4 text-white/50 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-            />
+            ) : (
+              <span className="bg-black/50 backdrop-blur-sm text-blue-200 font-mono text-sm px-2.5 py-0.5 rounded-lg tabular-nums">
+                {new Date(match.match_date).toLocaleTimeString(DATE_LOCALE[locale], {
+                  hour: '2-digit', minute: '2-digit',
+                })}
+              </span>
+            )}
           </div>
+
+          {/* Away team */}
+          <div className="flex-1 flex flex-col items-end gap-0.5 min-w-0">
+            {awayEmoji && <span className="text-xl leading-none">{awayEmoji}</span>}
+            <span className="text-white font-bold text-sm leading-tight truncate w-full text-right">
+              {match.away_team ?? '?'}
+            </span>
+          </div>
+
+          <ChevronDown
+            className={`shrink-0 w-4 h-4 text-white/50 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+          />
         </div>
       </button>
 
