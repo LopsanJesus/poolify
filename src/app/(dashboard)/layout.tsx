@@ -35,7 +35,7 @@ export default async function DashboardLayout({
       <TopBar clanName={activeClanName} />
       <NavBar activeClanId={activeClanId} />
 
-      <main className="pt-14 md:pl-16 pb-nav">
+      <main className="pt-14 md:pl-20 pb-nav">
         <div className="max-w-5xl mx-auto px-4 pt-4 pb-10">{children}</div>
       </main>
 

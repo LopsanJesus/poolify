@@ -1,4 +1,5 @@
 import { getLocale } from "@/lib/i18n/server";
+import { getTheme } from "@/lib/theme/server";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -24,11 +25,11 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const locale = await getLocale();
+  const [locale, theme] = await Promise.all([getLocale(), getTheme()]);
   return (
     <html
       lang={locale}
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased bg-blue-900`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased bg-blue-900 ${theme}`}
     >
       <body className="min-h-full flex flex-col bg-blue-900">{children}</body>
     </html>

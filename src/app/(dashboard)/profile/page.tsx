@@ -1,26 +1,28 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { ArrowLeft, LogOut, UserCircle2 } from 'lucide-react'
+import { ChevronRight, LogOut, UserCircle2, KeyRound } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getUserClans } from '@/app/actions/clans'
 import { logout } from '@/app/actions/auth'
 import { getDict } from '@/lib/i18n/server'
-import { PasswordForm } from './_components/PasswordForm'
 import { DefaultClanForm } from './_components/DefaultClanForm'
 import { LanguageForm } from './_components/LanguageForm'
+import { ThemeForm } from './_components/ThemeForm'
+import { getTheme } from '@/lib/theme/server'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, clans] = await Promise.all([
+  const [{ data: profile }, clans, theme] = await Promise.all([
     supabase
       .from('profiles')
       .select('username, default_clan_id, language')
       .eq('id', user.id)
       .single(),
     getUserClans(),
+    getTheme(),
   ])
 
   const { dict, locale } = await getDict()
@@ -38,7 +40,16 @@ export default async function ProfilePage() {
         </div>
       </section>
 
-      <PasswordForm dict={dict.profile} commonDict={dict.common} />
+      <Link
+        href="/profile/change-password"
+        className="flex items-center justify-between rounded-2xl bg-white/5 border border-white/10 p-5 hover:bg-white/10 transition group"
+      >
+        <div className="flex items-center gap-3">
+          <KeyRound className="w-5 h-5 text-emerald-400" />
+          <span className="text-white font-semibold">{dict.profile.section_password}</span>
+        </div>
+        <ChevronRight className="w-5 h-5 text-blue-400 group-hover:text-white transition" />
+      </Link>
 
       <DefaultClanForm
         dict={dict.profile}
@@ -47,7 +58,9 @@ export default async function ProfilePage() {
         current={profile?.default_clan_id ?? null}
       />
 
-      <LanguageForm dict={dict.profile} commonDict={dict.common} current={locale} />
+      <LanguageForm key={locale} dict={dict.profile} commonDict={dict.common} current={locale} />
+
+      <ThemeForm key={theme} dict={dict.profile} commonDict={dict.common} current={theme} />
 
       <section className="rounded-2xl bg-white/5 border border-white/10 p-5 space-y-3">
         <h2 className="text-white font-semibold">{dict.profile.section_session}</h2>

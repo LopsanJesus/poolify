@@ -10,8 +10,10 @@ export default function ProfileLoading() {
       </div>
 
       <div className="skeleton h-20 rounded-2xl" />
+      <div className="skeleton h-20 rounded-2xl" />
       <div className="skeleton h-36 rounded-2xl" />
       <div className="skeleton h-28 rounded-2xl" />
+      <div className="skeleton h-24 rounded-2xl" />
       <div className="skeleton h-28 rounded-2xl" />
       <div className="skeleton h-20 rounded-2xl" />
     </div>

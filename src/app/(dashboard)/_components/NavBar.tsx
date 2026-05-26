@@ -29,7 +29,7 @@ export function NavBar({ activeClanId }: { activeClanId: string | null }) {
         className="md:hidden fixed bottom-0 inset-x-0 z-30 flex items-center justify-around bg-blue-900/90 backdrop-blur-md border-t border-white/10"
         style={{
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
-          height: "calc(4rem + env(safe-area-inset-bottom, 0px))",
+          height: "calc(4.5rem + env(safe-area-inset-bottom, 0px))",
         }}
       >
         {links.map(({ href, icon: Icon, label }) => (
@@ -37,31 +37,33 @@ export function NavBar({ activeClanId }: { activeClanId: string | null }) {
             key={href}
             href={href}
             aria-label={label}
-            className={`flex items-center justify-center w-14 h-14 rounded-2xl transition-colors ${
+            className={`flex flex-col items-center justify-center gap-1 w-16 h-16 rounded-2xl transition-colors ${
               isActive(href)
                 ? "text-emerald-400"
                 : "text-blue-400 hover:text-white"
             }`}
           >
-            <Icon className="w-6 h-6" />
+            <Icon className="w-5 h-5" />
+            <span className="text-[10px] font-medium leading-none">{label}</span>
           </Link>
         ))}
       </nav>
 
       {/* Desktop: left sidebar */}
-      <aside className="hidden md:flex flex-col items-center gap-1 fixed left-0 top-14 bottom-0 w-16 z-30 bg-blue-900/60 backdrop-blur-sm border-r border-white/10 py-4">
+      <aside className="hidden md:flex flex-col items-center gap-1 fixed left-0 top-14 bottom-0 w-20 z-30 bg-blue-900/60 backdrop-blur-sm border-r border-white/10 py-4">
         {links.map(({ href, icon: Icon, label }) => (
           <Link
             key={href}
             href={href}
             aria-label={label}
-            className={`flex items-center justify-center w-11 h-11 rounded-xl transition-colors ${
+            className={`flex flex-col items-center justify-center gap-1 w-16 h-14 rounded-xl transition-colors ${
               isActive(href)
                 ? "bg-emerald-500/20 text-emerald-400"
                 : "text-blue-400 hover:text-white hover:bg-white/10"
             }`}
           >
             <Icon className="w-5 h-5" />
+            <span className="text-[10px] font-medium leading-none">{label}</span>
           </Link>
         ))}
       </aside>
