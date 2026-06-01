@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Medal, Star, Target, Trophy, Users } from "lucide-react";
 import { redirect } from "next/navigation";
 
-const MEDALS = ["🥇", "🥈", "🥉"];
+const MEDAL_COLORS = ["text-yellow-400", "text-slate-300", "text-orange-400"];
 
 export default async function RankingPage() {
   const supabase = await createClient();
@@ -154,14 +154,8 @@ function RankingRow({
           : "bg-white/5 border-white/10 hover:bg-white/10"
       }`}
     >
-      <span className="w-8 text-center text-lg">
-        {position < 3 ? (
-          MEDALS[position]
-        ) : (
-          <span className="text-blue-400 font-mono text-sm">
-            #{position + 1}
-          </span>
-        )}
+      <span className={`w-8 text-center font-mono text-sm font-bold ${position < 3 ? MEDAL_COLORS[position] : 'text-blue-400'}`}>
+        #{position + 1}
       </span>
       <div className="flex-1 min-w-0">
         <p

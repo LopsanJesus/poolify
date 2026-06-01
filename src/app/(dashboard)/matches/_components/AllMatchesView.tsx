@@ -204,7 +204,7 @@ function StatusChip({ status, clanDict }: { status: string; clanDict: Dict['clan
 
 function PointsBadge({ points }: { points: number }) {
   if (points === 4)
-    return <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 font-bold">+4 ⭐</span>
+    return <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 font-bold">+4</span>
   if (points === 1)
     return <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/30 text-blue-300 font-bold">+1</span>
   return <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400">0</span>

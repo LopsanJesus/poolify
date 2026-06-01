@@ -18,7 +18,7 @@ export function PasswordForm({
     if (!state?.error) return null
     if (state.error === 'password_too_short') return dict.password_too_short
     if (state.error === 'password_mismatch') return dict.password_mismatch
-    if (state.error === 'invalid_current_password') return dict.current_password + ' ❌'
+    if (state.error === 'invalid_current_password') return dict.current_password
     return state.error
   })()
 

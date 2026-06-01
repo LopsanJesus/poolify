@@ -47,7 +47,7 @@ export function Countdown({ label, days, hours, minutes, seconds }: Props) {
   if (!t) return <div className="h-24" />
 
   if (t.phase === 'done') {
-    return <p className="text-center text-white text-3xl font-bold">⚽ Kick-off!</p>
+    return <p className="text-center text-white text-3xl font-bold">Kick-off!</p>
   }
 
   const bigNum = t.phase === 'days' ? t.days : p2(t.hours)

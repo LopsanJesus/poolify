@@ -6,11 +6,7 @@ import { getClanPredictionsForMatch, type ClanPredictionEntry } from '@/app/acti
 import type { Match, Prediction } from '@/lib/types'
 import type { Dict, Locale } from '@/lib/i18n/dictionaries'
 import { stageLabel } from '@/lib/stages'
-
-const FLAG: Record<string, string> = {
-  'México': '🇲🇽', 'Estados Unidos': '🇺🇸', 'España': '🇪🇸',
-  'Argentina': '🇦🇷', 'Brasil': '🇧🇷', 'Francia': '🇫🇷',
-}
+import { FlagImage } from '@/app/_components/FlagImage'
 
 const DATE_LOCALE: Record<Locale, string> = { en: 'en-US', es: 'es-ES', de: 'de-DE' }
 
@@ -165,7 +161,7 @@ export function MatchCard({
 
 function TeamFlag({ team }: { team: string | null }) {
   if (!team) return null
-  return <span title={team}>{FLAG[team] ?? '🏳️'}</span>
+  return <FlagImage team={team} size={24} />
 }
 
 function TBD() {
@@ -203,7 +199,7 @@ function PointsBadge({ points, small = false }: { points: number; small?: boolea
   if (points === 4)
     return (
       <span className={`rounded-full bg-emerald-500/30 text-emerald-300 font-bold ${size}`}>
-        +4 ⭐
+        +4
       </span>
     )
   if (points === 1)

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getClanData } from '@/app/actions/clans'
 import { getMatchesWithPredictions } from '@/app/actions/predictions'
-import { ArrowLeft, Target } from 'lucide-react'
+import { ArrowLeft, Target, Star, Check, X } from 'lucide-react'
 import { PredictionsForm } from './_components/PredictionsForm'
 import { getDict } from '@/lib/i18n/server'
 
@@ -38,16 +38,19 @@ export default async function PredictionsPage({ params }: { params: Promise<{ id
         <Target className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
         <div className="text-sm text-blue-200 space-y-0.5">
           <p className="font-medium text-white">{dict.predictions.scoring_title}</p>
-          <p>
-            ⭐ <strong className="text-emerald-400">{dict.predictions.points_4}</strong> —{' '}
+          <p className="flex items-center gap-1.5">
+            <Star className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            <strong className="text-emerald-400">{dict.predictions.points_4}</strong>{' '}—{' '}
             {dict.predictions.scoring_exact}
           </p>
-          <p>
-            ✅ <strong className="text-blue-300">{dict.predictions.points_1}</strong> —{' '}
+          <p className="flex items-center gap-1.5">
+            <Check className="w-3.5 h-3.5 text-blue-300 shrink-0" />
+            <strong className="text-blue-300">{dict.predictions.points_1}</strong>{' '}—{' '}
             {dict.predictions.scoring_winner}
           </p>
-          <p>
-            ❌ <strong className="text-red-400">{dict.predictions.points_0}</strong> —{' '}
+          <p className="flex items-center gap-1.5">
+            <X className="w-3.5 h-3.5 text-red-400 shrink-0" />
+            <strong className="text-red-400">{dict.predictions.points_0}</strong>{' '}—{' '}
             {dict.predictions.scoring_miss}
           </p>
         </div>

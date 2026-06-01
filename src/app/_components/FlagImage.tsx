@@ -13,11 +13,9 @@ export function FlagImage({
   const url = flagUrl(team)
   if (!url) return (
     <div
-      className={`rounded-full overflow-hidden shrink-0 bg-white/10 flex items-center justify-center ${className}`}
+      className={`rounded-full shrink-0 bg-white/10 border border-white/20 ${className}`}
       style={{ width: size, height: size }}
-    >
-      <span style={{ fontSize: size * 0.55 }} className="leading-none">🏳️</span>
-    </div>
+    />
   )
 
   return (
