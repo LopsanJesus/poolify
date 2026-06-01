@@ -5,13 +5,9 @@ import { ChevronDown } from 'lucide-react'
 import type { Match, Prediction } from '@/lib/types'
 import type { Dict, Locale } from '@/lib/i18n/dictionaries'
 import { stageLabel } from '@/lib/stages'
+import { FlagImage } from '@/app/_components/FlagImage'
 
 const DATE_LOCALE: Record<Locale, string> = { en: 'en-US', es: 'es-ES', de: 'de-DE' }
-
-const FLAG_EMOJI: Record<string, string> = {
-  'México': '🇲🇽', 'Estados Unidos': '🇺🇸', 'España': '🇪🇸',
-  'Argentina': '🇦🇷', 'Brasil': '🇧🇷', 'Francia': '🇫🇷',
-}
 
 function toLocalDateKey(isoString: string) {
   const d = new Date(isoString)
@@ -106,8 +102,6 @@ function MatchRow({
   isExpanded: boolean
   onToggle: () => void
 }) {
-  const homeEmoji = FLAG_EMOJI[match.home_team ?? '']
-  const awayEmoji = FLAG_EMOJI[match.away_team ?? '']
   const isFinished = match.status === 'finished'
 
   return (
@@ -129,7 +123,7 @@ function MatchRow({
         <div className="flex items-center gap-2">
           {/* Home team */}
           <div className="flex-1 flex flex-col items-start gap-0.5 min-w-0">
-            {homeEmoji && <span className="text-xl leading-none">{homeEmoji}</span>}
+            <FlagImage team={match.home_team ?? ''} size={28} />
             <span className="text-white font-bold text-sm leading-tight truncate w-full">
               {match.home_team ?? '?'}
             </span>
@@ -156,7 +150,7 @@ function MatchRow({
 
           {/* Away team */}
           <div className="flex-1 flex flex-col items-end gap-0.5 min-w-0">
-            {awayEmoji && <span className="text-xl leading-none">{awayEmoji}</span>}
+            <FlagImage team={match.away_team ?? ''} size={28} />
             <span className="text-white font-bold text-sm leading-tight truncate w-full text-right">
               {match.away_team ?? '?'}
             </span>

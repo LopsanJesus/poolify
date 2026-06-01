@@ -6,17 +6,9 @@ import { stageLabel } from "@/lib/stages";
 import type { Match, Prediction } from "@/lib/types";
 import { Check, Loader2 } from "lucide-react";
 import { useActionState } from "react";
+import { FlagImage } from "@/app/_components/FlagImage";
 
 type MatchWithPrediction = Match & { prediction: Prediction | null };
-
-const FLAG: Record<string, string> = {
-  México: "🇲🇽",
-  "Estados Unidos": "🇺🇸",
-  España: "🇪🇸",
-  Argentina: "🇦🇷",
-  Brasil: "🇧🇷",
-  Francia: "🇫🇷",
-};
 
 const DATE_LOCALE: Record<Locale, string> = {
   en: "en-US",
@@ -124,13 +116,12 @@ function MatchCard({
 
       <div className="flex items-center gap-3">
         <div className="flex-1 text-right space-y-1">
-          <p className="text-white font-semibold text-sm">
-            {match.home_team ? (
-              (FLAG[match.home_team] ?? "🏳️") + " " + match.home_team
-            ) : (
-              <span className="text-blue-400/60">?</span>
-            )}
-          </p>
+          <div className="flex items-center justify-end gap-2">
+            <p className="text-white font-semibold text-sm">
+              {match.home_team ?? <span className="text-blue-400/60">?</span>}
+            </p>
+            {match.home_team && <FlagImage team={match.home_team} size={28} />}
+          </div>
           <input
             type="number"
             name={editable ? `home_${match.id}` : undefined}
@@ -154,13 +145,12 @@ function MatchCard({
         </div>
 
         <div className="flex-1 space-y-1">
-          <p className="text-white font-semibold text-sm">
-            {match.away_team ? (
-              (FLAG[match.away_team] ?? "🏳️") + " " + match.away_team
-            ) : (
-              <span className="text-blue-400/60">?</span>
-            )}
-          </p>
+          <div className="flex items-center gap-2">
+            {match.away_team && <FlagImage team={match.away_team} size={28} />}
+            <p className="text-white font-semibold text-sm">
+              {match.away_team ?? <span className="text-blue-400/60">?</span>}
+            </p>
+          </div>
           <input
             type="number"
             name={editable ? `away_${match.id}` : undefined}
