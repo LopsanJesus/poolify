@@ -212,3 +212,136 @@ export async function addUserToClan(userId: string, clanId: string) {
   revalidatePath("/dev-shell");
   return { success: true };
 }
+
+const SEED_CLAN_NAME = "Porra de prueba";
+
+export async function seedDatabase() {
+  await checkAuth();
+  const admin = createAdminClient();
+
+  // 1. Get test users
+  const { data: { users: allUsers } } = await admin.auth.admin.listUsers();
+  const testUsers = allUsers.filter(
+    (u) =>
+      (u.email?.startsWith(TEST_USER_PREFIX) && u.email?.endsWith(TEST_USER_DOMAIN)) ||
+      u.email?.endsWith(`@${FIXED_TEST_DOMAIN}`),
+  );
+  if (testUsers.length === 0) return { error: "No test users found. Run 'Seed users' first." };
+
+  const { data: profiles } = await admin
+    .from("profiles")
+    .select("id, username")
+    .in("id", testUsers.map((u) => u.id));
+
+  const users = testUsers.map((u) => ({
+    id: u.id,
+    username: (profiles as { id: string; username: string }[])?.find((p) => p.id === u.id)?.username ?? "unknown",
+  }));
+
+  // 2. Find or create the test clan
+  let clanId: string;
+  const { data: existingClan } = await admin
+    .from("clans")
+    .select("id")
+    .eq("name", SEED_CLAN_NAME)
+    .single();
+
+  if (existingClan) {
+    clanId = existingClan.id;
+    // Clear existing predictions for this clan to start fresh
+    await admin.from("predictions").delete().eq("clan_id", clanId);
+  } else {
+    const { data: newClan, error: clanError } = await admin
+      .from("clans")
+      .insert({ name: SEED_CLAN_NAME, owner_id: users[0].id, invite_code: Math.random().toString(36).slice(2, 8).toUpperCase() })
+      .select("id")
+      .single();
+    if (clanError || !newClan) return { error: `Failed to create clan: ${clanError?.message}` };
+    clanId = newClan.id;
+  }
+
+  // 3. Add all test users to the clan (staggered join dates for tiebreaker testing)
+  for (let i = 0; i < users.length; i++) {
+    const joinedAt = new Date(Date.now() - (users.length - i) * 60_000).toISOString();
+    await admin.from("clan_members").upsert(
+      { user_id: users[i].id, clan_id: clanId, joined_at: joinedAt },
+      { onConflict: "user_id,clan_id" },
+    );
+    // Set as default clan in profile
+    await admin.from("profiles").update({ default_clan_id: clanId }).eq("id", users[i].id);
+  }
+
+  // 4. Get finished matches
+  const { data: finishedMatches } = await admin
+    .from("matches")
+    .select("id, home_score, away_score")
+    .eq("status", "finished")
+    .order("match_date", { ascending: false })
+    .limit(6);
+
+  if (!finishedMatches || finishedMatches.length === 0) {
+    return { error: "No finished matches found. Can't seed predictions." };
+  }
+
+  type FinishedMatch = { id: string; home_score: number; away_score: number };
+  const matches = finishedMatches as FinishedMatch[];
+
+  // 5. Build predictions: each user gets 3 matches, varied outcomes
+  // Outcome patterns per user (cycling through matches):
+  //   exact, exact, winner, miss, winner, miss...
+  type Outcome = "exact" | "winner" | "miss";
+  const OUTCOME_PATTERNS: Array<Outcome[]> = [
+    ["exact",  "exact",  "winner", "miss",   "winner", "miss"],
+    ["exact",  "winner", "winner", "exact",  "miss",   "winner"],
+    ["winner", "exact",  "miss",   "winner", "exact",  "winner"],
+    ["miss",   "winner", "exact",  "exact",  "winner", "miss"],
+    ["winner", "miss",   "exact",  "winner", "exact",  "exact"],
+  ];
+
+  function makePred(match: FinishedMatch, outcome: Outcome) {
+    const rh = match.home_score;
+    const ra = match.away_score;
+    if (outcome === "exact") return { home_score: rh, away_score: ra, points: 4 };
+    if (outcome === "winner") {
+      // Same sign but different score
+      if (rh > ra) return { home_score: rh + 1, away_score: ra, points: 1 };
+      if (ra > rh) return { home_score: rh, away_score: ra + 1, points: 1 };
+      // Draw — flip to a non-draw (miss) since we can't easily do same-sign for draw
+      return { home_score: rh + 1, away_score: ra + 1, points: 0 };
+    }
+    // miss: flip the result
+    return { home_score: ra, away_score: rh + 1, points: 0 };
+  }
+
+  const predictions = [];
+  for (let ui = 0; ui < users.length; ui++) {
+    const pattern = OUTCOME_PATTERNS[ui % OUTCOME_PATTERNS.length];
+    const matchCount = Math.min(3, matches.length);
+    for (let mi = 0; mi < matchCount; mi++) {
+      const match = matches[mi];
+      const outcome = pattern[mi % pattern.length];
+      const pred = makePred(match, outcome);
+      predictions.push({
+        user_id: users[ui].id,
+        clan_id: clanId,
+        match_id: match.id,
+        ...pred,
+      });
+    }
+  }
+
+  const { error: predError } = await admin.from("predictions").upsert(predictions, {
+    onConflict: "user_id,clan_id,match_id",
+  });
+  if (predError) return { error: `Predictions failed: ${predError.message}` };
+
+  revalidatePath("/dev-shell");
+  revalidatePath("/ranking");
+  return {
+    success: true,
+    clanId,
+    clanName: SEED_CLAN_NAME,
+    users: users.length,
+    predictions: predictions.length,
+  };
+}

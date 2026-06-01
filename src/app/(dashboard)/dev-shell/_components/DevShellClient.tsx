@@ -6,10 +6,12 @@ import {
   deleteAllTestUsers,
   deleteTestUser,
   impersonateUser,
+  seedDatabase,
   seedTestUsers,
 } from "@/app/actions/dev";
 import {
   AlertTriangle,
+  Database,
   Loader2,
   LogIn,
   Sprout,
@@ -72,6 +74,25 @@ export function DevShellClient({
       router.refresh();
     } catch {
       alert("Error seeding users");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleSeedDatabase = async () => {
+    setLoading("seeding-db");
+    try {
+      const res = await seedDatabase();
+      if ("error" in res && res.error) {
+        alert(res.error);
+      } else if ("success" in res && res.success) {
+        alert(
+          `Base de datos poblada.\nGrupo: "${res.clanName}"\n${res.users} usuarios · ${res.predictions} predicciones`
+        );
+        router.refresh();
+      }
+    } catch {
+      alert("Error al poblar la base de datos");
     } finally {
       setLoading(null);
     }
@@ -190,19 +211,34 @@ export function DevShellClient({
               )}
             </button>
           </form>
-          <button
-            type="button"
-            onClick={handleSeed}
-            disabled={!!loading}
-            className="flex items-center gap-2 px-4 py-2.5 bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border border-violet-500/30 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 self-start"
-          >
-            {loading === "seeding" ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Sprout className="w-4 h-4" />
-            )}
-            Seed users (juan / pedro / maria / luis / ana)
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleSeed}
+              disabled={!!loading}
+              className="flex items-center gap-2 px-4 py-2.5 bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border border-violet-500/30 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+            >
+              {loading === "seeding" ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Sprout className="w-4 h-4" />
+              )}
+              Seed users (juan / pedro / maria / luis / ana)
+            </button>
+            <button
+              type="button"
+              onClick={handleSeedDatabase}
+              disabled={!!loading}
+              className="flex items-center gap-2 px-4 py-2.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/30 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+            >
+              {loading === "seeding-db" ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Database className="w-4 h-4" />
+              )}
+              Poblar database
+            </button>
+          </div>
         </div>
       </section>
 
