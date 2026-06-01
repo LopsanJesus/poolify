@@ -2,9 +2,9 @@ import { GroupSwitcher } from "@/app/(dashboard)/_components/GroupSwitcher";
 import { getClanRanking, getUserClans } from "@/app/actions/clans";
 import { getActiveClanId } from "@/lib/active-clan";
 import type { Dict } from "@/lib/i18n/dictionaries";
-import { format, getDict } from "@/lib/i18n/server";
+import { getDict } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
-import { Medal, Star, Target, Trophy, Users } from "lucide-react";
+import { Trophy } from "lucide-react";
 import { redirect } from "next/navigation";
 
 const MEDAL_COLORS = ["text-yellow-400", "text-slate-300", "text-orange-400"];
@@ -42,11 +42,8 @@ export default async function RankingPage() {
     getDict(),
   ]);
 
-  const myRank = ranking.findIndex((r) => r.user_id === user.id);
-  const myStats = ranking[myRank];
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-end">
         <GroupSwitcher
           currentId={clan.id}
@@ -55,76 +52,36 @@ export default async function RankingPage() {
         />
       </div>
 
-      {myStats && (
-        <div className="grid grid-cols-3 gap-3">
-          <StatCard
-            icon={<Trophy className="w-5 h-5 text-yellow-400" />}
-            label={dict.clan.stats_points}
-            value={myStats.total}
-            accent="yellow"
-          />
-          <StatCard
-            icon={<Star className="w-5 h-5 text-emerald-400" />}
-            label={dict.clan.stats_exact}
-            value={myStats.exact}
-            accent="emerald"
-          />
-          <StatCard
-            icon={<Medal className="w-5 h-5 text-blue-400" />}
-            label={dict.clan.stats_position}
-            value={myRank === -1 ? "–" : `#${myRank + 1}`}
-            accent="blue"
-          />
-        </div>
-      )}
-
       {ranking.length === 0 ? (
         <div className="text-center py-16 rounded-2xl border border-dashed border-white/20">
           <Trophy className="w-12 h-12 text-blue-500/50 mx-auto mb-3" />
           <p className="text-blue-300 font-medium">{dict.clan.no_ranking}</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {ranking.map((entry, i) => (
-            <RankingRow
-              key={entry.user_id}
-              entry={entry}
-              position={i}
-              isMe={entry.user_id === user.id}
-              clanDict={dict.clan}
-            />
-          ))}
+        <div className="rounded-xl border border-white/10 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-white/10 text-blue-400/70 text-xs uppercase tracking-wide">
+                <th className="text-left px-4 py-3 w-10">#</th>
+                <th className="text-left px-4 py-3">{dict.clan.ranking_name}</th>
+                <th className="text-center px-4 py-3">{dict.clan.ranking_exact}</th>
+                <th className="text-right px-4 py-3">{dict.clan.ranking_points}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ranking.map((entry, i) => (
+                <RankingRow
+                  key={entry.user_id}
+                  entry={entry}
+                  position={i}
+                  isMe={entry.user_id === user.id}
+                  clanDict={dict.clan}
+                />
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
-
-      <div className="grid grid-cols-3 gap-3">
-        <StatCard
-          icon={<Users className="w-5 h-5 text-blue-300" />}
-          label={dict.clan.players}
-          value={ranking.length}
-          accent="blue"
-        />
-        <StatCard
-          icon={<Target className="w-5 h-5 text-emerald-300" />}
-          label={dict.clan.total_predictions}
-          value={ranking.reduce((acc, r) => acc + r.exact + r.winner, 0)}
-          accent="emerald"
-        />
-        <StatCard
-          icon={<Trophy className="w-5 h-5 text-yellow-300" />}
-          label={dict.clan.average_points}
-          value={
-            ranking.length > 0
-              ? Math.round(
-                  (ranking.reduce((acc, r) => acc + r.total, 0) /
-                    ranking.length) *
-                    10,
-                ) / 10
-              : 0
-          }
-          accent="yellow"
-        />
-      </div>
     </div>
   );
 }
@@ -147,61 +104,26 @@ function RankingRow({
   clanDict: Dict["clan"];
 }) {
   return (
-    <div
-      className={`flex items-center gap-4 px-5 py-4 rounded-xl border transition ${
-        isMe
-          ? "bg-emerald-500/15 border-emerald-500/40"
-          : "bg-white/5 border-white/10 hover:bg-white/10"
+    <tr
+      className={`border-b border-white/5 last:border-0 transition ${
+        isMe ? "bg-emerald-500/10" : "hover:bg-white/5"
       }`}
     >
-      <span className={`w-8 text-center font-mono text-sm font-bold ${position < 3 ? MEDAL_COLORS[position] : 'text-blue-400'}`}>
-        #{position + 1}
-      </span>
-      <div className="flex-1 min-w-0">
-        <p
-          className={`font-semibold truncate ${isMe ? "text-emerald-300" : "text-white"}`}
-        >
+      <td className="px-4 py-3">
+        <span className={`font-mono font-bold text-xs ${position < 3 ? MEDAL_COLORS[position] : "text-blue-400"}`}>
+          #{position + 1}
+        </span>
+      </td>
+      <td className="px-4 py-3">
+        <span className={`font-semibold ${isMe ? "text-emerald-300" : "text-white"}`}>
           {entry.username}
-          {isMe && (
-            <span className="text-xs text-emerald-400 ml-2">
-              ({clanDict.you})
-            </span>
-          )}
-        </p>
-        <p className="text-xs text-blue-400">
-          {format(clanDict.exact_count, { n: entry.exact })} ·{" "}
-          {format(clanDict.winner_count, { n: entry.winner })}
-        </p>
-      </div>
-      <div className="text-right">
-        <p className="text-white font-bold text-lg">{entry.total}</p>
-        <p className="text-blue-400 text-xs">pts</p>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({
-  icon,
-  label,
-  value,
-  accent,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number | string;
-  accent: "yellow" | "emerald" | "blue";
-}) {
-  const bg = {
-    yellow: "bg-yellow-500/10 border-yellow-500/20",
-    emerald: "bg-emerald-500/10 border-emerald-500/20",
-    blue: "bg-blue-500/10 border-blue-500/20",
-  };
-  return (
-    <div className={`p-4 rounded-xl border ${bg[accent]} text-center`}>
-      <div className="flex justify-center mb-1">{icon}</div>
-      <p className="text-white font-bold text-2xl">{value}</p>
-      <p className="text-blue-300 text-xs mt-0.5">{label}</p>
-    </div>
+        </span>
+        {isMe && (
+          <span className="text-xs text-emerald-400 ml-2">({clanDict.you})</span>
+        )}
+      </td>
+      <td className="px-4 py-3 text-center text-white/80">{entry.exact}</td>
+      <td className="px-4 py-3 text-right font-bold text-white">{entry.total}</td>
+    </tr>
   );
 }
