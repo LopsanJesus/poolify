@@ -6,7 +6,7 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import { LOCALES, type Locale } from '@/lib/i18n/dictionaries'
 import { LOCALE_COOKIE, getDict } from '@/lib/i18n/server'
-
+import { ACTIVE_CLAN_COOKIE } from '@/lib/active-clan'
 import { getHomeRedirectPath } from '@/lib/home-redirect'
 
 export async function login(_: unknown, formData: FormData) {
@@ -63,6 +63,8 @@ export async function signup(_: unknown, formData: FormData) {
 export async function logout() {
   const supabase = await createClient()
   await supabase.auth.signOut()
+  const cookieStore = await cookies()
+  cookieStore.delete(ACTIVE_CLAN_COOKIE)
   redirect('/login')
 }
 
