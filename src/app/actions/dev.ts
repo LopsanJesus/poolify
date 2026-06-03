@@ -199,6 +199,186 @@ export async function seedTestUsers() {
   return { success: true, results };
 }
 
+export async function deleteTestMatches() {
+  await checkAuth();
+  const admin = createAdminClient();
+  const { error } = await admin.from("matches").delete().like("stage", "TEST%");
+  if (error) return { error: error.message };
+  revalidatePath("/dev-shell");
+  revalidatePath("/matches");
+  return { success: true };
+}
+
+// ── Shared helpers ────────────────────────────────────────────
+
+async function getOrCreateTestClan(admin: ReturnType<typeof createAdminClient>, name: string, ownerId: string) {
+  const { data: existing } = await admin.from("clans").select("id").eq("name", name).single();
+  if (existing) {
+    await admin.from("predictions").delete().eq("clan_id", existing.id);
+    await admin.from("tournament_predictions").delete().eq("clan_id", existing.id);
+    return existing.id as string;
+  }
+  const { data: newClan, error } = await admin
+    .from("clans")
+    .insert({ name, owner_id: ownerId, invite_code: Math.random().toString(36).slice(2, 10).toUpperCase() })
+    .select("id").single();
+  if (error || !newClan) throw new Error(error?.message ?? "clan creation failed");
+  return newClan.id as string;
+}
+
+async function addMembersToClan(admin: ReturnType<typeof createAdminClient>, clanId: string, users: { id: string }[]) {
+  for (let i = 0; i < users.length; i++) {
+    const joinedAt = new Date(Date.now() - (users.length - i) * 60_000).toISOString();
+    await admin.from("clan_members").upsert(
+      { user_id: users[i].id, clan_id: clanId, joined_at: joinedAt },
+      { onConflict: "user_id,clan_id" },
+    );
+    await admin.from("profiles").update({ default_clan_id: clanId }).eq("id", users[i].id);
+  }
+}
+
+function makePrediction(match: { id: string; home_score: number; away_score: number }, outcome: "exact" | "winner" | "miss") {
+  const rh = match.home_score;
+  const ra = match.away_score;
+  if (outcome === "exact") return { home_score: rh, away_score: ra, points: 4 };
+  if (outcome === "winner") {
+    if (rh > ra) return { home_score: rh + 1, away_score: ra, points: 1 };
+    if (ra > rh) return { home_score: rh, away_score: ra + 1, points: 1 };
+    return { home_score: rh + 1, away_score: ra + 1, points: 0 };
+  }
+  return { home_score: ra, away_score: rh + 1, points: 0 };
+}
+
+// ── Scenario: Tournament starts tomorrow ──────────────────────
+
+export async function seedPreTournament() {
+  await checkAuth();
+  const admin = createAdminClient();
+
+  const { data: { users: allUsers } } = await admin.auth.admin.listUsers();
+  const testUsers = allUsers.filter(
+    (u) => (u.email?.startsWith(TEST_USER_PREFIX) && u.email?.endsWith(TEST_USER_DOMAIN)) || u.email?.endsWith(`@${FIXED_TEST_DOMAIN}`),
+  );
+  if (testUsers.length === 0) return { error: "No test users. Run 'Seed users' first." };
+
+  const { data: profiles } = await admin.from("profiles").select("id, username").in("id", testUsers.map((u) => u.id));
+  const users = testUsers.map((u) => ({
+    id: u.id,
+    username: (profiles as { id: string; username: string }[])?.find((p) => p.id === u.id)?.username ?? "unknown",
+  }));
+
+  // Create 6 upcoming matches starting tomorrow
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(12, 0, 0, 0);
+
+  const MATCHES = [
+    { home: "España",   away: "Alemania",    stage: "TEST Grupo A" },
+    { home: "Francia",  away: "Portugal",    stage: "TEST Grupo B" },
+    { home: "Brasil",   away: "Argentina",   stage: "TEST Grupo C" },
+    { home: "Marruecos",away: "Senegal",     stage: "TEST Grupo D" },
+    { home: "Japón",    away: "Corea del Sur",stage:"TEST Grupo E" },
+    { home: "México",   away: "Uruguay",     stage: "TEST Grupo F" },
+  ];
+
+  const matchRows = MATCHES.map((m, i) => ({
+    home_team: m.home,
+    away_team: m.away,
+    match_date: new Date(tomorrow.getTime() + i * 2 * 60 * 60 * 1000).toISOString(),
+    stage: m.stage,
+    status: "upcoming" as const,
+  }));
+
+  const { data: createdMatches, error: matchErr } = await admin.from("matches").insert(matchRows).select("id");
+  if (matchErr || !createdMatches) return { error: `Matches: ${matchErr?.message}` };
+
+  const clanId = await getOrCreateTestClan(admin, "Porra pre-torneo", users[0].id);
+  await addMembersToClan(admin, clanId, users);
+
+  revalidatePath("/dev-shell");
+  revalidatePath("/matches");
+  return { success: true, clanId, clanName: "Porra pre-torneo", matches: createdMatches.length, users: users.length };
+}
+
+// ── Scenario: Tournament in progress ─────────────────────────
+
+export async function seedInProgress() {
+  await checkAuth();
+  const admin = createAdminClient();
+
+  const { data: { users: allUsers } } = await admin.auth.admin.listUsers();
+  const testUsers = allUsers.filter(
+    (u) => (u.email?.startsWith(TEST_USER_PREFIX) && u.email?.endsWith(TEST_USER_DOMAIN)) || u.email?.endsWith(`@${FIXED_TEST_DOMAIN}`),
+  );
+  if (testUsers.length === 0) return { error: "No test users. Run 'Seed users' first." };
+
+  const { data: profiles } = await admin.from("profiles").select("id, username").in("id", testUsers.map((u) => u.id));
+  const users = testUsers.map((u) => ({
+    id: u.id,
+    username: (profiles as { id: string; username: string }[])?.find((p) => p.id === u.id)?.username ?? "unknown",
+  }));
+
+  const now = new Date();
+  const daysAgo = (d: number, h = 15) => { const t = new Date(now); t.setDate(t.getDate() - d); t.setHours(h, 0, 0, 0); return t.toISOString(); };
+  const hoursAgo = (h: number) => new Date(now.getTime() - h * 60 * 60 * 1000).toISOString();
+  const hoursFromNow = (h: number) => new Date(now.getTime() + h * 60 * 60 * 1000).toISOString();
+
+  const FINISHED = [
+    { home: "España",    away: "Alemania",     home_score: 2, away_score: 1, date: daysAgo(3), stage: "TEST Grupo A" },
+    { home: "Francia",   away: "Portugal",     home_score: 0, away_score: 0, date: daysAgo(2), stage: "TEST Grupo B" },
+    { home: "Brasil",    away: "Argentina",    home_score: 1, away_score: 3, date: daysAgo(1), stage: "TEST Grupo C" },
+  ];
+  const LIVE = [
+    { home: "Marruecos", away: "Senegal",      date: hoursAgo(1), stage: "TEST Grupo D" },
+  ];
+  const UPCOMING = [
+    { home: "Japón",     away: "Corea del Sur",date: hoursFromNow(4),  stage: "TEST Grupo E" },
+    { home: "México",    away: "Uruguay",      date: hoursFromNow(28), stage: "TEST Grupo F" },
+    { home: "Inglaterra",away: "Italia",       date: hoursFromNow(52), stage: "TEST Grupo G" },
+  ];
+
+  const rows = [
+    ...FINISHED.map((m) => ({ home_team: m.home, away_team: m.away, match_date: m.date, stage: m.stage, status: "finished" as const, home_score: m.home_score, away_score: m.away_score })),
+    ...LIVE.map((m)     => ({ home_team: m.home, away_team: m.away, match_date: m.date, stage: m.stage, status: "live" as const })),
+    ...UPCOMING.map((m) => ({ home_team: m.home, away_team: m.away, match_date: m.date, stage: m.stage, status: "upcoming" as const })),
+  ];
+
+  const { data: createdMatches, error: matchErr } = await admin.from("matches").insert(rows).select("id, home_score, away_score, status");
+  if (matchErr || !createdMatches) return { error: `Matches: ${matchErr?.message}` };
+
+  const clanId = await getOrCreateTestClan(admin, "Porra en juego", users[0].id);
+  await addMembersToClan(admin, clanId, users);
+
+  // Seed predictions for finished matches
+  type CreatedMatch = { id: string; home_score: number | null; away_score: number | null; status: string };
+  const finishedCreated = (createdMatches as CreatedMatch[]).filter((m) => m.status === "finished") as { id: string; home_score: number; away_score: number }[];
+
+  const OUTCOME_PATTERNS: Array<Array<"exact" | "winner" | "miss">> = [
+    ["exact", "exact",  "winner"],
+    ["exact", "winner", "exact"],
+    ["winner","exact",  "miss"],
+    ["miss",  "winner", "exact"],
+    ["winner","miss",   "exact"],
+  ];
+
+  const predictions = [];
+  for (let ui = 0; ui < users.length; ui++) {
+    const pattern = OUTCOME_PATTERNS[ui % OUTCOME_PATTERNS.length];
+    for (let mi = 0; mi < finishedCreated.length; mi++) {
+      const pred = makePrediction(finishedCreated[mi], pattern[mi % pattern.length]);
+      predictions.push({ user_id: users[ui].id, clan_id: clanId, match_id: finishedCreated[mi].id, ...pred });
+    }
+  }
+
+  const { error: predErr } = await admin.from("predictions").upsert(predictions, { onConflict: "user_id,clan_id,match_id" });
+  if (predErr) return { error: `Predictions: ${predErr.message}` };
+
+  revalidatePath("/dev-shell");
+  revalidatePath("/matches");
+  revalidatePath("/ranking");
+  return { success: true, clanId, clanName: "Porra en juego", matches: createdMatches.length, predictions: predictions.length, users: users.length };
+}
+
 export async function addUserToClan(userId: string, clanId: string) {
   await checkAuth();
   const admin = createAdminClient();

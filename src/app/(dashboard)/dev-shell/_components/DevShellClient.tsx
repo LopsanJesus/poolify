@@ -5,15 +5,20 @@ import {
   createTestUser,
   deleteAllTestUsers,
   deleteTestUser,
+  deleteTestMatches,
   impersonateUser,
   seedDatabase,
   seedTestUsers,
+  seedPreTournament,
+  seedInProgress,
 } from "@/app/actions/dev";
 import {
   AlertTriangle,
+  Calendar,
   Database,
   Loader2,
   LogIn,
+  Play,
   Sprout,
   Trash2,
   UserPlus,
@@ -86,13 +91,59 @@ export function DevShellClient({
       if ("error" in res && res.error) {
         alert(res.error);
       } else if ("success" in res && res.success) {
-        alert(
-          `Base de datos poblada.\nGrupo: "${res.clanName}"\n${res.users} usuarios · ${res.predictions} predicciones`
-        );
+        alert(`Base de datos poblada.\nGrupo: "${res.clanName}"\n${res.users} usuarios · ${res.predictions} predicciones`);
         router.refresh();
       }
     } catch {
       alert("Error al poblar la base de datos");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleSeedPreTournament = async () => {
+    setLoading("seed-pre");
+    try {
+      const res = await seedPreTournament();
+      if ("error" in res && res.error) {
+        alert(res.error);
+      } else if ("success" in res && res.success) {
+        alert(`Torneo pre-inicio creado.\nGrupo: "${res.clanName}"\n${res.matches} partidos (mañana) · ${res.users} usuarios sin predicciones`);
+        router.refresh();
+      }
+    } catch {
+      alert("Error");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleSeedInProgress = async () => {
+    setLoading("seed-live");
+    try {
+      const res = await seedInProgress();
+      if ("error" in res && res.error) {
+        alert(res.error);
+      } else if ("success" in res && res.success) {
+        alert(`Torneo en juego creado.\nGrupo: "${res.clanName}"\n${res.matches} partidos · ${res.predictions} predicciones · ${res.users} usuarios`);
+        router.refresh();
+      }
+    } catch {
+      alert("Error");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleDeleteTestMatches = async () => {
+    if (!confirm("Eliminar todos los partidos TEST (stage empieza por 'TEST')?")) return;
+    setLoading("delete-matches");
+    try {
+      const res = await deleteTestMatches();
+      if (res.error) alert(res.error);
+      else { alert("Partidos TEST eliminados."); router.refresh(); }
+    } catch {
+      alert("Error");
     } finally {
       setLoading(null);
     }
@@ -231,12 +282,35 @@ export function DevShellClient({
               disabled={!!loading}
               className="flex items-center gap-2 px-4 py-2.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/30 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
             >
-              {loading === "seeding-db" ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Database className="w-4 h-4" />
-              )}
+              {loading === "seeding-db" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Database className="w-4 h-4" />}
               Poblar database
+            </button>
+            <button
+              type="button"
+              onClick={handleSeedPreTournament}
+              disabled={!!loading}
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+            >
+              {loading === "seed-pre" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Calendar className="w-4 h-4" />}
+              Torneo empieza mañana
+            </button>
+            <button
+              type="button"
+              onClick={handleSeedInProgress}
+              disabled={!!loading}
+              className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+            >
+              {loading === "seed-live" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+              Torneo en juego
+            </button>
+            <button
+              type="button"
+              onClick={handleDeleteTestMatches}
+              disabled={!!loading}
+              className="flex items-center gap-2 px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+            >
+              {loading === "delete-matches" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              Limpiar partidos TEST
             </button>
           </div>
         </div>
