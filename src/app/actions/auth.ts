@@ -14,13 +14,12 @@ export async function login(_: unknown, formData: FormData) {
 
   const email = formData.get('email') as string
   const password = formData.get('password') as string
+  const next = (formData.get('next') as string | null)?.trim() || null
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) return { error: error.message }
 
-  // Sync locale cookie with the user's stored preference so the session
-  // picks up their language right away.
   if (data.user) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -33,7 +32,7 @@ export async function login(_: unknown, formData: FormData) {
     }
   }
 
-  const path = await getHomeRedirectPath()
+  const path = next && next.startsWith('/') ? next : await getHomeRedirectPath()
   redirect(path)
 }
 

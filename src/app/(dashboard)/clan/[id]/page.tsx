@@ -1,16 +1,18 @@
 import { MissingPredictionsBanner } from "@/app/_components/MissingPredictionsBanner";
+import { MissingFinalPredictionsBanner } from "@/app/_components/MissingFinalPredictionsBanner";
 import { DateCarousel } from "@/app/(dashboard)/matches/_components/DateCarousel";
-import { getClanData, getUserClans } from "@/app/actions/clans";
+import { getClanData, getUserClans, getTournamentDeadline } from "@/app/actions/clans";
 import { getMatchesWithPredictions } from "@/app/actions/predictions";
+import { getMyTournamentPrediction } from "@/app/actions/tournament";
 import { format, getDict } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_CLAN_SETTINGS } from "@/lib/types";
-import { Settings } from "lucide-react";
+import { HelpCircle, Settings } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ClanCookieSync } from "./_components/ClanCookieSync";
-import { CopyButton } from "./_components/CopyButton";
-import { PoolSwitcher } from "./_components/PoolSwitcher";
+import { PoolSwitcherModal } from "./_components/PoolSwitcherModal";
+import { InviteButton } from "./_components/InviteButton";
 
 export default async function ClanPage({
   params,
@@ -29,61 +31,73 @@ export default async function ClanPage({
 
   const settings = clan.settings ?? DEFAULT_CLAN_SETTINGS;
   const isOwner = clan.owner_id === user.id;
-  const showInviteCode = isOwner || settings.can_members_invite;
+  const canInvite = isOwner || settings.can_members_invite;
 
-  const [matchesWithPreds, clans, { dict, locale }] = await Promise.all([
+  const [matchesWithPreds, clans, { dict, locale }, deadline, myFinalPred] = await Promise.all([
     getMatchesWithPredictions(id),
     getUserClans(),
     getDict(),
+    getTournamentDeadline(),
+    getMyTournamentPrediction(id),
   ]);
 
-  const upcomingMatches = matchesWithPreds.filter(
-    (m) => m.status === "upcoming",
-  );
+  const now = new Date();
+  const isPastDeadline = deadline ? now >= deadline : false;
+
+  const upcomingMatches = matchesWithPreds.filter((m) => m.status === "upcoming");
   const missingUpcoming = upcomingMatches.filter((m) => !m.prediction).length;
+  const hasFinalPredictions = settings.final_predictions != null;
+  const missingFinalPreds = hasFinalPredictions && !myFinalPred;
+
+  // Banner logic: show match banner first; if all match preds done, show final banner.
+  // Both hide after deadline.
+  const showMatchBanner = !isPastDeadline && missingUpcoming > 0;
+  const showFinalBanner = !isPastDeadline && !showMatchBanner && missingFinalPreds;
 
   return (
     <div className="space-y-6">
       <ClanCookieSync clanId={id} />
       <div className="space-y-4">
+        {/* Header row */}
         <div className="flex items-center justify-between gap-4">
+          {/* Left: clan name + modal trigger */}
           <div className="min-w-0">
-            {showInviteCode && (
-              <div className="flex items-center gap-2">
-                <span className="text-blue-400 text-sm font-mono">
-                  {clan.invite_code}
-                </span>
-                <CopyButton
-                  code={clan.invite_code}
-                  label={dict.clan.copy_code}
-                />
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <PoolSwitcher
+            <PoolSwitcherModal
               currentId={clan.id}
+              currentName={clan.name}
               clans={clans}
               clanDict={dict.clan}
               navDict={dict.nav}
               dashboardDict={dict.dashboard}
             />
+          </div>
+
+          {/* Right: invite + settings */}
+          <div className="flex items-center gap-2 shrink-0">
+            {canInvite && !isPastDeadline && (
+              <InviteButton inviteCode={clan.invite_code} dict={dict.invite} />
+            )}
             <Link
               href={`/clan/${id}/settings`}
               className="flex items-center justify-center w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 text-blue-300 hover:text-white transition"
               aria-label={dict.clan_settings.title}
             >
-              <Settings className="w-4 h-4" />
+              {isOwner ? <Settings className="w-4 h-4" /> : <HelpCircle className="w-4 h-4" />}
             </Link>
           </div>
         </div>
 
-        <MissingPredictionsBanner
-          clanId={id}
-          count={missingUpcoming}
-          dict={dict.clan}
-          format={format}
-        />
+        {showMatchBanner && (
+          <MissingPredictionsBanner
+            clanId={id}
+            count={missingUpcoming}
+            dict={dict.clan}
+            format={format}
+          />
+        )}
+        {showFinalBanner && (
+          <MissingFinalPredictionsBanner clanId={id} dict={dict.final_predictions} />
+        )}
       </div>
 
       <DateCarousel

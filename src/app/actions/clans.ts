@@ -3,8 +3,9 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getDict } from '@/lib/i18n/server'
-import type { Clan, ClanSettings } from '@/lib/types'
+import type { Clan, ClanSettings, FinalPredictionsCustomField } from '@/lib/types'
 import { DEFAULT_CLAN_SETTINGS } from '@/lib/types'
 
 export async function createClan(_: unknown, formData: FormData) {
@@ -152,10 +153,34 @@ export async function updateClanSettings(_: unknown, formData: FormData) {
   if (isNaN(pointsExact) || pointsExact < 0) return { error: dict.common.error }
   if (isNaN(pointsSign) || pointsSign < 0) return { error: dict.common.error }
 
+  const winnerPts     = parseInt(formData.get('final_winner_pts')     as string, 10)
+  const runnerUpPts   = parseInt(formData.get('final_runner_up_pts')  as string, 10)
+  const semi1Pts      = parseInt(formData.get('final_semi1_pts')      as string, 10)
+  const semi2Pts      = parseInt(formData.get('final_semi2_pts')      as string, 10)
+  const topScorerPts  = parseInt(formData.get('final_top_scorer_pts') as string, 10)
+  const customFieldsRaw = formData.get('custom_fields_json') as string | null
+
+  let customFields: FinalPredictionsCustomField[] = []
+  try {
+    if (customFieldsRaw) customFields = JSON.parse(customFieldsRaw)
+  } catch { /* ignore */ }
+
+  const hasFinalPredConfig = !isNaN(winnerPts) && !isNaN(runnerUpPts)
+
   const settings: ClanSettings = {
     points_exact: pointsExact,
     points_sign: pointsSign,
     can_members_invite: canMembersInvite,
+    ...(hasFinalPredConfig ? {
+      final_predictions: {
+        winner_pts: winnerPts,
+        runner_up_pts: runnerUpPts,
+        semi1_pts: isNaN(semi1Pts) ? 5 : semi1Pts,
+        semi2_pts: isNaN(semi2Pts) ? 5 : semi2Pts,
+        top_scorer_pts: isNaN(topScorerPts) ? 5 : topScorerPts,
+        custom_fields: customFields,
+      },
+    } : {}),
   }
 
   const { error } = await supabase
@@ -174,6 +199,71 @@ export async function updateClanSettings(_: unknown, formData: FormData) {
 
 export async function refreshClanPage(clanId: string) {
   revalidatePath(`/clan/${clanId}`)
+}
+
+export async function removeClanMember(clanId: string, targetUserId: string): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { dict } = await getDict()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: dict.common.error }
+
+  const clan = await getClanData(clanId)
+  if (!clan || clan.owner_id !== user.id) return { error: dict.common.error }
+  if (targetUserId === user.id) return { error: dict.clan_settings.member_remove_self }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('clan_members')
+    .delete()
+    .eq('clan_id', clanId)
+    .eq('user_id', targetUserId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/clan/${clanId}/settings`)
+  return {}
+}
+
+export async function joinClanByCode(code: string): Promise<{ error?: string; clanId?: string }> {
+  const supabase = await createClient()
+  const { dict } = await getDict()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: dict.common.error }
+
+  const { data: clanData, error: clanError } = await supabase
+    .from('clans')
+    .select('id, name')
+    .eq('invite_code', code.toUpperCase())
+    .single()
+
+  if (clanError || !clanData) return { error: dict.invite.invalid_code }
+
+  const { error: joinError } = await supabase
+    .from('clan_members')
+    .insert({ clan_id: clanData.id, user_id: user.id })
+
+  if (joinError) {
+    if (joinError.code === '23505') return { clanId: clanData.id }
+    return { error: joinError.message }
+  }
+
+  revalidatePath(`/clan/${clanData.id}`)
+  return { clanId: clanData.id }
+}
+
+export async function getTournamentDeadline(): Promise<Date | null> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('matches')
+    .select('match_date')
+    .order('match_date', { ascending: true })
+    .limit(1)
+    .single()
+
+  if (!data) return null
+  const d = new Date(data.match_date)
+  d.setHours(d.getHours() - 2)
+  return d
 }
 
 export type MatchRankingEntry = {

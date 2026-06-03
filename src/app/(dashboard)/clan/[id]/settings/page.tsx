@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { getClanData } from '@/app/actions/clans'
+import { getClanData, getClanMembers } from '@/app/actions/clans'
 import { getDict } from '@/lib/i18n/server'
 import { DEFAULT_CLAN_SETTINGS } from '@/lib/types'
 import { ClanSettingsForm } from './_components/ClanSettingsForm'
@@ -13,11 +13,14 @@ export default async function ClanSettingsPage({ params }: { params: Promise<{ i
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const clan = await getClanData(id)
+  const [clan, members, { dict }] = await Promise.all([
+    getClanData(id),
+    getClanMembers(id),
+    getDict(),
+  ])
   if (!clan) notFound()
 
   const isOwner = clan.owner_id === user.id
-  const { dict } = await getDict()
   const settings = clan.settings ?? DEFAULT_CLAN_SETTINGS
 
   return (
@@ -38,6 +41,8 @@ export default async function ClanSettingsPage({ params }: { params: Promise<{ i
         dict={dict.clan_settings}
         commonDict={dict.common}
         readOnly={!isOwner}
+        members={members}
+        currentUserId={user.id}
       />
     </div>
   )

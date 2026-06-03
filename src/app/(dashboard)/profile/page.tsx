@@ -2,10 +2,8 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ChevronRight, LogOut, UserCircle2, KeyRound } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
-import { getUserClans } from '@/app/actions/clans'
 import { logout } from '@/app/actions/auth'
 import { getDict } from '@/lib/i18n/server'
-import { DefaultClanForm } from './_components/DefaultClanForm'
 import { LanguageForm } from './_components/LanguageForm'
 
 export default async function ProfilePage() {
@@ -13,16 +11,10 @@ export default async function ProfilePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, clans] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select('username, default_clan_id, language')
-      .eq('id', user.id)
-      .single(),
-    getUserClans(),
+  const [{ data: profile }, { dict, locale }] = await Promise.all([
+    supabase.from('profiles').select('username, language').eq('id', user.id).single(),
+    getDict(),
   ])
-
-  const { dict, locale } = await getDict()
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
@@ -47,13 +39,6 @@ export default async function ProfilePage() {
         </div>
         <ChevronRight className="w-5 h-5 text-blue-400 group-hover:text-white transition" />
       </Link>
-
-      <DefaultClanForm
-        dict={dict.profile}
-        commonDict={dict.common}
-        clans={clans}
-        current={profile?.default_clan_id ?? null}
-      />
 
       <LanguageForm key={locale} dict={dict.profile} commonDict={dict.common} current={locale} />
 

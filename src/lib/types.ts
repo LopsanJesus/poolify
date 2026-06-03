@@ -1,16 +1,65 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
+export interface FinalPredictionsCustomField {
+  id: string
+  label: string
+  points: number
+}
+
+export interface FinalPredictionsConfig {
+  winner_pts: number
+  runner_up_pts: number
+  semi1_pts: number
+  semi2_pts: number
+  top_scorer_pts: number
+  custom_fields: FinalPredictionsCustomField[]
+}
+
 export interface ClanSettings {
   points_exact: number
   points_sign: number
   can_members_invite: boolean
-  [key: string]: Json
+  final_predictions?: FinalPredictionsConfig
+}
+
+export const DEFAULT_FINAL_PREDICTIONS_CONFIG: FinalPredictionsConfig = {
+  winner_pts: 10,
+  runner_up_pts: 7,
+  semi1_pts: 5,
+  semi2_pts: 5,
+  top_scorer_pts: 5,
+  custom_fields: [],
 }
 
 export const DEFAULT_CLAN_SETTINGS: ClanSettings = {
   points_exact: 4,
   points_sign: 1,
   can_members_invite: true,
+}
+
+export type TournamentPrediction = {
+  id: string
+  clan_id: string
+  user_id: string
+  winner: string | null
+  runner_up: string | null
+  semi1: string | null
+  semi2: string | null
+  top_scorer: string | null
+  custom_answers: Record<string, string>
+  points: number
+  created_at: string
+  updated_at: string
+}
+
+export type TournamentResult = {
+  clan_id: string
+  winner: string | null
+  runner_up: string | null
+  semis: string[]
+  top_scorer: string | null
+  custom_results: Record<string, string>
+  awarded_at: string | null
 }
 
 export interface Database {
@@ -86,6 +135,45 @@ export interface Database {
           { foreignKeyName: 'predictions_match_id_fkey'; columns: ['match_id']; referencedRelation: 'matches'; referencedColumns: ['id'] },
           { foreignKeyName: 'predictions_clan_id_fkey'; columns: ['clan_id']; referencedRelation: 'clans'; referencedColumns: ['id'] }
         ]
+      }
+      tournament_predictions: {
+        Row: {
+          id: string; clan_id: string; user_id: string
+          winner: string | null; runner_up: string | null
+          semi1: string | null; semi2: string | null; top_scorer: string | null
+          custom_answers: Json; points: number
+          created_at: string; updated_at: string
+        }
+        Insert: {
+          id?: string; clan_id: string; user_id: string
+          winner?: string | null; runner_up?: string | null
+          semi1?: string | null; semi2?: string | null; top_scorer?: string | null
+          custom_answers?: Json; points?: number
+        }
+        Update: {
+          winner?: string | null; runner_up?: string | null
+          semi1?: string | null; semi2?: string | null; top_scorer?: string | null
+          custom_answers?: Json; points?: number; updated_at?: string
+        }
+        Relationships: []
+      }
+      tournament_results: {
+        Row: {
+          clan_id: string; winner: string | null; runner_up: string | null
+          semis: string[]; top_scorer: string | null
+          custom_results: Json; awarded_at: string | null
+        }
+        Insert: {
+          clan_id: string; winner?: string | null; runner_up?: string | null
+          semis?: string[]; top_scorer?: string | null
+          custom_results?: Json; awarded_at?: string | null
+        }
+        Update: {
+          winner?: string | null; runner_up?: string | null
+          semis?: string[]; top_scorer?: string | null
+          custom_results?: Json; awarded_at?: string | null
+        }
+        Relationships: []
       }
     }
     Views: Record<string, never>

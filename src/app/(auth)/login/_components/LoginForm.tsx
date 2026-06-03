@@ -17,6 +17,13 @@ function RegisteredBanner({ message }: { message: string }) {
   )
 }
 
+function NextInput() {
+  const params = useSearchParams()
+  const next = params.get('next')
+  if (!next) return null
+  return <input type="hidden" name="next" value={next} />
+}
+
 export function LoginForm({ dict }: { dict: Dict['auth'] }) {
   const [state, action, pending] = useActionState(login, undefined)
 
@@ -35,6 +42,7 @@ export function LoginForm({ dict }: { dict: Dict['auth'] }) {
       )}
 
       <form action={action} className="space-y-4">
+        <Suspense><NextInput /></Suspense>
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-blue-200 mb-1">
             {dict.email}

@@ -171,6 +171,55 @@ insert into public.matches (home_team, away_team, match_date, stage) values
   ('España',    'Argentina',      '2026-06-17 20:00:00+00', 'Grupo B'),
   ('Brasil',    'Francia',        '2026-06-19 20:00:00+00', 'Grupo C');
 
+-- ── Tournament Predictions ────────────────────────────────────
+-- One row per user per clan. Filled before tournament deadline.
+create table public.tournament_predictions (
+  id            uuid primary key default gen_random_uuid(),
+  clan_id       uuid not null references public.clans(id) on delete cascade,
+  user_id       uuid not null references public.profiles(id) on delete cascade,
+  winner        text,
+  runner_up     text,
+  semi1         text,
+  semi2         text,
+  top_scorer    text,
+  custom_answers jsonb not null default '{}'::jsonb,
+  points        int not null default 0,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now(),
+  unique (clan_id, user_id)
+);
+alter table public.tournament_predictions enable row level security;
+
+create policy "Clan members can view tournament predictions"
+  on public.tournament_predictions for select
+  using (public.is_clan_member(clan_id));
+
+create policy "Users can insert their own tournament prediction"
+  on public.tournament_predictions for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can update their own tournament prediction"
+  on public.tournament_predictions for update
+  using (auth.uid() = user_id);
+
+-- ── Tournament Results (owner-set actual results for scoring) ─
+create table public.tournament_results (
+  clan_id        uuid primary key references public.clans(id) on delete cascade,
+  winner         text,
+  runner_up      text,
+  semis          text[] not null default '{}',
+  top_scorer     text,
+  custom_results jsonb not null default '{}'::jsonb,
+  awarded_at     timestamptz
+);
+alter table public.tournament_results enable row level security;
+
+create policy "Clan members can view tournament results"
+  on public.tournament_results for select
+  using (public.is_clan_member(clan_id));
+
+-- Owner writes/updates results via admin client (bypasses RLS).
+
 -- ── Incremental Migration Notes ─────────────────────────────
 -- If a previous version of this schema is already deployed, run the
 -- following statements (they are no-ops on a fresh install):
@@ -186,3 +235,6 @@ insert into public.matches (home_team, away_team, match_date, stage) values
 --   alter table public.clans
 --     add column if not exists settings jsonb not null
 --       default '{"points_exact": 4, "points_sign": 1, "can_members_invite": true}'::jsonb;
+--
+-- NEW (tournament predictions):
+--   Run the tournament_predictions + tournament_results blocks above.
