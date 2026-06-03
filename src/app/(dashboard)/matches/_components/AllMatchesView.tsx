@@ -27,6 +27,8 @@ export function AllMatchesView({
   locale,
   clanId,
   currentUserId,
+  pointsExact,
+  pointsSign,
 }: {
   matches: Match[]
   predictions: Record<string, Prediction>
@@ -34,6 +36,8 @@ export function AllMatchesView({
   locale: Locale
   clanId: string | null
   currentUserId: string
+  pointsExact: number
+  pointsSign: number
 }) {
   const [expanded, setExpanded] = useState<string | null>(null)
 
@@ -85,6 +89,8 @@ export function AllMatchesView({
                   onToggle={() => toggle(m.id)}
                   clanId={clanId}
                   currentUserId={currentUserId}
+                  pointsExact={pointsExact}
+                  pointsSign={pointsSign}
                 />
               ))}
             </div>
@@ -104,6 +110,8 @@ function MatchRow({
   onToggle,
   clanId,
   currentUserId,
+  pointsExact,
+  pointsSign,
 }: {
   match: Match
   prediction: Prediction | null
@@ -113,6 +121,8 @@ function MatchRow({
   onToggle: () => void
   clanId: string | null
   currentUserId: string
+  pointsExact: number
+  pointsSign: number
 }) {
   const isFinished = match.status === 'finished'
   const [rankingRows, setRankingRows] = useState<MatchRankingEntry[] | null>(null)
@@ -197,7 +207,7 @@ function MatchRow({
                 <span className="font-mono font-semibold text-white tabular-nums">
                   {prediction.home_score} – {prediction.away_score}
                 </span>
-                {isFinished && <PointsBadge points={prediction.points} />}
+                {isFinished && <PointsBadge points={prediction.points} exactPts={pointsExact} signPts={pointsSign} />}
               </div>
             ) : (
               <span className="text-sm text-red-300/80">{clanDict.not_submitted}</span>
@@ -227,6 +237,8 @@ function MatchRow({
                       rank={idx + 1}
                       isCurrentUser={entry.user_id === currentUserId}
                       clanDict={clanDict}
+                      pointsExact={pointsExact}
+                      pointsSign={pointsSign}
                     />
                   ))}
                 </div>
@@ -244,11 +256,15 @@ function MatchRankingRow({
   rank,
   isCurrentUser,
   clanDict,
+  pointsExact,
+  pointsSign,
 }: {
   entry: MatchRankingEntry
   rank: number
   isCurrentUser: boolean
   clanDict: Dict['clan']
+  pointsExact: number
+  pointsSign: number
 }) {
   const pred = entry.prediction
 
@@ -276,7 +292,7 @@ function MatchRankingRow({
             <span className="font-mono text-xs text-white/60 tabular-nums">
               {pred.home_score}–{pred.away_score}
             </span>
-            <PointsBadge points={pred.points} />
+            <PointsBadge points={pred.points} exactPts={pointsExact} signPts={pointsSign} />
           </>
         ) : (
           <span className="text-xs text-white/25">—</span>
@@ -311,10 +327,10 @@ function StatusChip({ status, clanDict }: { status: string; clanDict: Dict['clan
   )
 }
 
-function PointsBadge({ points }: { points: number }) {
-  if (points === 4)
-    return <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 font-bold">+4</span>
-  if (points === 1)
-    return <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/30 text-blue-300 font-bold">+1</span>
+function PointsBadge({ points, exactPts, signPts }: { points: number; exactPts: number; signPts: number }) {
+  if (points === exactPts)
+    return <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 font-bold">+{exactPts}</span>
+  if (points === signPts)
+    return <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/30 text-blue-300 font-bold">+{signPts}</span>
   return <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400">0</span>
 }
