@@ -1,7 +1,7 @@
 import { PwaInstallModal } from "@/app/_components/PwaInstallModal";
 import { getActiveClanId } from "@/lib/active-clan";
 import { getDict } from "@/lib/i18n/server";
-import { getUserClans } from "@/app/actions/clans";
+import { getUserClans, getClanData, getTournamentDeadline } from "@/app/actions/clans";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { NavBar } from "./_components/NavBar";
@@ -18,16 +18,23 @@ export default async function DashboardLayout({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ dict }, activeClanId, clans] = await Promise.all([
+  const [{ dict }, activeClanId, clans, deadline] = await Promise.all([
     getDict(),
     getActiveClanId(),
     getUserClans(),
+    getTournamentDeadline(),
   ]);
 
-  let activeClanName: string | null = null;
-  if (activeClanId) {
-    const found = clans.find((c) => c.id === activeClanId);
-    activeClanName = found?.name ?? null;
+  const activeClan = clans.find((c) => c.id === activeClanId) ?? null;
+  const activeClanName = activeClan?.name ?? null;
+  const isOwner = activeClan?.owner_id === user.id;
+  const isPastDeadline = deadline ? new Date() >= deadline : false;
+
+  // Can show invite button: owner always, members if settings allow
+  let canInvite = isOwner;
+  if (activeClanId && !isOwner) {
+    const clanData = await getClanData(activeClanId);
+    canInvite = clanData?.settings?.can_members_invite ?? true;
   }
 
   return (
@@ -35,10 +42,16 @@ export default async function DashboardLayout({
       <TopBar
         activeClanId={activeClanId}
         activeClanName={activeClanName}
+        inviteCode={activeClan?.invite_code ?? null}
+        isOwner={isOwner}
+        canInvite={canInvite}
+        isPastDeadline={isPastDeadline}
         clans={clans}
         clanDict={dict.clan}
         navDict={dict.nav}
         dashboardDict={dict.dashboard}
+        inviteDict={dict.invite}
+        settingsTitle={dict.clan_settings.title}
       />
       <NavBar activeClanId={activeClanId} />
 
