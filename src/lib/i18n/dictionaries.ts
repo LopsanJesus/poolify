@@ -96,6 +96,8 @@ const en = {
     missing_banner_desc: "Don't leave points on the table — submit them now.",
     missing_banner_cta: 'Fill predictions',
     copy_code: 'Copy code',
+    match_ranking: 'Ranking after this match',
+    ranking_gained: 'Gained',
   },
   predictions: {
     title: 'My predictions',
@@ -309,6 +311,8 @@ const es: typeof en = {
     missing_banner_desc: 'No dejes puntos sobre la mesa — complétalos ahora.',
     missing_banner_cta: 'Rellenar pronósticos',
     copy_code: 'Copiar código',
+    match_ranking: 'Clasificación tras este partido',
+    ranking_gained: 'Ganado',
   },
   predictions: {
     title: 'Mis pronósticos',
@@ -523,6 +527,8 @@ const de: typeof en = {
     missing_banner_desc: 'Lass keine Punkte liegen — gib sie jetzt ab.',
     missing_banner_cta: 'Tipps abgeben',
     copy_code: 'Code kopieren',
+    match_ranking: 'Rangliste nach diesem Spiel',
+    ranking_gained: 'Gewonnen',
   },
   predictions: {
     title: 'Meine Tipps',

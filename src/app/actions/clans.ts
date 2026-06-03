@@ -175,3 +175,71 @@ export async function updateClanSettings(_: unknown, formData: FormData) {
 export async function refreshClanPage(clanId: string) {
   revalidatePath(`/clan/${clanId}`)
 }
+
+export type MatchRankingEntry = {
+  user_id: string
+  username: string
+  prediction: { home_score: number; away_score: number; points: number } | null
+  total: number
+  joined_at: string | null
+}
+
+export async function getRankingUpToMatch(clanId: string, matchId: string): Promise<MatchRankingEntry[]> {
+  const supabase = await createClient()
+
+  const { data: matchData } = await supabase
+    .from('matches')
+    .select('match_date, status')
+    .eq('id', matchId)
+    .single()
+
+  if (!matchData || matchData.status !== 'finished') return []
+
+  const matchDate = matchData.match_date
+
+  const [{ data: memberData }, { data: finishedMatchData }] = await Promise.all([
+    supabase.from('clan_members').select('user_id, joined_at, profiles(username)').eq('clan_id', clanId),
+    supabase.from('matches').select('id').lte('match_date', matchDate).eq('status', 'finished'),
+  ])
+
+  const ids = (finishedMatchData ?? []).map((m) => m.id)
+  if (ids.length === 0) return []
+
+  const { data: predData } = await supabase
+    .from('predictions')
+    .select('user_id, match_id, home_score, away_score, points')
+    .eq('clan_id', clanId)
+    .in('match_id', ids)
+
+  type MemberRow = { user_id: string; joined_at: string | null; profiles: { username: string } | null }
+  type PredRow = { user_id: string; match_id: string; home_score: number; away_score: number; points: number | null }
+
+  const members = (memberData ?? []) as unknown as MemberRow[]
+  const preds = (predData ?? []) as unknown as PredRow[]
+
+  const map = new Map<string, MatchRankingEntry>()
+  for (const m of members) {
+    map.set(m.user_id, {
+      user_id: m.user_id,
+      username: m.profiles?.username ?? m.user_id,
+      prediction: null,
+      total: 0,
+      joined_at: m.joined_at ?? null,
+    })
+  }
+
+  for (const row of preds) {
+    const entry = map.get(row.user_id)
+    if (!entry) continue
+    const pts = row.points ?? 0
+    entry.total += pts
+    if (row.match_id === matchId) {
+      entry.prediction = { home_score: row.home_score, away_score: row.away_score, points: pts }
+    }
+  }
+
+  return [...map.values()].sort((a, b) => {
+    if (b.total !== a.total) return b.total - a.total
+    return (a.joined_at ?? '').localeCompare(b.joined_at ?? '')
+  })
+}

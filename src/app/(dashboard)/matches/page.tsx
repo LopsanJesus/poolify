@@ -31,6 +31,8 @@ export default async function MatchesPage() {
         predictions={predictions}
         clanDict={dict.clan}
         locale={locale}
+        clanId={activeClanId ?? null}
+        currentUserId={user.id}
       />
     </div>
   );
