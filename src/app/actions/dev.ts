@@ -199,6 +199,27 @@ export async function seedTestUsers() {
   return { success: true, results };
 }
 
+export async function resetAllData() {
+  await checkAuth();
+  const admin = createAdminClient();
+
+  // Order matters: delete dependents before parents
+  await admin.from("tournament_predictions").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  await admin.from("tournament_results").delete().neq("clan_id", "00000000-0000-0000-0000-000000000000");
+  await admin.from("predictions").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  await admin.from("clan_members").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  await admin.from("clans").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  await admin.from("matches").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+
+  // Clear default_clan_id references in profiles (FK would be null from cascade but just in case)
+  await admin.from("profiles").update({ default_clan_id: null }).neq("id", "00000000-0000-0000-0000-000000000000");
+
+  revalidatePath("/dev-shell");
+  revalidatePath("/matches");
+  revalidatePath("/ranking");
+  return { success: true };
+}
+
 export async function deleteTestMatches() {
   await checkAuth();
   const admin = createAdminClient();

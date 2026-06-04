@@ -7,6 +7,7 @@ import {
   deleteTestUser,
   deleteTestMatches,
   impersonateUser,
+  resetAllData,
   seedDatabase,
   seedTestUsers,
   seedPreTournament,
@@ -19,6 +20,7 @@ import {
   Loader2,
   LogIn,
   Play,
+  RotateCcw,
   Sprout,
   Trash2,
   UserPlus,
@@ -130,6 +132,20 @@ export function DevShellClient({
       }
     } catch {
       alert("Error");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleResetAllData = async () => {
+    if (!confirm("NUCLEAR: borrar TODOS los partidos, porras, predicciones y miembros. Usuarios intactos. ¿Continuar?")) return;
+    setLoading("reset-all");
+    try {
+      await resetAllData();
+      alert("Base de datos reseteada. Solo quedan los usuarios.");
+      router.refresh();
+    } catch {
+      alert("Error al resetear");
     } finally {
       setLoading(null);
     }
@@ -263,6 +279,15 @@ export function DevShellClient({
             </button>
           </form>
           <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleResetAllData}
+              disabled={!!loading}
+              className="flex items-center gap-2 px-4 py-2.5 bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+            >
+              {loading === "reset-all" ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+              Reset DB (mantener usuarios)
+            </button>
             <button
               type="button"
               onClick={handleSeed}
