@@ -55,9 +55,9 @@ export function MatchCard({
 
         <div className="flex items-center gap-4">
           <div className="flex-1 text-right">
-            <p className="text-white font-semibold flex items-center justify-end gap-2">
+            <div className="text-white font-semibold flex items-center justify-end gap-2">
               {match.home_team ?? <TBD />} <TeamFlag team={match.home_team} />
-            </p>
+            </div>
           </div>
 
           <div className="text-center px-3">
@@ -82,9 +82,9 @@ export function MatchCard({
           </div>
 
           <div className="flex-1">
-            <p className="text-white font-semibold flex items-center gap-2">
+            <div className="text-white font-semibold flex items-center gap-2">
               <TeamFlag team={match.away_team} /> {match.away_team ?? <TBD />}
-            </p>
+            </div>
           </div>
         </div>
 

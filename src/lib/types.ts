@@ -104,16 +104,19 @@ export interface Database {
         Row: {
           id: string; home_team: string | null; away_team: string | null; match_date: string
           home_score: number | null; away_score: number | null
-          stage: string; status: 'upcoming' | 'live' | 'finished'; created_at: string
+          stage: string; status: 'upcoming' | 'live' | 'finished'
+          tournament_id: string | null; created_at: string
         }
         Insert: {
           id?: string; home_team?: string | null; away_team?: string | null; match_date: string
           home_score?: number | null; away_score?: number | null
           stage?: string; status?: 'upcoming' | 'live' | 'finished'
+          tournament_id?: string | null
         }
         Update: {
           home_score?: number | null; away_score?: number | null
           status?: 'upcoming' | 'live' | 'finished'
+          tournament_id?: string | null
         }
         Relationships: []
       }
@@ -179,6 +182,19 @@ export interface Database {
     Views: Record<string, never>
     Functions: Record<string, never>
   }
+}
+
+export type Tournament = {
+  id: string
+  name: string
+  status: 'upcoming' | 'in_progress' | 'finished'
+  created_at: string
+}
+
+export type ClanTournament = {
+  clan_id: string
+  tournament_id: string
+  joined_at: string
 }
 
 // Convenience row types

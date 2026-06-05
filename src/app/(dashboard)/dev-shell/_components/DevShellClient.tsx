@@ -12,17 +12,21 @@ import {
   seedTestUsers,
   seedPreTournament,
   seedInProgress,
+  seedFakeWorldCup,
+  seedRealWorldCup,
 } from "@/app/actions/dev";
 import {
   AlertTriangle,
   Calendar,
   Database,
+  Globe,
   Loader2,
   LogIn,
   Play,
   RotateCcw,
   Sprout,
   Trash2,
+  Trophy,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -128,6 +132,40 @@ export function DevShellClient({
         alert(res.error);
       } else if ("success" in res && res.success) {
         alert(`Torneo en juego creado.\nGrupo: "${res.clanName}"\n${res.matches} partidos · ${res.predictions} predicciones · ${res.users} usuarios`);
+        router.refresh();
+      }
+    } catch {
+      alert("Error");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleSeedFakeWorldCup = async () => {
+    setLoading("seed-fake-wc");
+    try {
+      const res = await seedFakeWorldCup();
+      if ("error" in res && res.error) {
+        alert(res.error);
+      } else if ("success" in res && res.success) {
+        alert(`Mundial Fake creado.\nGrupo: "${res.clanName}"\n${res.matches} partidos · ${res.predictions} predicciones · ${res.users} usuarios`);
+        router.refresh();
+      }
+    } catch {
+      alert("Error");
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleSeedRealWorldCup = async () => {
+    setLoading("seed-real-wc");
+    try {
+      const res = await seedRealWorldCup();
+      if ("error" in res && res.error) {
+        alert(res.error);
+      } else if ("success" in res && res.success) {
+        alert(`Mundial Real 2026 creado.\nGrupo: "${res.clanName}"\n${res.matches} partidos (horario Madrid) · ${res.users} usuarios`);
         router.refresh();
       }
     } catch {
@@ -327,6 +365,24 @@ export function DevShellClient({
             >
               {loading === "seed-live" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
               Torneo en juego
+            </button>
+            <button
+              type="button"
+              onClick={handleSeedFakeWorldCup}
+              disabled={!!loading}
+              className="flex items-center gap-2 px-4 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+            >
+              {loading === "seed-fake-wc" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trophy className="w-4 h-4" />}
+              Mundial Fake en juego
+            </button>
+            <button
+              type="button"
+              onClick={handleSeedRealWorldCup}
+              disabled={!!loading}
+              className="flex items-center gap-2 px-4 py-2.5 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 rounded-xl text-sm font-semibold transition-all disabled:opacity-50"
+            >
+              {loading === "seed-real-wc" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
+              Mundial Real 2026
             </button>
             <button
               type="button"

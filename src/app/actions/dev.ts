@@ -3,6 +3,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Profile } from "@/lib/types";
 import { revalidatePath } from "next/cache";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 const TEST_USER_PREFIX = "test-user-";
 const TEST_USER_DOMAIN = "poolify.test";
@@ -208,8 +210,11 @@ export async function resetAllData() {
   await admin.from("tournament_results").delete().neq("clan_id", "00000000-0000-0000-0000-000000000000");
   await admin.from("predictions").delete().neq("id", "00000000-0000-0000-0000-000000000000");
   await admin.from("clan_members").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  // clan_tournaments cascades on clan delete, but delete explicitly first for clarity
+  await admin.from("clan_tournaments" as never).delete().neq("clan_id", "00000000-0000-0000-0000-000000000000");
   await admin.from("clans").delete().neq("id", "00000000-0000-0000-0000-000000000000");
   await admin.from("matches").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  await admin.from("tournaments" as never).delete().neq("id", "00000000-0000-0000-0000-000000000000");
 
   // Clear default_clan_id references in profiles (FK would be null from cascade but just in case)
   await admin.from("profiles").update({ default_clan_id: null }).neq("id", "00000000-0000-0000-0000-000000000000");
@@ -398,6 +403,198 @@ export async function seedInProgress() {
   revalidatePath("/matches");
   revalidatePath("/ranking");
   return { success: true, clanId, clanName: "Porra en juego", matches: createdMatches.length, predictions: predictions.length, users: users.length };
+}
+
+// ── Helper: subscribe a clan to a tournament ──────────────────
+
+async function subscribeClanToTournament(
+  admin: ReturnType<typeof createAdminClient>,
+  clanId: string,
+  tournamentId: string,
+) {
+  await (admin as any)
+    .from("clan_tournaments")
+    .upsert({ clan_id: clanId, tournament_id: tournamentId }, { onConflict: "clan_id,tournament_id" });
+}
+
+// ── Helper: convert WC JSON time to UTC ISO string ────────────
+// Input: date "2026-06-11", time "13:00 UTC-6"
+// Madrid summer = UTC+2 → stored UTC = local time - UTC offset
+function wcTimeToISO(date: string, time: string): string {
+  const m = time.match(/^(\d{2}):(\d{2})\s+UTC([+-]\d+)$/);
+  if (!m) throw new Error(`Bad time format: ${time}`);
+  const h = parseInt(m[1]);
+  const min = parseInt(m[2]);
+  const offset = parseInt(m[3]); // e.g. -6
+  // UTC hours = local hours - offset (since local = UTC + offset)
+  const utcMs = Date.UTC(
+    parseInt(date.slice(0, 4)),
+    parseInt(date.slice(5, 7)) - 1,
+    parseInt(date.slice(8, 10)),
+    h - offset,
+    min,
+  );
+  return new Date(utcMs).toISOString();
+}
+
+// ── Scenario: Fake World Cup in progress ──────────────────────
+
+export async function seedFakeWorldCup() {
+  await checkAuth();
+  const admin = createAdminClient();
+
+  const { data: { users: allUsers } } = await admin.auth.admin.listUsers();
+  const testUsers = allUsers.filter(
+    (u) => (u.email?.startsWith(TEST_USER_PREFIX) && u.email?.endsWith(TEST_USER_DOMAIN)) || u.email?.endsWith(`@${FIXED_TEST_DOMAIN}`),
+  );
+  if (testUsers.length === 0) return { error: "No test users. Run 'Seed users' first." };
+
+  const { data: profiles } = await admin.from("profiles").select("id, username").in("id", testUsers.map((u) => u.id));
+  const users = testUsers.map((u) => ({
+    id: u.id,
+    username: (profiles as { id: string; username: string }[])?.find((p) => p.id === u.id)?.username ?? "unknown",
+  }));
+
+  // Create or reuse tournament
+  let tournamentId: string;
+  const { data: existingT } = await (admin as any).from("tournaments").select("id").eq("name", "Mundial Fake 2026").single();
+  if (existingT) {
+    tournamentId = (existingT as { id: string }).id;
+    await admin.from("matches").delete().eq("tournament_id" as never, tournamentId);
+  } else {
+    const { data: newT, error: tErr } = await (admin as any)
+      .from("tournaments")
+      .insert({ name: "Mundial Fake 2026", status: "in_progress" })
+      .select("id").single();
+    if (tErr || !newT) return { error: `Tournament: ${tErr?.message}` };
+    tournamentId = (newT as { id: string }).id;
+  }
+
+  const now = new Date();
+  const daysAgo = (d: number, h = 15) => { const t = new Date(now); t.setDate(t.getDate() - d); t.setHours(h, 0, 0, 0); return t.toISOString(); };
+  const hoursAgo = (h: number) => new Date(now.getTime() - h * 60 * 60 * 1000).toISOString();
+  const hoursFromNow = (h: number) => new Date(now.getTime() + h * 60 * 60 * 1000).toISOString();
+
+  const FINISHED = [
+    { home: "España",    away: "Alemania",     home_score: 2, away_score: 1, date: daysAgo(3), stage: "Grupo A" },
+    { home: "Francia",   away: "Portugal",     home_score: 0, away_score: 0, date: daysAgo(2), stage: "Grupo B" },
+    { home: "Brasil",    away: "Argentina",    home_score: 1, away_score: 3, date: daysAgo(1), stage: "Grupo C" },
+  ];
+  const LIVE = [
+    { home: "Marruecos", away: "Senegal",      date: hoursAgo(1), stage: "Grupo D" },
+  ];
+  const UPCOMING = [
+    { home: "Japón",     away: "Corea del Sur",date: hoursFromNow(4),  stage: "Grupo E" },
+    { home: "México",    away: "Uruguay",      date: hoursFromNow(28), stage: "Grupo F" },
+    { home: "Inglaterra",away: "Italia",       date: hoursFromNow(52), stage: "Grupo G" },
+  ];
+
+  const rows = [
+    ...FINISHED.map((m) => ({ home_team: m.home, away_team: m.away, match_date: m.date, stage: m.stage, status: "finished" as const, home_score: m.home_score, away_score: m.away_score, tournament_id: tournamentId })),
+    ...LIVE.map((m)     => ({ home_team: m.home, away_team: m.away, match_date: m.date, stage: m.stage, status: "live" as const, tournament_id: tournamentId })),
+    ...UPCOMING.map((m) => ({ home_team: m.home, away_team: m.away, match_date: m.date, stage: m.stage, status: "upcoming" as const, tournament_id: tournamentId })),
+  ];
+
+  const { data: createdMatches, error: matchErr } = await admin.from("matches").insert(rows as never[]).select("id, home_score, away_score, status");
+  if (matchErr || !createdMatches) return { error: `Matches: ${matchErr?.message}` };
+
+  const clanId = await getOrCreateTestClan(admin, "Porra Fake en Juego", users[0].id);
+  await addMembersToClan(admin, clanId, users);
+  await subscribeClanToTournament(admin, clanId, tournamentId);
+
+  type CreatedMatch = { id: string; home_score: number | null; away_score: number | null; status: string };
+  const finishedCreated = (createdMatches as CreatedMatch[]).filter((m) => m.status === "finished") as { id: string; home_score: number; away_score: number }[];
+
+  const OUTCOME_PATTERNS: Array<Array<"exact" | "winner" | "miss">> = [
+    ["exact", "exact",  "winner"],
+    ["exact", "winner", "exact"],
+    ["winner","exact",  "miss"],
+    ["miss",  "winner", "exact"],
+    ["winner","miss",   "exact"],
+  ];
+
+  const predictions = [];
+  for (let ui = 0; ui < users.length; ui++) {
+    const pattern = OUTCOME_PATTERNS[ui % OUTCOME_PATTERNS.length];
+    for (let mi = 0; mi < finishedCreated.length; mi++) {
+      const pred = makePrediction(finishedCreated[mi], pattern[mi % pattern.length]);
+      predictions.push({ user_id: users[ui].id, clan_id: clanId, match_id: finishedCreated[mi].id, ...pred });
+    }
+  }
+
+  const { error: predErr } = await admin.from("predictions").upsert(predictions, { onConflict: "user_id,clan_id,match_id" });
+  if (predErr) return { error: `Predictions: ${predErr.message}` };
+
+  revalidatePath("/dev-shell");
+  revalidatePath("/matches");
+  revalidatePath("/ranking");
+  return { success: true, clanId, clanName: "Porra Fake en Juego", matches: createdMatches.length, predictions: predictions.length, users: users.length };
+}
+
+// ── Scenario: Real World Cup 2026 ────────────────────────────
+
+export async function seedRealWorldCup() {
+  await checkAuth();
+  const admin = createAdminClient();
+
+  const { data: { users: allUsers } } = await admin.auth.admin.listUsers();
+  const testUsers = allUsers.filter(
+    (u) => (u.email?.startsWith(TEST_USER_PREFIX) && u.email?.endsWith(TEST_USER_DOMAIN)) || u.email?.endsWith(`@${FIXED_TEST_DOMAIN}`),
+  );
+  if (testUsers.length === 0) return { error: "No test users. Run 'Seed users' first." };
+
+  const { data: profiles } = await admin.from("profiles").select("id, username").in("id", testUsers.map((u) => u.id));
+  const users = testUsers.map((u) => ({
+    id: u.id,
+    username: (profiles as { id: string; username: string }[])?.find((p) => p.id === u.id)?.username ?? "unknown",
+  }));
+
+  // Create or reuse tournament
+  let tournamentId: string;
+  const { data: existingT } = await (admin as any).from("tournaments").select("id").eq("name", "World Cup 2026").single();
+  if (existingT) {
+    tournamentId = (existingT as { id: string }).id;
+    await admin.from("matches").delete().eq("tournament_id" as never, tournamentId);
+  } else {
+    const { data: newT, error: tErr } = await (admin as any)
+      .from("tournaments")
+      .insert({ name: "World Cup 2026", status: "upcoming" })
+      .select("id").single();
+    if (tErr || !newT) return { error: `Tournament: ${tErr?.message}` };
+    tournamentId = (newT as { id: string }).id;
+  }
+
+  // Read and parse worldcup_games.json from project root
+  const wcJson = JSON.parse(readFileSync(join(process.cwd(), "worldcup_games.json"), "utf-8")) as {
+    matches: Array<{
+      round: string; date: string; time: string;
+      team1: string; team2: string;
+      group?: string; ground?: string; num?: number;
+    }>;
+  };
+
+  // Only group stage matches (those with a real group field)
+  const groupMatches = wcJson.matches.filter((m) => m.group != null);
+
+  const matchRows = groupMatches.map((m) => ({
+    home_team: m.team1,
+    away_team: m.team2,
+    match_date: wcTimeToISO(m.date, m.time),
+    stage: `${m.group} – ${m.round}`,
+    status: "upcoming" as const,
+    tournament_id: tournamentId,
+  }));
+
+  const { data: createdMatches, error: matchErr } = await admin.from("matches").insert(matchRows as never[]).select("id");
+  if (matchErr || !createdMatches) return { error: `Matches: ${matchErr?.message}` };
+
+  const clanId = await getOrCreateTestClan(admin, "Porra Mundial Real 2026", users[0].id);
+  await addMembersToClan(admin, clanId, users);
+  await subscribeClanToTournament(admin, clanId, tournamentId);
+
+  revalidatePath("/dev-shell");
+  revalidatePath("/matches");
+  return { success: true, clanId, clanName: "Porra Mundial Real 2026", matches: createdMatches.length, users: users.length };
 }
 
 export async function addUserToClan(userId: string, clanId: string) {

@@ -68,9 +68,27 @@ export async function getUserPredictionsForClan(clanId: string): Promise<Record<
   return Object.fromEntries((data as Prediction[]).map((p) => [p.match_id, p]))
 }
 
-export async function getAllMatches() {
+async function getTournamentIdsForClan(supabase: Awaited<ReturnType<typeof createClient>>, clanId: string): Promise<string[] | null> {
+  const { data } = await supabase
+    .from('clan_tournaments')
+    .select('tournament_id')
+    .eq('clan_id', clanId)
+  if (!data || data.length === 0) return null
+  return (data as { tournament_id: string }[]).map(r => r.tournament_id)
+}
+
+export async function getAllMatches(clanId?: string) {
   const supabase = await createClient()
-  const { data } = await supabase.from('matches').select('*').order('match_date')
+  let query = supabase.from('matches').select('*').order('match_date')
+
+  if (clanId) {
+    const tournamentIds = await getTournamentIdsForClan(supabase, clanId)
+    if (tournamentIds) {
+      query = query.in('tournament_id', tournamentIds)
+    }
+  }
+
+  const { data } = await query
   return (data ?? []) as Match[]
 }
 
@@ -79,18 +97,19 @@ export async function getMatchesWithPredictions(clanId: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
-  const [{ data: matchData }, { data: predData }] = await Promise.all([
+  const [{ data: matchData }, { data: predData }, tournamentIds] = await Promise.all([
     supabase.from('matches').select('*').order('match_date'),
-    supabase
-      .from('predictions')
-      .select('*')
-      .eq('clan_id', clanId)
-      .eq('user_id', user.id),
+    supabase.from('predictions').select('*').eq('clan_id', clanId).eq('user_id', user.id),
+    getTournamentIdsForClan(supabase, clanId),
   ])
 
-  const matches = (matchData ?? []) as Match[]
-  const predictions = (predData ?? []) as Prediction[]
+  let matches = (matchData ?? []) as Match[]
+  if (tournamentIds) {
+    const idSet = new Set(tournamentIds)
+    matches = matches.filter(m => m.tournament_id != null && idSet.has(m.tournament_id))
+  }
 
+  const predictions = (predData ?? []) as Prediction[]
   return matches.map((match) => ({
     ...match,
     prediction: predictions.find((p) => p.match_id === match.id) ?? null,

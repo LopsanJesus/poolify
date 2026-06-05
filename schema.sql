@@ -16,6 +16,9 @@ drop policy if exists "Anyone can view matches" on public.matches;
 drop policy if exists "Clan members can view predictions in their clan" on public.predictions;
 drop policy if exists "Users can insert their own predictions" on public.predictions;
 drop policy if exists "Users can update their own predictions" on public.predictions;
+drop policy if exists "Anyone can view tournaments" on public.tournaments;
+drop policy if exists "Clan members can view clan_tournaments" on public.clan_tournaments;
+drop policy if exists "Clan owner can manage clan_tournaments" on public.clan_tournaments;
 
 drop trigger if exists on_auth_user_created on auth.users;
 drop function if exists public.handle_new_user();
@@ -23,8 +26,10 @@ drop function if exists public.is_clan_member(uuid);
 
 drop table if exists public.predictions cascade;
 drop table if exists public.clan_members cascade;
+drop table if exists public.clan_tournaments cascade;
 drop table if exists public.clans cascade;
 drop table if exists public.matches cascade;
+drop table if exists public.tournaments cascade;
 drop table if exists public.profiles cascade;
 
 -- Enable UUID generation
@@ -121,17 +126,31 @@ create policy "Clan members can view their clan"
   on public.clans for select
   using (public.is_clan_member(id));
 
+-- ── Tournaments ──────────────────────────────────────────────
+create table public.tournaments (
+  id          uuid primary key default gen_random_uuid(),
+  name        text not null,
+  status      text not null default 'upcoming'
+              check (status in ('upcoming', 'in_progress', 'finished')),
+  created_at  timestamptz not null default now()
+);
+alter table public.tournaments enable row level security;
+
+create policy "Anyone can view tournaments"
+  on public.tournaments for select using (true);
+
 -- ── Matches ──────────────────────────────────────────────────
 create table public.matches (
-  id          uuid primary key default gen_random_uuid(),
-  home_team   text not null,
-  away_team   text not null,
-  match_date  timestamptz not null,
-  home_score  int,          -- null until the match is finished
-  away_score  int,
-  stage       text not null default 'Group Stage',
-  status      text not null default 'upcoming' check (status in ('upcoming','live','finished')),
-  created_at  timestamptz not null default now()
+  id            uuid primary key default gen_random_uuid(),
+  home_team     text not null,
+  away_team     text not null,
+  match_date    timestamptz not null,
+  home_score    int,
+  away_score    int,
+  stage         text not null default 'Group Stage',
+  status        text not null default 'upcoming' check (status in ('upcoming','live','finished')),
+  tournament_id uuid references public.tournaments(id) on delete set null,
+  created_at    timestamptz not null default now()
 );
 alter table public.matches enable row level security;
 
@@ -220,6 +239,26 @@ create policy "Clan members can view tournament results"
 
 -- Owner writes/updates results via admin client (bypasses RLS).
 
+-- ── Clan Tournaments ─────────────────────────────────────────
+-- Which tournaments each clan participates in (bets on)
+create table public.clan_tournaments (
+  clan_id        uuid not null references public.clans(id) on delete cascade,
+  tournament_id  uuid not null references public.tournaments(id) on delete cascade,
+  joined_at      timestamptz not null default now(),
+  primary key (clan_id, tournament_id)
+);
+alter table public.clan_tournaments enable row level security;
+
+create policy "Clan members can view clan_tournaments"
+  on public.clan_tournaments for select
+  using (public.is_clan_member(clan_id));
+
+create policy "Clan owner can manage clan_tournaments"
+  on public.clan_tournaments for all
+  using (exists (
+    select 1 from public.clans where id = clan_id and owner_id = auth.uid()
+  ));
+
 -- ── Incremental Migration Notes ─────────────────────────────
 -- If a previous version of this schema is already deployed, run the
 -- following statements (they are no-ops on a fresh install):
@@ -238,3 +277,8 @@ create policy "Clan members can view tournament results"
 --
 -- NEW (tournament predictions):
 --   Run the tournament_predictions + tournament_results blocks above.
+--
+-- NEW (tournaments + clan_tournaments):
+--   create table public.tournaments (...) -- see block above
+--   alter table public.matches add column if not exists tournament_id uuid references public.tournaments(id) on delete set null;
+--   create table public.clan_tournaments (...) -- see block above

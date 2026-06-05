@@ -15,9 +15,9 @@ export default async function MatchesPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [matches, activeClanId, { dict, locale }] = await Promise.all([
-    getAllMatches(),
-    getActiveClanId(),
+  const activeClanId = await getActiveClanId();
+  const [matches, { dict, locale }] = await Promise.all([
+    getAllMatches(activeClanId ?? undefined),
     getDict(),
   ]);
 
