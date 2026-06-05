@@ -269,7 +269,7 @@ export async function getTournamentDeadline(): Promise<Date | null> {
 export type MatchRankingEntry = {
   user_id: string
   username: string
-  prediction: { home_score: number; away_score: number; points: number } | null
+  prediction: { home_score: string; away_score: string; points: number } | null
   total: number
   joined_at: string | null
 }
@@ -302,7 +302,7 @@ export async function getRankingUpToMatch(clanId: string, matchId: string): Prom
     .in('match_id', ids)
 
   type MemberRow = { user_id: string; joined_at: string | null; profiles: { username: string } | null }
-  type PredRow = { user_id: string; match_id: string; home_score: number; away_score: number; points: number | null }
+  type PredRow = { user_id: string; match_id: string; home_score: string; away_score: string; points: number | null }
 
   const members = (memberData ?? []) as unknown as MemberRow[]
   const preds = (predData ?? []) as unknown as PredRow[]

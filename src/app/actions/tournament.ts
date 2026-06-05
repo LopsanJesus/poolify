@@ -3,8 +3,31 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { TournamentPrediction, TournamentResult, FinalPredictionsConfig } from '@/lib/types'
+import type { TournamentPrediction, TournamentResult, FinalPredictionsConfig, Team } from '@/lib/types'
 import { getClanData } from './clans'
+
+// Returns teams for the first tournament a clan is subscribed to.
+// Used to populate dropdowns in final predictions.
+export async function getTeamsForClan(clanId: string): Promise<Team[]> {
+  const supabase = await createClient()
+
+  const { data: ct } = await (supabase as any)
+    .from('clan_tournaments')
+    .select('tournament_id')
+    .eq('clan_id', clanId)
+    .limit(1)
+    .single()
+
+  if (!ct) return []
+
+  const { data: teams } = await (supabase as any)
+    .from('teams')
+    .select('*')
+    .eq('tournament_id', (ct as { tournament_id: string }).tournament_id)
+    .order('name')
+
+  return (teams ?? []) as Team[]
+}
 
 export async function getMyTournamentPrediction(clanId: string): Promise<TournamentPrediction | null> {
   const supabase = await createClient()

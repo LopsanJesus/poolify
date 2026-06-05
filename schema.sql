@@ -17,6 +17,7 @@ drop policy if exists "Clan members can view predictions in their clan" on publi
 drop policy if exists "Users can insert their own predictions" on public.predictions;
 drop policy if exists "Users can update their own predictions" on public.predictions;
 drop policy if exists "Anyone can view tournaments" on public.tournaments;
+drop policy if exists "Anyone can view teams" on public.teams;
 drop policy if exists "Clan members can view clan_tournaments" on public.clan_tournaments;
 drop policy if exists "Clan owner can manage clan_tournaments" on public.clan_tournaments;
 
@@ -28,6 +29,7 @@ drop table if exists public.predictions cascade;
 drop table if exists public.clan_members cascade;
 drop table if exists public.clan_tournaments cascade;
 drop table if exists public.clans cascade;
+drop table if exists public.teams cascade;
 drop table if exists public.matches cascade;
 drop table if exists public.tournaments cascade;
 drop table if exists public.profiles cascade;
@@ -139,6 +141,21 @@ alter table public.tournaments enable row level security;
 create policy "Anyone can view tournaments"
   on public.tournaments for select using (true);
 
+-- ── Teams ────────────────────────────────────────────────────
+-- Canonical team roster per tournament (used for flags + dropdowns)
+create table public.teams (
+  id            uuid primary key default gen_random_uuid(),
+  tournament_id uuid references public.tournaments(id) on delete cascade,
+  name          text not null,   -- canonical name matching matches.home_team / away_team
+  flag_code     text,             -- ISO code for flagcdn.com (e.g. 'es', 'gb-eng')
+  created_at    timestamptz not null default now(),
+  unique (tournament_id, name)
+);
+alter table public.teams enable row level security;
+
+create policy "Anyone can view teams"
+  on public.teams for select using (true);
+
 -- ── Matches ──────────────────────────────────────────────────
 create table public.matches (
   id            uuid primary key default gen_random_uuid(),
@@ -163,8 +180,8 @@ create table public.predictions (
   user_id         uuid not null references public.profiles(id) on delete cascade,
   match_id        uuid not null references public.matches(id) on delete cascade,
   clan_id         uuid not null references public.clans(id) on delete cascade,
-  home_score      int not null,
-  away_score      int not null,
+  home_score      text not null check (home_score in ('0','1','2','+')),
+  away_score      text not null check (away_score in ('0','1','2','+')),
   points          int not null default 0,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now(),
@@ -282,3 +299,12 @@ create policy "Clan owner can manage clan_tournaments"
 --   create table public.tournaments (...) -- see block above
 --   alter table public.matches add column if not exists tournament_id uuid references public.tournaments(id) on delete set null;
 --   create table public.clan_tournaments (...) -- see block above
+--
+-- NEW (teams table + text prediction scores):
+--   create table public.teams (...) -- see block above
+--   alter table public.predictions
+--     alter column home_score type text using case when home_score >= 3 then '+' else home_score::text end,
+--     alter column away_score type text using case when away_score >= 3 then '+' else away_score::text end;
+--   alter table public.predictions
+--     add constraint predictions_home_score_check check (home_score in ('0','1','2','+')),
+--     add constraint predictions_away_score_check check (away_score in ('0','1','2','+'));

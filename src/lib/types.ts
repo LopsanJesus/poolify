@@ -123,15 +123,15 @@ export interface Database {
       predictions: {
         Row: {
           id: string; user_id: string; match_id: string; clan_id: string
-          home_score: number; away_score: number; points: number
+          home_score: PredScore; away_score: PredScore; points: number
           created_at: string; updated_at: string
         }
         Insert: {
           id?: string; user_id: string; match_id: string; clan_id: string
-          home_score: number; away_score: number; points?: number
+          home_score: PredScore; away_score: PredScore; points?: number
         }
         Update: {
-          home_score?: number; away_score?: number; points?: number; updated_at?: string
+          home_score?: PredScore; away_score?: PredScore; points?: number; updated_at?: string
         }
         Relationships: [
           { foreignKeyName: 'predictions_user_id_fkey'; columns: ['user_id']; referencedRelation: 'profiles'; referencedColumns: ['id'] },
@@ -195,6 +195,16 @@ export type ClanTournament = {
   clan_id: string
   tournament_id: string
   joined_at: string
+}
+
+export type PredScore = '0' | '1' | '2' | '+'
+
+export type Team = {
+  id: string
+  tournament_id: string | null
+  name: string
+  flag_code: string | null
+  created_at: string
 }
 
 // Convenience row types

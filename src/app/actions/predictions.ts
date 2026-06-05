@@ -3,14 +3,14 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { calculatePoints } from '@/lib/scoring'
-import type { Match, Prediction, ClanSettings } from '@/lib/types'
+import type { Match, Prediction, ClanSettings, PredScore } from '@/lib/types'
 import { DEFAULT_CLAN_SETTINGS } from '@/lib/types'
 
 export type ClanPredictionEntry = {
   user_id: string
   username: string
-  home_score: number
-  away_score: number
+  home_score: PredScore
+  away_score: PredScore
   points: number
 }
 
@@ -35,8 +35,8 @@ export async function getClanPredictionsForMatch(
 
   type Row = {
     user_id: string
-    home_score: number
-    away_score: number
+    home_score: PredScore
+    away_score: PredScore
     points: number
     profiles: { username: string } | null
   }
@@ -132,16 +132,18 @@ export async function savePredictions(_: unknown, formData: FormData) {
   const matches = (matchData ?? []) as Match[]
   const settings = ((clanData as { settings?: ClanSettings } | null)?.settings ?? DEFAULT_CLAN_SETTINGS)
 
-  const upserts = matchIds.flatMap((matchId) => {
-    const homeRaw = formData.get(`home_${matchId}`) as string
-    const awayRaw = formData.get(`away_${matchId}`) as string
-    const homeScore = parseInt(homeRaw, 10)
-    const awayScore = parseInt(awayRaw, 10)
+  const VALID: PredScore[] = ['0', '1', '2', '+']
 
-    // Skip if either field is blank
-    if (homeRaw.trim() === '' || awayRaw.trim() === '' || isNaN(homeScore) || isNaN(awayScore)) {
+  const upserts = matchIds.flatMap((matchId) => {
+    const homeRaw = (formData.get(`home_${matchId}`) as string)?.trim()
+    const awayRaw = (formData.get(`away_${matchId}`) as string)?.trim()
+
+    if (!VALID.includes(homeRaw as PredScore) || !VALID.includes(awayRaw as PredScore)) {
       return []
     }
+
+    const homeScore = homeRaw as PredScore
+    const awayScore = awayRaw as PredScore
 
     const match = matches.find((m) => m.id === matchId)
     let points = 0

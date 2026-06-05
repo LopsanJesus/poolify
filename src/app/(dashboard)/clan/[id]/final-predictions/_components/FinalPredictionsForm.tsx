@@ -3,19 +3,24 @@
 import { useActionState } from 'react'
 import { Check, Loader2 } from 'lucide-react'
 import { saveTournamentPrediction } from '@/app/actions/tournament'
-import type { FinalPredictionsConfig, TournamentPrediction } from '@/lib/types'
+import type { FinalPredictionsConfig, TournamentPrediction, Team } from '@/lib/types'
 import type { Dict } from '@/lib/i18n/dictionaries'
+
+// Fields that expect a team name (show dropdown when teams available)
+const TEAM_FIELDS: (keyof TournamentPrediction)[] = ['winner', 'runner_up', 'semi1', 'semi2']
 
 export function FinalPredictionsForm({
   clanId,
   config,
   existing,
+  teams,
   dict,
   commonDict,
 }: {
   clanId: string
   config: FinalPredictionsConfig
   existing: TournamentPrediction | null
+  teams: Team[]
   dict: Dict['final_predictions']
   commonDict: Dict['common']
 }) {
@@ -32,6 +37,8 @@ export function FinalPredictionsForm({
     ['top_scorer', dict.field_top_scorer, dict.placeholder_player, config.top_scorer_pts],
   ]
 
+  const hasTeams = teams.length > 0
+
   return (
     <form action={action} className="space-y-4">
       {state?.error && (
@@ -43,25 +50,46 @@ export function FinalPredictionsForm({
         </div>
       )}
 
-      {fields.map(([name, label, placeholder, pts]) => (
-        <div key={name} className="rounded-xl bg-white/5 border border-white/10 p-4 space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-white">{label}</label>
-            <span className="text-xs text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full">
-              {dict.pts_label.replace('{pts}', String(pts))}
-            </span>
-          </div>
-          <input
-            type="text"
-            name={name}
-            defaultValue={(existing?.[name] as string) ?? ''}
-            placeholder={placeholder}
-            className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-blue-300/40 focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
-          />
-        </div>
-      ))}
+      {fields.map(([name, label, placeholder, pts]) => {
+        const isTeamField = TEAM_FIELDS.includes(name)
+        const currentValue = (existing?.[name] as string) ?? ''
 
-      {/* Custom fields */}
+        return (
+          <div key={name} className="rounded-xl bg-white/5 border border-white/10 p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-white">{label}</label>
+              <span className="text-xs text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full">
+                {dict.pts_label.replace('{pts}', String(pts))}
+              </span>
+            </div>
+
+            {isTeamField && hasTeams ? (
+              <select
+                name={name}
+                defaultValue={currentValue}
+                className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition appearance-none"
+              >
+                <option value="" className="bg-blue-950 text-blue-400">{placeholder}</option>
+                {teams.map((t) => (
+                  <option key={t.id} value={t.name} className="bg-blue-950 text-white">
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                name={name}
+                defaultValue={currentValue}
+                placeholder={placeholder}
+                className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-blue-300/40 focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
+              />
+            )}
+          </div>
+        )
+      })}
+
+      {/* Custom fields — always text input */}
       {config.custom_fields?.map((f) => (
         <div key={f.id} className="rounded-xl bg-white/5 border border-white/10 p-4 space-y-2">
           <div className="flex items-center justify-between">

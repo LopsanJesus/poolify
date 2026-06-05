@@ -3,9 +3,9 @@
 import { savePredictions } from "@/app/actions/predictions";
 import type { Dict, Locale } from "@/lib/i18n/dictionaries";
 import { stageLabel } from "@/lib/stages";
-import type { Match, Prediction } from "@/lib/types";
+import type { Match, Prediction, PredScore } from "@/lib/types";
 import { Check, Loader2 } from "lucide-react";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { FlagImage } from "@/app/_components/FlagImage";
 
 type MatchWithPrediction = Match & { prediction: Prediction | null };
@@ -15,6 +15,8 @@ const DATE_LOCALE: Record<Locale, string> = {
   es: "es-ES",
   de: "de-DE",
 };
+
+const SCORE_OPTIONS: PredScore[] = ["0", "1", "2", "+"];
 
 export function PredictionsForm({
   clanId,
@@ -32,7 +34,7 @@ export function PredictionsForm({
   const [state, action, pending] = useActionState(savePredictions, undefined);
 
   const upcoming = matchesWithPreds.filter((m) => m.status === "upcoming");
-  const locked = matchesWithPreds.filter((m) => m.status !== "upcoming");
+  const locked   = matchesWithPreds.filter((m) => m.status !== "upcoming");
 
   return (
     <div className="space-y-8">
@@ -88,6 +90,62 @@ export function PredictionsForm({
   );
 }
 
+// ── Score selector ────────────────────────────────────────────
+
+function ScoreSelector({
+  name,
+  defaultValue,
+  disabled,
+}: {
+  name: string;
+  defaultValue: PredScore | "";
+  disabled?: boolean;
+}) {
+  const [selected, setSelected] = useState<PredScore | "">(defaultValue);
+
+  if (disabled) {
+    return (
+      <div className="flex justify-center">
+        <span
+          className={`min-w-[2.5rem] text-center text-xl font-bold px-3 py-2 rounded-lg border ${
+            selected === "+"
+              ? "bg-amber-500/20 border-amber-500/40 text-amber-300"
+              : "bg-blue-900/60 border-white/20 text-white"
+          }`}
+        >
+          {selected || "–"}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex gap-1 justify-center">
+      {name && selected !== "" && (
+        <input type="hidden" name={name} value={selected} />
+      )}
+      {SCORE_OPTIONS.map((opt) => (
+        <button
+          key={opt}
+          type="button"
+          onClick={() => setSelected(opt === selected ? "" : opt)}
+          className={`w-10 h-10 rounded-lg font-bold text-base transition-all border ${
+            selected === opt
+              ? opt === "+"
+                ? "bg-amber-500 border-amber-400 text-white shadow-lg shadow-amber-500/30 scale-110"
+                : "bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/30 scale-110"
+              : "bg-white/5 border-white/15 text-blue-200 hover:bg-white/15 hover:border-white/30"
+          }`}
+        >
+          {opt}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── Match card ────────────────────────────────────────────────
+
 function MatchCard({
   match,
   dict,
@@ -99,6 +157,9 @@ function MatchCard({
   locale: Locale;
   editable: boolean;
 }) {
+  const existingHome = (match.prediction?.home_score ?? "") as PredScore | "";
+  const existingAway = (match.prediction?.away_score ?? "") as PredScore | "";
+
   return (
     <div
       className={`rounded-2xl border p-5 space-y-4 transition ${
@@ -115,26 +176,22 @@ function MatchCard({
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="flex-1 text-right space-y-1">
+        {/* Home team */}
+        <div className="flex-1 space-y-2">
           <div className="flex items-center justify-end gap-2">
-            <p className="text-white font-semibold text-sm">
+            <span className="text-white font-semibold text-sm text-right leading-tight">
               {match.home_team ?? <span className="text-blue-400/60">?</span>}
-            </p>
+            </span>
             {match.home_team && <FlagImage team={match.home_team} size={28} />}
           </div>
-          <input
-            type="number"
-            name={editable ? `home_${match.id}` : undefined}
-            defaultValue={match.prediction?.home_score ?? ""}
-            min={0}
-            max={20}
+          <ScoreSelector
+            name={editable ? `home_${match.id}` : ""}
+            defaultValue={existingHome}
             disabled={!editable}
-            placeholder="0"
-            required={false}
-            className="w-full text-center text-xl font-bold px-3 py-2 rounded-lg bg-blue-900/60 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
         </div>
 
+        {/* Center divider + actual result */}
         <div className="flex flex-col items-center gap-1 shrink-0">
           <span className="text-blue-300 text-lg font-bold">–</span>
           {match.status === "finished" && (
@@ -144,23 +201,18 @@ function MatchCard({
           )}
         </div>
 
-        <div className="flex-1 space-y-1">
+        {/* Away team */}
+        <div className="flex-1 space-y-2">
           <div className="flex items-center gap-2">
             {match.away_team && <FlagImage team={match.away_team} size={28} />}
-            <p className="text-white font-semibold text-sm">
+            <span className="text-white font-semibold text-sm leading-tight">
               {match.away_team ?? <span className="text-blue-400/60">?</span>}
-            </p>
+            </span>
           </div>
-          <input
-            type="number"
-            name={editable ? `away_${match.id}` : undefined}
-            defaultValue={match.prediction?.away_score ?? ""}
-            min={0}
-            max={20}
+          <ScoreSelector
+            name={editable ? `away_${match.id}` : ""}
+            defaultValue={existingAway}
             disabled={!editable}
-            placeholder="0"
-            required={false}
-            className="w-full text-center text-xl font-bold px-3 py-2 rounded-lg bg-blue-900/60 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
         </div>
       </div>
@@ -184,13 +236,7 @@ function MatchCard({
   );
 }
 
-function StatusPill({
-  status,
-  dict,
-}: {
-  status: string;
-  dict: Dict["predictions"];
-}) {
+function StatusPill({ status, dict }: { status: string; dict: Dict["predictions"] }) {
   if (status === "live")
     return (
       <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-500/30 text-red-300 animate-pulse">
@@ -210,13 +256,7 @@ function StatusPill({
   );
 }
 
-function PointsBadge({
-  points,
-  dict,
-}: {
-  points: number;
-  dict: Dict["predictions"];
-}) {
+function PointsBadge({ points, dict }: { points: number; dict: Dict["predictions"] }) {
   if (points === 4)
     return (
       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-500/30 text-emerald-300 text-sm font-bold">

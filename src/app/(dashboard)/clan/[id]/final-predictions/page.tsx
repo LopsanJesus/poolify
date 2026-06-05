@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { ArrowLeft, Star, Lock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { getClanData, getTournamentDeadline } from '@/app/actions/clans'
-import { getMyTournamentPrediction, getAllTournamentPredictions } from '@/app/actions/tournament'
+import { getMyTournamentPrediction, getAllTournamentPredictions, getTeamsForClan } from '@/app/actions/tournament'
 import { getDict } from '@/lib/i18n/server'
 import { FinalPredictionsForm } from './_components/FinalPredictionsForm'
 import { FinalPredictionsTable } from './_components/FinalPredictionsTable'
@@ -14,10 +14,11 @@ export default async function FinalPredictionsPage({ params }: { params: Promise
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
 
-  const [clan, deadline, myPred, { dict }] = await Promise.all([
+  const [clan, deadline, myPred, teams, { dict }] = await Promise.all([
     getClanData(id),
     getTournamentDeadline(),
     getMyTournamentPrediction(id),
+    getTeamsForClan(id),
     getDict(),
   ])
   if (!clan) notFound()
@@ -82,6 +83,7 @@ export default async function FinalPredictionsPage({ params }: { params: Promise
                 clanId={id}
                 config={config}
                 existing={myPred}
+                teams={teams}
                 dict={dict.final_predictions}
                 commonDict={dict.common}
               />

@@ -1,10 +1,11 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { Profile } from "@/lib/types";
+import type { Profile, PredScore } from "@/lib/types";
 import { revalidatePath } from "next/cache";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { flagCode } from "@/lib/team-flags";
 
 const TEST_USER_PREFIX = "test-user-";
 const TEST_USER_DOMAIN = "poolify.test";
@@ -263,16 +264,25 @@ async function addMembersToClan(admin: ReturnType<typeof createAdminClient>, cla
   }
 }
 
+// Converts an actual integer score to a PredScore string.
+function toPS(n: number): PredScore { return n >= 3 ? "+" : String(n) as PredScore }
+
 function makePrediction(match: { id: string; home_score: number; away_score: number }, outcome: "exact" | "winner" | "miss") {
   const rh = match.home_score;
   const ra = match.away_score;
-  if (outcome === "exact") return { home_score: rh, away_score: ra, points: 4 };
-  if (outcome === "winner") {
-    if (rh > ra) return { home_score: rh + 1, away_score: ra, points: 1 };
-    if (ra > rh) return { home_score: rh, away_score: ra + 1, points: 1 };
-    return { home_score: rh + 1, away_score: ra + 1, points: 0 };
+  if (outcome === "exact") {
+    return { home_score: toPS(rh), away_score: toPS(ra), points: 4 };
   }
-  return { home_score: ra, away_score: rh + 1, points: 0 };
+  if (outcome === "winner") {
+    // Correct sign but different score
+    if (rh > ra) return { home_score: "+", away_score: "0" as PredScore, points: 1 };
+    if (ra > rh) return { home_score: "0" as PredScore, away_score: "+", points: 1 };
+    // Draw → same sign prediction but impossible to be non-exact → counts as miss
+    return { home_score: "1" as PredScore, away_score: "1" as PredScore, points: 0 };
+  }
+  // miss: flip the result
+  if (rh >= ra) return { home_score: "0" as PredScore, away_score: "+", points: 0 };
+  return { home_score: "+", away_score: "0" as PredScore, points: 0 };
 }
 
 // ── Scenario: Tournament starts tomorrow ──────────────────────
@@ -396,7 +406,7 @@ export async function seedInProgress() {
     }
   }
 
-  const { error: predErr } = await admin.from("predictions").upsert(predictions, { onConflict: "user_id,clan_id,match_id" });
+  const { error: predErr } = await admin.from("predictions").upsert(predictions as never[], { onConflict: "user_id,clan_id,match_id" });
   if (predErr) return { error: `Predictions: ${predErr.message}` };
 
   revalidatePath("/dev-shell");
@@ -522,7 +532,7 @@ export async function seedFakeWorldCup() {
     }
   }
 
-  const { error: predErr } = await admin.from("predictions").upsert(predictions, { onConflict: "user_id,clan_id,match_id" });
+  const { error: predErr } = await admin.from("predictions").upsert(predictions as never[], { onConflict: "user_id,clan_id,match_id" });
   if (predErr) return { error: `Predictions: ${predErr.message}` };
 
   revalidatePath("/dev-shell");
@@ -587,6 +597,17 @@ export async function seedRealWorldCup() {
 
   const { data: createdMatches, error: matchErr } = await admin.from("matches").insert(matchRows as never[]).select("id");
   if (matchErr || !createdMatches) return { error: `Matches: ${matchErr?.message}` };
+
+  // Seed teams for this tournament (unique teams from group stage)
+  const uniqueTeams = Array.from(
+    new Set(groupMatches.flatMap((m) => [m.team1, m.team2])),
+  );
+  const teamRows = uniqueTeams.map((name) => ({
+    tournament_id: tournamentId,
+    name,
+    flag_code: flagCode(name) ?? null,
+  }));
+  await (admin as any).from("teams").upsert(teamRows, { onConflict: "tournament_id,name" });
 
   const clanId = await getOrCreateTestClan(admin, "Porra Mundial Real 2026", users[0].id);
   await addMembersToClan(admin, clanId, users);
@@ -697,18 +718,7 @@ export async function seedDatabase() {
   ];
 
   function makePred(match: FinishedMatch, outcome: Outcome) {
-    const rh = match.home_score;
-    const ra = match.away_score;
-    if (outcome === "exact") return { home_score: rh, away_score: ra, points: 4 };
-    if (outcome === "winner") {
-      // Same sign but different score
-      if (rh > ra) return { home_score: rh + 1, away_score: ra, points: 1 };
-      if (ra > rh) return { home_score: rh, away_score: ra + 1, points: 1 };
-      // Draw — flip to a non-draw (miss) since we can't easily do same-sign for draw
-      return { home_score: rh + 1, away_score: ra + 1, points: 0 };
-    }
-    // miss: flip the result
-    return { home_score: ra, away_score: rh + 1, points: 0 };
+    return makePrediction(match, outcome);
   }
 
   const predictions = [];
@@ -728,7 +738,7 @@ export async function seedDatabase() {
     }
   }
 
-  const { error: predError } = await admin.from("predictions").upsert(predictions, {
+  const { error: predError } = await admin.from("predictions").upsert(predictions as never[], {
     onConflict: "user_id,clan_id,match_id",
   });
   if (predError) return { error: `Predictions failed: ${predError.message}` };
