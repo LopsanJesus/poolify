@@ -55,6 +55,7 @@ export function DateCarousel({
   clanDict,
   commonDict,
   locale,
+  isPastDeadline = false,
 }: {
   matches: MatchWithPrediction[]
   clanId: string
@@ -62,6 +63,7 @@ export function DateCarousel({
   clanDict: Dict['clan']
   commonDict: Dict['common']
   locale: Locale
+  isPastDeadline?: boolean
 }) {
   const byDate = new Map<string, MatchWithPrediction[]>()
   for (const m of matches) {
@@ -184,6 +186,7 @@ export function DateCarousel({
                   clanDict={clanDict}
                   commonDict={commonDict}
                   locale={locale}
+                  isPastDeadline={isPastDeadline}
                 />
               ))}
             </div>

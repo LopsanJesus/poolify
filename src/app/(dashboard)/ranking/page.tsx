@@ -1,11 +1,12 @@
 import { GroupSwitcher } from "@/app/(dashboard)/_components/GroupSwitcher";
-import { getClanRanking, getUserClans } from "@/app/actions/clans";
+import { getClanRanking, getUserClans, getClanData } from "@/app/actions/clans";
 import { getActiveClanId } from "@/lib/active-clan";
 import type { Dict } from "@/lib/i18n/dictionaries";
 import { getDict } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
-import { Trophy } from "lucide-react";
+import { Trophy, Star } from "lucide-react";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 const MEDAL_COLORS = ["text-yellow-400", "text-slate-300", "text-orange-400"];
 
@@ -37,10 +38,13 @@ export default async function RankingPage() {
 
   const clan = clans.find((c) => c.id === clanId) ?? clans[0];
 
-  const [ranking, { dict }] = await Promise.all([
+  const [ranking, { dict }, clanData] = await Promise.all([
     getClanRanking(clan.id),
     getDict(),
+    getClanData(clan.id),
   ]);
+
+  const hasFinalPredictions = clanData?.settings?.final_predictions != null;
 
   return (
     <div className="space-y-4">
@@ -51,6 +55,16 @@ export default async function RankingPage() {
           label={dict.clan.switch_pool}
         />
       </div>
+
+      {hasFinalPredictions && (
+        <Link
+          href={`/clan/${clan.id}/final-predictions`}
+          className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 hover:bg-purple-500/20 transition text-sm font-medium"
+        >
+          <Star className="w-4 h-4 shrink-0" />
+          {dict.final_predictions.title}
+        </Link>
+      )}
 
       {ranking.length === 0 ? (
         <div className="text-center py-16 rounded-2xl border border-dashed border-white/20">

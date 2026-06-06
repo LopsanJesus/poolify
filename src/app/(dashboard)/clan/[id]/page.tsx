@@ -71,6 +71,7 @@ export default async function ClanPage({
         clanDict={dict.clan}
         commonDict={dict.common}
         locale={locale}
+        isPastDeadline={isPastDeadline}
       />
     </div>
   );

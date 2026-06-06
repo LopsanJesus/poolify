@@ -19,6 +19,7 @@ export function MatchCard({
   clanDict,
   commonDict,
   locale,
+  isPastDeadline = false,
 }: {
   clanId: string
   match: MatchWithPrediction
@@ -26,6 +27,7 @@ export function MatchCard({
   clanDict: Dict['clan']
   commonDict: Dict['common']
   locale: Locale
+  isPastDeadline?: boolean
 }) {
   const [expanded, setExpanded] = useState(false)
   const [rows, setRows] = useState<ClanPredictionEntry[] | null>(null)
@@ -43,7 +45,8 @@ export function MatchCard({
   }
 
   const isFinished = match.status === 'finished'
-  const canRevealOthers = match.status !== 'upcoming'
+  // Only reveal other users' predictions after the global deadline closes (prevents copying)
+  const canRevealOthers = isPastDeadline
 
   return (
     <div className="rounded-xl bg-white/5 border border-white/10 overflow-hidden">
