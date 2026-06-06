@@ -4,11 +4,12 @@ import { savePredictions } from "@/app/actions/predictions";
 import type { Dict, Locale } from "@/lib/i18n/dictionaries";
 import { stageLabel } from "@/lib/stages";
 import type { Match, Prediction, PredScore } from "@/lib/types";
-import { Check, Loader2, Shuffle } from "lucide-react";
+import { Loader2, Shuffle } from "lucide-react";
 import { useActionState, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FlagImage } from "@/app/_components/FlagImage";
 import { translateTeam } from "@/lib/team-flags";
+import { SuccessToast } from "@/app/_components/SuccessToast";
 
 type MatchWithPrediction = Match & { prediction: Prediction | null };
 
@@ -35,11 +36,15 @@ export function PredictionsForm({
 }) {
   const [state, action, pending] = useActionState(savePredictions, undefined);
   const [dirty, setDirty] = useState(false);
+  const [showToast, setShowToast] = useState(false);
   // TODO: remove randomize-all debug button before launch
   const [randomizeAllToken, setRandomizeAllToken] = useState(0);
 
   useEffect(() => {
-    if (state?.success) setDirty(false);
+    if (state?.success) {
+      setDirty(false);
+      setShowToast(true);
+    }
   }, [state?.success]);
 
   const allUpcoming = matchesWithPreds
@@ -116,11 +121,6 @@ export function PredictionsForm({
               {state.error}
             </div>
           )}
-          {state?.success && (
-            <div className="rounded-lg bg-emerald-500/20 border border-emerald-500/40 px-4 py-3 text-emerald-300 text-sm flex items-center gap-2">
-              <Check className="w-4 h-4" /> {dict.saved}
-            </div>
-          )}
 
           {/* Desktop inline button */}
           {allUpcoming.length > 0 && (
@@ -147,6 +147,12 @@ export function PredictionsForm({
           </div>
         )}
       </div>
+
+      <SuccessToast
+        show={showToast}
+        message={dict.saved}
+        onDone={() => setShowToast(false)}
+      />
 
       {/* Mobile floating save button — only when dirty, above navbar */}
       <AnimatePresence>

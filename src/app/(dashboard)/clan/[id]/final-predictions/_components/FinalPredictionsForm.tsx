@@ -1,11 +1,12 @@
 'use client'
 
-import { useActionState, useState } from 'react'
-import { Check, Loader2 } from 'lucide-react'
+import { useActionState, useEffect, useState } from 'react'
+import { Loader2 } from 'lucide-react'
 import { saveTournamentPrediction } from '@/app/actions/tournament'
 import type { FinalPredictionsConfig, TournamentPrediction, Team } from '@/lib/types'
 import type { Dict } from '@/lib/i18n/dictionaries'
 import { TeamPickerModal, TeamPickerButton } from '@/app/_components/TeamPickerModal'
+import { SuccessToast } from '@/app/_components/SuccessToast'
 
 type TeamKey = 'winner' | 'runner_up' | 'semi1' | 'semi2'
 
@@ -28,6 +29,11 @@ export function FinalPredictionsForm({
     return saveTournamentPrediction(clanId, fd)
   }
   const [state, action, pending] = useActionState(save, undefined)
+  const [showToast, setShowToast] = useState(false)
+
+  useEffect(() => {
+    if (state?.success) setShowToast(true)
+  }, [state?.success])
 
   const [selections, setSelections] = useState<Record<TeamKey, string>>({
     winner:    (existing?.winner    as string) ?? '',
@@ -66,11 +72,12 @@ export function FinalPredictionsForm({
       {state?.error && (
         <div className="rounded-lg bg-red-500/20 border border-red-500/40 px-4 py-3 text-red-300 text-sm">{state.error}</div>
       )}
-      {state?.success && (
-        <div className="rounded-lg bg-emerald-500/20 border border-emerald-500/40 px-4 py-3 text-emerald-300 text-sm flex items-center gap-2">
-          <Check className="w-4 h-4" /> {dict.saved}
-        </div>
-      )}
+
+      <SuccessToast
+        show={showToast}
+        message={dict.saved}
+        onDone={() => setShowToast(false)}
+      />
 
       {/* Team pickers */}
       {teamFields.map(({ key, label, pts }) => (
