@@ -5,10 +5,12 @@ import { Loader2, Check, Trophy, Users, Star, Plus, Trash2 } from 'lucide-react'
 import { updateClanSettings } from '@/app/actions/clans'
 import { removeClanMember } from '@/app/actions/clans'
 import { saveTournamentResults } from '@/app/actions/tournament'
-import type { ClanSettings } from '@/lib/types'
+import type { ClanSettings, Team } from '@/lib/types'
 import type { Dict } from '@/lib/i18n/dictionaries'
+import { TeamPickerModal, TeamPickerButton } from '@/app/_components/TeamPickerModal'
 
 type Member = { user_id: string; username: string }
+type ResKey = 'res_winner' | 'res_runner_up' | 'res_semi1' | 'res_semi2'
 
 export function ClanSettingsForm({
   clanId,
@@ -18,6 +20,7 @@ export function ClanSettingsForm({
   readOnly = false,
   members,
   currentUserId,
+  teams = [],
 }: {
   clanId: string
   settings: ClanSettings
@@ -26,6 +29,7 @@ export function ClanSettingsForm({
   readOnly?: boolean
   members: Member[]
   currentUserId: string
+  teams?: Team[]
 }) {
   const [state, action, pending] = useActionState(updateClanSettings, undefined)
   async function saveResults(_: { error?: string; success?: boolean } | undefined, fd: FormData) {
@@ -35,6 +39,16 @@ export function ClanSettingsForm({
 
   const fp = settings.final_predictions
   const [customFields, setCustomFields] = useState(fp?.custom_fields ?? [])
+
+  const [resSelections, setResSelections] = useState<Record<ResKey, string>>({
+    res_winner: '', res_runner_up: '', res_semi1: '', res_semi2: '',
+  })
+  const [openResPicker, setOpenResPicker] = useState<ResKey | null>(null)
+  function setRes(key: ResKey, val: string) { setResSelections((s) => ({ ...s, [key]: val })) }
+  function resExcluded(key: ResKey) {
+    return (Object.entries(resSelections) as [ResKey, string][])
+      .filter(([k, v]) => k !== key && v !== '').map(([, v]) => v)
+  }
 
   function addField() {
     setCustomFields((prev) => [...prev, { id: crypto.randomUUID(), label: '', points: 3 }])
@@ -205,17 +219,50 @@ export function ClanSettingsForm({
               </div>
             )}
 
-            {[
-              ['res_winner',     dict.results_winner],
-              ['res_runner_up',  dict.results_runner_up],
-              ['res_semis',      dict.results_semis],
-              ['res_top_scorer', dict.results_top_scorer],
-            ].map(([name, label]) => (
-              <div key={name}>
+            {/* Hidden inputs carry team picker selections */}
+            {(['res_winner', 'res_runner_up', 'res_semi1', 'res_semi2'] as ResKey[]).map((k) =>
+              resSelections[k] ? <input key={k} type="hidden" name={k} value={resSelections[k]} /> : null
+            )}
+
+            {([
+              ['res_winner',    dict.results_winner]    as const,
+              ['res_runner_up', dict.results_runner_up] as const,
+              ['res_semi1',     dict.results_semi1]     as const,
+              ['res_semi2',     dict.results_semi2]     as const,
+            ] as [ResKey, string][]).map(([key, label]) => (
+              <div key={key}>
                 <label className="block text-sm text-blue-300 mb-1.5">{label}</label>
-                <input type="text" name={name}
-                  className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition" />
+                <TeamPickerButton
+                  value={resSelections[key]}
+                  placeholder="—"
+                  onClick={() => setOpenResPicker(key)}
+                />
               </div>
+            ))}
+
+            <div>
+              <label className="block text-sm text-blue-300 mb-1.5">{dict.results_top_scorer}</label>
+              <input type="text" name="res_top_scorer"
+                className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition" />
+            </div>
+
+            {/* Team picker modals for results */}
+            {([
+              ['res_winner',    dict.results_winner]    as const,
+              ['res_runner_up', dict.results_runner_up] as const,
+              ['res_semi1',     dict.results_semi1]     as const,
+              ['res_semi2',     dict.results_semi2]     as const,
+            ] as [ResKey, string][]).map(([key, label]) => (
+              <TeamPickerModal
+                key={key}
+                open={openResPicker === key}
+                onClose={() => setOpenResPicker(null)}
+                title={label}
+                teams={teams}
+                value={resSelections[key]}
+                onChange={(name) => setRes(key, name)}
+                excluded={resExcluded(key)}
+              />
             ))}
 
             <button type="submit" disabled={resultsPending}

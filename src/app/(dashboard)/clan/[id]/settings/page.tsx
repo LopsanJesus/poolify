@@ -6,6 +6,7 @@ import { getClanData, getClanMembers } from '@/app/actions/clans'
 import { getDict } from '@/lib/i18n/server'
 import { DEFAULT_CLAN_SETTINGS } from '@/lib/types'
 import { ClanSettingsForm } from './_components/ClanSettingsForm'
+import { getTeamsForClan } from '@/app/actions/tournament'
 
 export default async function ClanSettingsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -13,10 +14,11 @@ export default async function ClanSettingsPage({ params }: { params: Promise<{ i
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [clan, members, { dict }] = await Promise.all([
+  const [clan, members, { dict }, teams] = await Promise.all([
     getClanData(id),
     getClanMembers(id),
     getDict(),
+    getTeamsForClan(id),
   ])
   if (!clan) notFound()
 
@@ -43,6 +45,7 @@ export default async function ClanSettingsPage({ params }: { params: Promise<{ i
         readOnly={!isOwner}
         members={members}
         currentUserId={user.id}
+        teams={teams}
       />
     </div>
   )

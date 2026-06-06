@@ -1,13 +1,13 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import { Check, Loader2 } from 'lucide-react'
 import { saveTournamentPrediction } from '@/app/actions/tournament'
 import type { FinalPredictionsConfig, TournamentPrediction, Team } from '@/lib/types'
 import type { Dict } from '@/lib/i18n/dictionaries'
+import { TeamPickerModal, TeamPickerButton } from '@/app/_components/TeamPickerModal'
 
-// Fields that expect a team name (show dropdown when teams available)
-const TEAM_FIELDS: (keyof TournamentPrediction)[] = ['winner', 'runner_up', 'semi1', 'semi2']
+type TeamKey = 'winner' | 'runner_up' | 'semi1' | 'semi2'
 
 export function FinalPredictionsForm({
   clanId,
@@ -29,18 +29,40 @@ export function FinalPredictionsForm({
   }
   const [state, action, pending] = useActionState(save, undefined)
 
-  const fields: [keyof TournamentPrediction, string, string, number][] = [
-    ['winner',     dict.field_winner,     dict.placeholder_team,   config.winner_pts],
-    ['runner_up',  dict.field_runner_up,  dict.placeholder_team,   config.runner_up_pts],
-    ['semi1',      dict.field_semi1,      dict.placeholder_team,   config.semi1_pts],
-    ['semi2',      dict.field_semi2,      dict.placeholder_team,   config.semi2_pts],
-    ['top_scorer', dict.field_top_scorer, dict.placeholder_player, config.top_scorer_pts],
-  ]
+  const [selections, setSelections] = useState<Record<TeamKey, string>>({
+    winner:    (existing?.winner    as string) ?? '',
+    runner_up: (existing?.runner_up as string) ?? '',
+    semi1:     (existing?.semi1     as string) ?? '',
+    semi2:     (existing?.semi2     as string) ?? '',
+  })
+  const [openPicker, setOpenPicker] = useState<TeamKey | null>(null)
 
-  const hasTeams = teams.length > 0
+  function set(key: TeamKey, val: string) {
+    setSelections((s) => ({ ...s, [key]: val }))
+  }
+
+  function excluded(key: TeamKey) {
+    return (Object.entries(selections) as [TeamKey, string][])
+      .filter(([k, v]) => k !== key && v !== '')
+      .map(([, v]) => v)
+  }
+
+  const teamFields: { key: TeamKey; label: string; pts: number }[] = [
+    { key: 'winner',    label: dict.field_winner,    pts: config.winner_pts    },
+    { key: 'runner_up', label: dict.field_runner_up, pts: config.runner_up_pts },
+    { key: 'semi1',     label: dict.field_semi1,     pts: config.semi1_pts     },
+    { key: 'semi2',     label: dict.field_semi2,     pts: config.semi2_pts     },
+  ]
 
   return (
     <form action={action} className="space-y-4">
+      {/* Hidden inputs carry the selections into the server action */}
+      {teamFields.map(({ key }) =>
+        selections[key] ? (
+          <input key={key} type="hidden" name={key} value={selections[key]} />
+        ) : null
+      )}
+
       {state?.error && (
         <div className="rounded-lg bg-red-500/20 border border-red-500/40 px-4 py-3 text-red-300 text-sm">{state.error}</div>
       )}
@@ -50,46 +72,42 @@ export function FinalPredictionsForm({
         </div>
       )}
 
-      {fields.map(([name, label, placeholder, pts]) => {
-        const isTeamField = TEAM_FIELDS.includes(name)
-        const currentValue = (existing?.[name] as string) ?? ''
-
-        return (
-          <div key={name} className="rounded-xl bg-white/5 border border-white/10 p-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-white">{label}</label>
-              <span className="text-xs text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full">
-                {dict.pts_label.replace('{pts}', String(pts))}
-              </span>
-            </div>
-
-            {isTeamField && hasTeams ? (
-              <select
-                name={name}
-                defaultValue={currentValue}
-                className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition appearance-none"
-              >
-                <option value="" className="bg-blue-950 text-blue-400">{placeholder}</option>
-                {teams.map((t) => (
-                  <option key={t.id} value={t.name} className="bg-blue-950 text-white">
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type="text"
-                name={name}
-                defaultValue={currentValue}
-                placeholder={placeholder}
-                className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-blue-300/40 focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
-              />
-            )}
+      {/* Team pickers */}
+      {teamFields.map(({ key, label, pts }) => (
+        <div key={key} className="rounded-xl bg-white/5 border border-white/10 p-4 space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-white">{label}</label>
+            <span className="text-xs text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full">
+              {dict.pts_label.replace('{pts}', String(pts))}
+            </span>
           </div>
-        )
-      })}
+          <TeamPickerButton
+            value={selections[key]}
+            placeholder={dict.placeholder_team}
+            onClick={() => setOpenPicker(key)}
+            accentClass="ring-purple-500"
+          />
+        </div>
+      ))}
 
-      {/* Custom fields — always text input */}
+      {/* Top scorer — stays as text input */}
+      <div className="rounded-xl bg-white/5 border border-white/10 p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-medium text-white">{dict.field_top_scorer}</label>
+          <span className="text-xs text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full">
+            {dict.pts_label.replace('{pts}', String(config.top_scorer_pts))}
+          </span>
+        </div>
+        <input
+          type="text"
+          name="top_scorer"
+          defaultValue={(existing?.top_scorer as string) ?? ''}
+          placeholder={dict.placeholder_player}
+          className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-blue-300/40 focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
+        />
+      </div>
+
+      {/* Custom fields */}
       {config.custom_fields?.map((f) => (
         <div key={f.id} className="rounded-xl bg-white/5 border border-white/10 p-4 space-y-2">
           <div className="flex items-center justify-between">
@@ -115,6 +133,20 @@ export function FinalPredictionsForm({
         {pending && <Loader2 className="w-4 h-4 animate-spin" />}
         {pending ? commonDict.saving : dict.save_cta}
       </button>
+
+      {/* Team picker modals */}
+      {teamFields.map(({ key, label }) => (
+        <TeamPickerModal
+          key={key}
+          open={openPicker === key}
+          onClose={() => setOpenPicker(null)}
+          title={label}
+          teams={teams}
+          value={selections[key]}
+          onChange={(name) => set(key, name)}
+          excluded={excluded(key)}
+        />
+      ))}
     </form>
   )
 }

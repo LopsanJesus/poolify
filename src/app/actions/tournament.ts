@@ -119,9 +119,10 @@ export async function saveTournamentResults(
 
   const winner     = (formData.get('res_winner')     as string)?.trim() || null
   const runner_up  = (formData.get('res_runner_up')  as string)?.trim() || null
-  const semisRaw   = (formData.get('res_semis')      as string)?.trim() || ''
+  const semi1      = (formData.get('res_semi1')      as string)?.trim() || null
+  const semi2      = (formData.get('res_semi2')      as string)?.trim() || null
   const top_scorer = (formData.get('res_top_scorer') as string)?.trim() || null
-  const semis = semisRaw.split(',').map((s) => s.trim()).filter(Boolean)
+  const semis = [semi1, semi2].filter(Boolean) as string[]
 
   const customFields = clan.settings?.final_predictions?.custom_fields ?? []
   const customResults: Record<string, string> = {}
