@@ -1,7 +1,7 @@
 import { getAllMatches, getUserPredictionsForClan } from "@/app/actions/predictions";
 import { getDict } from "@/lib/i18n/server";
 import { getActiveClanId } from "@/lib/active-clan";
-import { getClanData, getTournamentDeadline } from "@/app/actions/clans";
+import { getClanData, getTournamentDeadline, getUserClans } from "@/app/actions/clans";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { AllMatchesView } from "./_components/AllMatchesView";
@@ -17,12 +17,16 @@ export default async function MatchesPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const activeClanId = await getActiveClanId();
-  const [matches, { dict, locale }, deadline] = await Promise.all([
-    getAllMatches(activeClanId ?? undefined),
+  const cookieClanId = await getActiveClanId();
+  const [matches, { dict, locale }, deadline, userClans] = await Promise.all([
+    getAllMatches(cookieClanId ?? undefined),
     getDict(),
     getTournamentDeadline(),
+    getUserClans(),
   ]);
+
+  // Only use the clan if the user is actually a member (cookie may be stale)
+  const activeClanId = userClans.some((c) => c.id === cookieClanId) ? cookieClanId : null;
 
   let predictions: Record<string, Prediction> = {};
   let pointsExact = DEFAULT_CLAN_SETTINGS.points_exact;
