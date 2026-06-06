@@ -120,7 +120,7 @@ function ScoreSelector({
   }
 
   return (
-    <div className="flex gap-1 justify-center">
+    <div className="grid grid-cols-4 gap-1">
       {name && selected !== "" && (
         <input type="hidden" name={name} value={selected} />
       )}
@@ -129,7 +129,7 @@ function ScoreSelector({
           key={opt}
           type="button"
           onClick={() => setSelected(opt === selected ? "" : opt)}
-          className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg font-bold text-sm sm:text-base transition-all border ${
+          className={`h-9 w-full rounded-lg font-bold text-sm transition-all border ${
             selected === opt
               ? opt === "+"
                 ? "bg-amber-500 border-amber-400 text-white shadow-lg shadow-amber-500/30 scale-110"
@@ -175,14 +175,14 @@ function MatchCard({
         <StatusPill status={match.status} dict={dict} />
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-2">
         {/* Home team */}
-        <div className="flex-1 space-y-2">
-          <div className="flex items-center justify-end gap-2">
-            <span className="text-white font-semibold text-sm text-right leading-tight">
+        <div className="min-w-0 space-y-2">
+          <div className="flex items-center justify-end gap-1.5 min-w-0">
+            <span className="text-white font-semibold text-sm text-right leading-tight truncate">
               {match.home_team ?? <span className="text-blue-400/60">?</span>}
             </span>
-            {match.home_team && <FlagImage team={match.home_team} size={28} />}
+            {match.home_team && <FlagImage team={match.home_team} size={24} className="shrink-0" />}
           </div>
           <ScoreSelector
             name={editable ? `home_${match.id}` : ""}
@@ -202,10 +202,10 @@ function MatchCard({
         </div>
 
         {/* Away team */}
-        <div className="flex-1 space-y-2">
-          <div className="flex items-center gap-2">
-            {match.away_team && <FlagImage team={match.away_team} size={28} />}
-            <span className="text-white font-semibold text-sm leading-tight">
+        <div className="min-w-0 space-y-2">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {match.away_team && <FlagImage team={match.away_team} size={24} className="shrink-0" />}
+            <span className="text-white font-semibold text-sm leading-tight truncate">
               {match.away_team ?? <span className="text-blue-400/60">?</span>}
             </span>
           </div>
