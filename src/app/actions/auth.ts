@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { LOCALES, type Locale } from '@/lib/i18n/dictionaries'
 import { LOCALE_COOKIE, getDict } from '@/lib/i18n/server'
 import { ACTIVE_CLAN_COOKIE } from '@/lib/active-clan'
@@ -48,13 +49,19 @@ export async function signup(_: unknown, formData: FormData) {
     return { error: dict.auth.invalid_username }
   }
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: { data: { username } },
   })
 
   if (error) return { error: error.message }
+
+  // Auto-confirm test accounts so they can log in without email verification.
+  if (email.toLowerCase().endsWith('@test.com') && data.user) {
+    const admin = createAdminClient()
+    await admin.auth.admin.updateUserById(data.user.id, { email_confirm: true })
+  }
 
   redirect('/login?registered=true')
 }
