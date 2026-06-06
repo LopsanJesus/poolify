@@ -9,6 +9,15 @@ const LABELS: Record<string, Record<Locale, string>> = {
   final:         { en: 'Final',          es: 'Final',                   de: 'Finale'          },
 }
 
+const GROUP_WORD:    Record<Locale, string> = { en: 'Group',    es: 'Grupo',   de: 'Gruppe'   }
+const MATCHDAY_WORD: Record<Locale, string> = { en: 'Matchday', es: 'Jornada', de: 'Spieltag' }
+
+// Handles both static keys (e.g. "semi_final") and dynamic "Group X – Matchday N" strings.
 export function stageLabel(stage: string, locale: Locale): string {
-  return LABELS[stage]?.[locale] ?? stage
+  if (LABELS[stage]) return LABELS[stage][locale]
+
+  const m = stage.match(/^Group\s+([A-Z0-9]+)\s*[–-]\s*Matchday\s+(\d+)$/i)
+  if (m) return `${GROUP_WORD[locale]} ${m[1]} – ${MATCHDAY_WORD[locale]} ${m[2]}`
+
+  return stage
 }
