@@ -49,19 +49,27 @@ export async function signup(_: unknown, formData: FormData) {
     return { error: dict.auth.invalid_username }
   }
 
-  const { data, error } = await supabase.auth.signUp({
+  // For @test.com addresses use the admin API directly — bypasses Supabase's
+  // email domain validation and confirms the account in one step.
+  if (email.toLowerCase().endsWith('@test.com')) {
+    const admin = createAdminClient()
+    const { error: adminError } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { username },
+    })
+    if (adminError) return { error: adminError.message }
+    redirect('/login?registered=true')
+  }
+
+  const { error } = await supabase.auth.signUp({
     email,
     password,
     options: { data: { username } },
   })
 
   if (error) return { error: error.message }
-
-  // Auto-confirm test accounts so they can log in without email verification.
-  if (email.toLowerCase().endsWith('@test.com') && data.user) {
-    const admin = createAdminClient()
-    await admin.auth.admin.updateUserById(data.user.id, { email_confirm: true })
-  }
 
   redirect('/login?registered=true')
 }
