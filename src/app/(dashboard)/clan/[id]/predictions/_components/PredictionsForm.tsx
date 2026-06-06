@@ -6,7 +6,9 @@ import { stageLabel } from "@/lib/stages";
 import type { Match, Prediction, PredScore } from "@/lib/types";
 import { Check, Loader2 } from "lucide-react";
 import { useActionState, useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { FlagImage } from "@/app/_components/FlagImage";
+import { translateTeam } from "@/lib/team-flags";
 
 type MatchWithPrediction = Match & { prediction: Prediction | null };
 
@@ -38,15 +40,12 @@ export function PredictionsForm({
     if (state?.success) setDirty(false);
   }, [state?.success]);
 
-  // Without prediction first, then with — both chronological
-  const upcoming = matchesWithPreds
+  const allUpcoming = matchesWithPreds
     .filter((m) => m.status === "upcoming")
-    .sort((a, b) => {
-      const aHas = a.prediction !== null;
-      const bHas = b.prediction !== null;
-      if (aHas !== bHas) return aHas ? 1 : -1;
-      return new Date(a.match_date).getTime() - new Date(b.match_date).getTime();
-    });
+    .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
+
+  const upcomingEmpty  = allUpcoming.filter((m) => m.prediction === null);
+  const upcomingFilled = allUpcoming.filter((m) => m.prediction !== null);
 
   const locked = matchesWithPreds.filter((m) => m.status !== "upcoming");
 
@@ -56,21 +55,45 @@ export function PredictionsForm({
         <form id="predictions-form" action={action} className="space-y-4">
           <input type="hidden" name="clan_id" value={clanId} />
 
-          {upcoming.length === 0 ? (
+          {allUpcoming.length === 0 ? (
             <p className="text-center text-blue-400/70 text-sm py-6">
               {dict.no_upcoming_predictions}
             </p>
           ) : (
-            upcoming.map((match) => (
-              <MatchCard
-                key={match.id}
-                match={match}
-                dict={dict}
-                locale={locale}
-                editable
-                onDirty={() => setDirty(true)}
-              />
-            ))
+            <>
+              {upcomingEmpty.map((match) => (
+                <MatchCard
+                  key={match.id}
+                  match={match}
+                  dict={dict}
+                  locale={locale}
+                  editable
+                  onDirty={() => setDirty(true)}
+                />
+              ))}
+
+              {upcomingFilled.length > 0 && (
+                <>
+                  <div className="flex items-center gap-3 pt-2">
+                    <div className="flex-1 h-px bg-white/10" />
+                    <span className="text-xs font-semibold text-blue-400/50 uppercase tracking-wide whitespace-nowrap">
+                      {dict.already_predicted}
+                    </span>
+                    <div className="flex-1 h-px bg-white/10" />
+                  </div>
+                  {upcomingFilled.map((match) => (
+                    <MatchCard
+                      key={match.id}
+                      match={match}
+                      dict={dict}
+                      locale={locale}
+                      editable
+                      onDirty={() => setDirty(true)}
+                    />
+                  ))}
+                </>
+              )}
+            </>
           )}
 
           {state?.error && (
@@ -85,7 +108,7 @@ export function PredictionsForm({
           )}
 
           {/* Desktop inline button */}
-          {upcoming.length > 0 && (
+          {allUpcoming.length > 0 && (
             <button
               type="submit"
               disabled={pending}
@@ -110,25 +133,29 @@ export function PredictionsForm({
         )}
       </div>
 
-      {/* Mobile floating save button — slides up above navbar when dirty */}
-      {upcoming.length > 0 && (
-        <div
-          className={`md:hidden fixed inset-x-0 z-40 px-4 pb-2 transition-transform duration-300 ${
-            dirty ? "translate-y-0" : "translate-y-[calc(100%+2rem)]"
-          }`}
-          style={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom, 0px))" }}
-        >
-          <button
-            type="submit"
-            form="predictions-form"
-            disabled={pending}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-white font-semibold shadow-lg shadow-emerald-900/50 transition disabled:opacity-60"
+      {/* Mobile floating save button — only when dirty, above navbar */}
+      <AnimatePresence>
+        {dirty && allUpcoming.length > 0 && (
+          <motion.div
+            className="md:hidden fixed inset-x-0 z-40 px-4 pb-3"
+            style={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom, 0px))" }}
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 80, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
           >
-            {pending && <Loader2 className="w-4 h-4 animate-spin" />}
-            {pending ? commonDict.saving : dict.save_cta}
-          </button>
-        </div>
-      )}
+            <button
+              type="submit"
+              form="predictions-form"
+              disabled={pending}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-white font-semibold shadow-lg shadow-emerald-900/50 transition disabled:opacity-60"
+            >
+              {pending && <Loader2 className="w-4 h-4 animate-spin" />}
+              {pending ? commonDict.saving : dict.save_cta}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
@@ -231,7 +258,7 @@ function MatchCard({
         <div className="min-w-0 space-y-2">
           <div className="flex items-center justify-end gap-1.5 min-w-0">
             <span className="text-white font-semibold text-sm text-right leading-tight truncate">
-              {match.home_team ?? <span className="text-blue-400/60">?</span>}
+              {match.home_team ? translateTeam(match.home_team, locale) : <span className="text-blue-400/60">?</span>}
             </span>
             {match.home_team && <FlagImage team={match.home_team} size={24} className="shrink-0" />}
           </div>
@@ -258,7 +285,7 @@ function MatchCard({
           <div className="flex items-center gap-1.5 min-w-0">
             {match.away_team && <FlagImage team={match.away_team} size={24} className="shrink-0" />}
             <span className="text-white font-semibold text-sm leading-tight truncate">
-              {match.away_team ?? <span className="text-blue-400/60">?</span>}
+              {match.away_team ? translateTeam(match.away_team, locale) : <span className="text-blue-400/60">?</span>}
             </span>
           </div>
           <ScoreSelector

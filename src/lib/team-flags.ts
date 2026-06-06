@@ -130,3 +130,28 @@ export function flagUrl(teamName: string): string | null {
 export function flagCode(teamName: string): string | null {
   return TEAM_FLAG_CODE[teamName] ?? null
 }
+
+// Manual overrides for codes that Intl.DisplayNames can't handle
+const LOCALE_OVERRIDES: Record<string, Record<string, string>> = {
+  'gb-eng': { es: 'Inglaterra',         de: 'England'             },
+  'gb-sct': { es: 'Escocia',            de: 'Schottland'          },
+  'gb-wls': { es: 'Gales',              de: 'Wales'               },
+  'gb-nir': { es: 'Irlanda del Norte',  de: 'Nordirland'          },
+  'xk':     { es: 'Kosovo',             de: 'Kosovo'              },
+}
+
+// Returns the team name translated to the given locale (BCP 47, e.g. 'es', 'de').
+// Falls back to the original English name if no translation is available.
+export function translateTeam(name: string, locale: string): string {
+  if (locale === 'en') return name
+  const code = TEAM_FLAG_CODE[name]
+  if (!code) return name
+  const override = LOCALE_OVERRIDES[code]?.[locale]
+  if (override) return override
+  try {
+    const fmt = new Intl.DisplayNames([locale], { type: 'region' })
+    return fmt.of(code.toUpperCase()) ?? name
+  } catch {
+    return name
+  }
+}
