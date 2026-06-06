@@ -4,7 +4,7 @@ import { getDict } from '@/lib/i18n/server'
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
   const { dict } = await getDict()
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-emerald-900 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-emerald-900 px-4 py-10">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center mb-4">
