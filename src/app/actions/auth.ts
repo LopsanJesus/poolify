@@ -53,13 +53,17 @@ export async function signup(_: unknown, formData: FormData) {
   // email domain validation and confirms the account in one step.
   if (email.toLowerCase().endsWith('@test.com')) {
     const admin = createAdminClient()
-    const { error: adminError } = await admin.auth.admin.createUser({
+    const { data: created, error: adminError } = await admin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: { username },
     })
     if (adminError) return { error: adminError.message }
+    // Force-set the correct username regardless of what the trigger inserted
+    if (created?.user) {
+      await admin.from('profiles').update({ username }).eq('id', created.user.id)
+    }
     redirect('/login?registered=true')
   }
 
