@@ -46,7 +46,7 @@ export default async function MatchesPage() {
   return (
     <div className="space-y-6">
       {showPredictionLinks && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-2">
           <Link
             href={`/clan/${activeClanId}/predictions`}
             className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 hover:bg-emerald-500/20 transition text-sm font-medium"
