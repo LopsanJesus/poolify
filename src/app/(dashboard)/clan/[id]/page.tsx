@@ -40,7 +40,7 @@ export default async function ClanPage({
   const upcomingMatches = matchesWithPreds.filter((m) => m.status === "upcoming");
   const missingUpcoming = upcomingMatches.filter((m) => !m.prediction).length;
   const hasFinalPredictions = settings.final_predictions != null;
-  const missingFinalPreds = hasFinalPredictions && !myFinalPred;
+  const missingFinalPreds = hasFinalPredictions && (!myFinalPred || !myFinalPred.winner);
 
   // Banner logic: show match banner first; if all match preds done, show final banner.
   // Both hide after deadline.

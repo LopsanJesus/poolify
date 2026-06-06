@@ -74,6 +74,11 @@ export async function saveTournamentPrediction(
   const semi2     = (formData.get('semi2')      as string)?.trim() || null
   const top_scorer = (formData.get('top_scorer') as string)?.trim() || null
 
+  // Don't create a record if the user hasn't filled anything in
+  if (!winner && !runner_up && !semi1 && !semi2 && !top_scorer) {
+    return { success: true }
+  }
+
   const clan = await getClanData(clanId)
   const customFields = clan?.settings?.final_predictions?.custom_fields ?? []
   const customAnswers: Record<string, string> = {}
