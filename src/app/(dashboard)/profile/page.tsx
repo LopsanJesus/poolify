@@ -23,9 +23,8 @@ export default async function ProfilePage() {
           <UserCircle2 className="w-7 h-7 text-emerald-400" />
         </div>
         <div className="min-w-0">
-          <p className="text-xs text-blue-400">{dict.profile.username_label}</p>
           <p className="text-white font-semibold truncate">
-            {profile?.username ? `@${profile.username}` : user.email}
+            {profile?.username ?? user.email}
           </p>
           <p className="text-blue-300 text-sm truncate">{user.email}</p>
         </div>
