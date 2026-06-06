@@ -154,27 +154,27 @@ function MatchRow({
         </div>
 
         {/* Teams + score row */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {/* Home team */}
-          <div className="flex-1 flex flex-col items-start gap-0.5 min-w-0">
+          <div className="flex-1 flex flex-col items-start gap-0.5">
             <FlagImage team={match.home_team ?? ''} size={28} />
-            <span className="text-white font-bold text-sm leading-tight truncate w-full">
+            <span className="text-white font-semibold text-xs leading-tight break-words">
               {match.home_team ?? '?'}
             </span>
           </div>
 
           {/* Center score / time */}
-          <div className="shrink-0 flex flex-col items-center gap-0.5 min-w-[64px]">
+          <div className="shrink-0 flex flex-col items-center gap-0.5">
             {isFinished ? (
-              <span className="bg-black/60 backdrop-blur-sm text-white font-bold px-2.5 py-0.5 rounded-lg text-base tabular-nums ring-1 ring-white/10">
+              <span className="bg-black/60 backdrop-blur-sm text-white font-bold px-2 py-0.5 rounded-lg text-base tabular-nums ring-1 ring-white/10">
                 {match.home_score} – {match.away_score}
               </span>
             ) : match.status === 'live' ? (
-              <span className="bg-red-500/80 text-white font-bold text-xs px-2.5 py-1 rounded-lg animate-pulse">
+              <span className="bg-red-500/80 text-white font-bold text-xs px-2 py-1 rounded-lg animate-pulse">
                 {clanDict.status_live}
               </span>
             ) : (
-              <span className="bg-black/50 backdrop-blur-sm text-blue-200 font-mono text-sm px-2.5 py-0.5 rounded-lg tabular-nums">
+              <span className="bg-black/50 backdrop-blur-sm text-blue-200 font-mono text-sm px-2 py-0.5 rounded-lg tabular-nums">
                 {new Date(match.match_date).toLocaleTimeString(DATE_LOCALE[locale], {
                   hour: '2-digit', minute: '2-digit',
                 })}
@@ -183,9 +183,9 @@ function MatchRow({
           </div>
 
           {/* Away team */}
-          <div className="flex-1 flex flex-col items-end gap-0.5 min-w-0">
+          <div className="flex-1 flex flex-col items-end gap-0.5">
             <FlagImage team={match.away_team ?? ''} size={28} />
-            <span className="text-white font-bold text-sm leading-tight truncate w-full text-right">
+            <span className="text-white font-semibold text-xs leading-tight break-words text-right">
               {match.away_team ?? '?'}
             </span>
           </div>
