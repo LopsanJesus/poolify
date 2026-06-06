@@ -1,9 +1,9 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { getClanData } from '@/app/actions/clans'
+import { getClanData, getTournamentDeadline } from '@/app/actions/clans'
 import { getMatchesWithPredictions } from '@/app/actions/predictions'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Lock } from 'lucide-react'
 import { PredictionsForm } from './_components/PredictionsForm'
 import { getDict } from '@/lib/i18n/server'
 import { DEFAULT_CLAN_SETTINGS } from '@/lib/types'
@@ -14,9 +14,10 @@ export default async function PredictionsPage({ params }: { params: Promise<{ id
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
 
-  const [clan, matchesWithPreds] = await Promise.all([
+  const [clan, matchesWithPreds, deadline] = await Promise.all([
     getClanData(id),
     getMatchesWithPredictions(id),
+    getTournamentDeadline(),
   ])
 
   if (!clan) notFound()
@@ -25,6 +26,7 @@ export default async function PredictionsPage({ params }: { params: Promise<{ id
 
   const exactPts = clan.settings?.points_exact ?? DEFAULT_CLAN_SETTINGS.points_exact
   const signPts  = clan.settings?.points_sign  ?? DEFAULT_CLAN_SETTINGS.points_sign
+  const isPastDeadline = deadline ? new Date() >= deadline : false
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -36,6 +38,17 @@ export default async function PredictionsPage({ params }: { params: Promise<{ id
           <h1 className="text-2xl font-bold text-white">{dict.predictions.title}</h1>
           <p className="text-blue-300 text-sm">{clan.name}</p>
         </div>
+      </div>
+
+      <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm ${
+        isPastDeadline
+          ? 'bg-red-500/10 border-red-500/30 text-red-300'
+          : 'bg-blue-500/10 border-blue-500/20 text-blue-300'
+      }`}>
+        <Lock className="w-4 h-4 shrink-0" />
+        {isPastDeadline
+          ? dict.predictions.deadline_passed
+          : `${dict.predictions.deadline_info}${deadline ? ` (${deadline.toLocaleString(locale === 'es' ? 'es-ES' : locale === 'de' ? 'de-DE' : 'en-US')})` : ''}`}
       </div>
 
       <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">

@@ -295,48 +295,46 @@ function MatchCard({
         </div>
       </div>
 
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-2">
-        {/* Home team */}
-        <div className="min-w-0 space-y-2">
-          <div className="flex items-center justify-end gap-1.5 min-w-0">
-            <span className="text-white font-semibold text-sm text-right leading-tight truncate">
-              {match.home_team ? translateTeam(match.home_team, locale) : <span className="text-blue-400/60">?</span>}
-            </span>
-            {match.home_team && <FlagImage team={match.home_team} size={24} className="shrink-0" />}
-          </div>
-          <ScoreSelector
-            name={editable ? `home_${match.id}` : ""}
-            value={homeScore}
-            onChange={(v) => { setHomeScore(v); onDirty?.(); }}
-            disabled={!editable}
-          />
+      <div className="grid grid-cols-[1fr_auto_1fr] gap-x-2 gap-y-2">
+        {/* Row 1 — team names */}
+        <div className="min-w-0 flex items-center justify-end gap-1.5">
+          <span className="text-white font-semibold text-sm text-right leading-tight truncate">
+            {match.home_team ? translateTeam(match.home_team, locale) : <span className="text-blue-400/60">?</span>}
+          </span>
+          {match.home_team && <FlagImage team={match.home_team} size={24} className="shrink-0" />}
+        </div>
+        <div className="flex items-center justify-center shrink-0 px-1">
+          <span className="text-blue-300/60 font-bold text-base">–</span>
+        </div>
+        <div className="min-w-0 flex items-center gap-1.5">
+          {match.away_team && <FlagImage team={match.away_team} size={24} className="shrink-0" />}
+          <span className="text-white font-semibold text-sm leading-tight truncate">
+            {match.away_team ? translateTeam(match.away_team, locale) : <span className="text-blue-400/60">?</span>}
+          </span>
         </div>
 
-        {/* Center divider + actual result */}
-        <div className="flex flex-col items-center gap-1 shrink-0">
-          <span className="text-blue-300 text-lg font-bold">–</span>
-          {match.status === "finished" && (
-            <span className="text-xs text-blue-400 font-mono">
+        {/* Row 2 — score selectors */}
+        <ScoreSelector
+          name={editable ? `home_${match.id}` : ""}
+          value={homeScore}
+          onChange={(v) => { setHomeScore(v); onDirty?.(); }}
+          disabled={!editable}
+        />
+        <div className="flex items-center justify-center shrink-0 px-1">
+          {match.status === "finished" ? (
+            <span className="text-xs text-blue-400 font-mono whitespace-nowrap">
               {match.home_score}–{match.away_score}
             </span>
+          ) : (
+            <span className="text-blue-300/40 font-bold text-base">–</span>
           )}
         </div>
-
-        {/* Away team */}
-        <div className="min-w-0 space-y-2">
-          <div className="flex items-center gap-1.5 min-w-0">
-            {match.away_team && <FlagImage team={match.away_team} size={24} className="shrink-0" />}
-            <span className="text-white font-semibold text-sm leading-tight truncate">
-              {match.away_team ? translateTeam(match.away_team, locale) : <span className="text-blue-400/60">?</span>}
-            </span>
-          </div>
-          <ScoreSelector
-            name={editable ? `away_${match.id}` : ""}
-            value={awayScore}
-            onChange={(v) => { setAwayScore(v); onDirty?.(); }}
-            disabled={!editable}
-          />
-        </div>
+        <ScoreSelector
+          name={editable ? `away_${match.id}` : ""}
+          value={awayScore}
+          onChange={(v) => { setAwayScore(v); onDirty?.(); }}
+          disabled={!editable}
+        />
       </div>
 
       <p className="text-center text-xs text-blue-400">
