@@ -10,35 +10,40 @@ type MatchWithPrediction = Match & { prediction: Prediction | null }
 
 const DATE_LOCALE: Record<Locale, string> = { en: 'en-US', es: 'es-ES', de: 'de-DE' }
 
-function toLocalDateKey(isoString: string) {
-  const d = new Date(isoString)
+// World Cup 2026 runs in UTC-6 (Mexico/Central). Using the tournament's timezone
+// as the day boundary means a 20:00 local match (02:00 UTC next day) still shows
+// under the correct matchday date rather than splitting to the following calendar day.
+const TOURNAMENT_OFFSET_MS = -6 * 60 * 60 * 1000
+
+function toMatchdayDateKey(isoString: string) {
+  const d = new Date(new Date(isoString).getTime() + TOURNAMENT_OFFSET_MS)
   return [
-    d.getFullYear(),
-    String(d.getMonth() + 1).padStart(2, '0'),
-    String(d.getDate()).padStart(2, '0'),
+    d.getUTCFullYear(),
+    String(d.getUTCMonth() + 1).padStart(2, '0'),
+    String(d.getUTCDate()).padStart(2, '0'),
   ].join('-')
 }
 
 function todayKey() {
-  const d = new Date()
+  const d = new Date(Date.now() + TOURNAMENT_OFFSET_MS)
   return [
-    d.getFullYear(),
-    String(d.getMonth() + 1).padStart(2, '0'),
-    String(d.getDate()).padStart(2, '0'),
+    d.getUTCFullYear(),
+    String(d.getUTCMonth() + 1).padStart(2, '0'),
+    String(d.getUTCDate()).padStart(2, '0'),
   ].join('-')
 }
 
 function buildDateRange(first: string, last: string): string[] {
   const dates: string[] = []
-  const cursor = new Date(first + 'T12:00:00')
-  const end = new Date(last + 'T12:00:00')
+  const cursor = new Date(first + 'T12:00:00Z')
+  const end = new Date(last + 'T12:00:00Z')
   while (cursor <= end) {
     dates.push([
-      cursor.getFullYear(),
-      String(cursor.getMonth() + 1).padStart(2, '0'),
-      String(cursor.getDate()).padStart(2, '0'),
+      cursor.getUTCFullYear(),
+      String(cursor.getUTCMonth() + 1).padStart(2, '0'),
+      String(cursor.getUTCDate()).padStart(2, '0'),
     ].join('-'))
-    cursor.setDate(cursor.getDate() + 1)
+    cursor.setUTCDate(cursor.getUTCDate() + 1)
   }
   return dates
 }
@@ -60,7 +65,7 @@ export function DateCarousel({
 }) {
   const byDate = new Map<string, MatchWithPrediction[]>()
   for (const m of matches) {
-    const key = toLocalDateKey(m.match_date)
+    const key = toMatchdayDateKey(m.match_date)
     const existing = byDate.get(key)
     if (existing) existing.push(m)
     else byDate.set(key, [m])
@@ -80,13 +85,9 @@ export function DateCarousel({
 
   const today = todayKey()
   let initialDate: string
-  if (allDates.includes(today)) {
-    initialDate = today
-  } else if (today < allDates[0]) {
-    initialDate = allDates[0]
-  } else {
-    initialDate = allDates[allDates.length - 1]
-  }
+  // Jump to the latest day that has already started (or the first future day)
+  const nextWithMatches = matchDates.find((d) => d >= today)
+  initialDate = nextWithMatches ?? matchDates[matchDates.length - 1]
 
   const [selected, setSelected] = useState(initialDate)
   const [direction, setDirection] = useState(0)
@@ -119,7 +120,7 @@ export function DateCarousel({
     <div className="space-y-5">
       <div ref={scrollRef} className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
         {allDates.map((date) => {
-          const d = new Date(date + 'T12:00:00')
+          const d = new Date(date + 'T12:00:00Z')
           const isToday = date === today
           const isSelected = date === selected
           const hasMatches = byDate.has(date)
