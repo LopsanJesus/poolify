@@ -4,7 +4,7 @@ import { savePredictions } from "@/app/actions/predictions";
 import type { Dict, Locale } from "@/lib/i18n/dictionaries";
 import { stageLabel } from "@/lib/stages";
 import type { Match, Prediction, PredScore } from "@/lib/types";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, Shuffle } from "lucide-react";
 import { useActionState, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FlagImage } from "@/app/_components/FlagImage";
@@ -35,6 +35,8 @@ export function PredictionsForm({
 }) {
   const [state, action, pending] = useActionState(savePredictions, undefined);
   const [dirty, setDirty] = useState(false);
+  // TODO: remove randomize-all debug button before launch
+  const [randomizeAllToken, setRandomizeAllToken] = useState(0);
 
   useEffect(() => {
     if (state?.success) setDirty(false);
@@ -52,6 +54,18 @@ export function PredictionsForm({
   return (
     <>
       <div className="space-y-8">
+        {/* TODO: remove this debug button before launch */}
+        {upcomingEmpty.length > 0 && (
+          <button
+            type="button"
+            onClick={() => { setRandomizeAllToken((t) => t + 1); setDirty(true); }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-blue-400/70 text-xs hover:bg-white/10 transition"
+          >
+            <Shuffle className="w-3.5 h-3.5" />
+            Randomizar todos (debug)
+          </button>
+        )}
+
         <form id="predictions-form" action={action} className="space-y-4">
           <input type="hidden" name="clan_id" value={clanId} />
 
@@ -69,6 +83,7 @@ export function PredictionsForm({
                   locale={locale}
                   editable
                   onDirty={() => setDirty(true)}
+                  randomizeSignal={randomizeAllToken}
                 />
               ))}
 
@@ -160,32 +175,30 @@ export function PredictionsForm({
   );
 }
 
-// ── Score selector ────────────────────────────────────────────
+// ── Score selector (controlled) ───────────────────────────────
 
 function ScoreSelector({
   name,
-  defaultValue,
+  value,
+  onChange,
   disabled,
-  onDirty,
 }: {
   name: string;
-  defaultValue: PredScore | "";
+  value: PredScore | "";
+  onChange?: (v: PredScore | "") => void;
   disabled?: boolean;
-  onDirty?: () => void;
 }) {
-  const [selected, setSelected] = useState<PredScore | "">(defaultValue);
-
   if (disabled) {
     return (
       <div className="flex justify-center">
         <span
           className={`min-w-[2.5rem] text-center text-xl font-bold px-3 py-2 rounded-lg border ${
-            selected === "+"
+            value === "+"
               ? "bg-amber-500/20 border-amber-500/40 text-amber-300"
               : "bg-blue-900/60 border-white/20 text-white"
           }`}
         >
-          {selected || "–"}
+          {value || "–"}
         </span>
       </div>
     );
@@ -193,20 +206,16 @@ function ScoreSelector({
 
   return (
     <div className="grid grid-cols-4 gap-1">
-      {name && selected !== "" && (
-        <input type="hidden" name={name} value={selected} />
+      {name && value !== "" && (
+        <input type="hidden" name={name} value={value} />
       )}
       {SCORE_OPTIONS.map((opt) => (
         <button
           key={opt}
           type="button"
-          onClick={() => {
-            const next = opt === selected ? "" : opt;
-            setSelected(next);
-            onDirty?.();
-          }}
+          onClick={() => onChange?.(opt === value ? "" : opt)}
           className={`h-9 w-full rounded-lg font-bold text-sm transition-all border ${
-            selected === opt
+            value === opt
               ? opt === "+"
                 ? "bg-amber-500 border-amber-400 text-white shadow-lg shadow-amber-500/30 scale-110"
                 : "bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/30 scale-110"
@@ -220,6 +229,10 @@ function ScoreSelector({
   );
 }
 
+function randomPick(): PredScore {
+  return SCORE_OPTIONS[Math.floor(Math.random() * SCORE_OPTIONS.length)];
+}
+
 // ── Match card ────────────────────────────────────────────────
 
 function MatchCard({
@@ -228,15 +241,32 @@ function MatchCard({
   locale,
   editable,
   onDirty,
+  randomizeSignal,
 }: {
   match: MatchWithPrediction;
   dict: Dict["predictions"];
   locale: Locale;
   editable: boolean;
   onDirty?: () => void;
+  randomizeSignal?: number;
 }) {
-  const existingHome = (match.prediction?.home_score ?? "") as PredScore | "";
-  const existingAway = (match.prediction?.away_score ?? "") as PredScore | "";
+  const [homeScore, setHomeScore] = useState<PredScore | "">((match.prediction?.home_score ?? "") as PredScore | "");
+  const [awayScore, setAwayScore] = useState<PredScore | "">((match.prediction?.away_score ?? "") as PredScore | "");
+
+  useEffect(() => {
+    if (randomizeSignal && randomizeSignal > 0) {
+      setHomeScore(randomPick());
+      setAwayScore(randomPick());
+      onDirty?.();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [randomizeSignal]);
+
+  function handleRandomize() {
+    setHomeScore(randomPick());
+    setAwayScore(randomPick());
+    onDirty?.();
+  }
 
   return (
     <div
@@ -250,7 +280,19 @@ function MatchCard({
         <span className="text-xs text-blue-400 font-medium">
           {stageLabel(match.stage, locale)}
         </span>
-        <StatusPill status={match.status} dict={dict} />
+        <div className="flex items-center gap-2">
+          {editable && (
+            <button
+              type="button"
+              onClick={handleRandomize}
+              className="p-1 rounded-md text-blue-400/50 hover:text-blue-300 hover:bg-white/10 transition"
+              aria-label="Randomizar"
+            >
+              <Shuffle className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <StatusPill status={match.status} dict={dict} />
+        </div>
       </div>
 
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-2">
@@ -264,9 +306,9 @@ function MatchCard({
           </div>
           <ScoreSelector
             name={editable ? `home_${match.id}` : ""}
-            defaultValue={existingHome}
+            value={homeScore}
+            onChange={(v) => { setHomeScore(v); onDirty?.(); }}
             disabled={!editable}
-            onDirty={onDirty}
           />
         </div>
 
@@ -290,9 +332,9 @@ function MatchCard({
           </div>
           <ScoreSelector
             name={editable ? `away_${match.id}` : ""}
-            defaultValue={existingAway}
+            value={awayScore}
+            onChange={(v) => { setAwayScore(v); onDirty?.(); }}
             disabled={!editable}
-            onDirty={onDirty}
           />
         </div>
       </div>
