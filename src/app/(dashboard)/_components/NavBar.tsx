@@ -22,9 +22,15 @@ export function NavBar({
     { href: "/profile", icon: User, label: navDict.profile },
   ];
 
+  const isPredictionsPath =
+    pathname.includes("/predictions") || pathname.includes("/final-predictions");
+
   const isActive = (href: string) => {
     if (href === homeHref) {
-      return pathname === "/dashboard" || pathname.startsWith("/clan");
+      return (pathname === "/dashboard" || pathname.startsWith("/clan")) && !isPredictionsPath;
+    }
+    if (href === "/matches") {
+      return pathname === href || pathname.startsWith(href + "/") || isPredictionsPath;
     }
     return pathname === href || pathname.startsWith(href + "/");
   };
