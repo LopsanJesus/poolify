@@ -129,7 +129,7 @@ function ScoreSelector({
           key={opt}
           type="button"
           onClick={() => setSelected(opt === selected ? "" : opt)}
-          className={`w-10 h-10 rounded-lg font-bold text-base transition-all border ${
+          className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg font-bold text-sm sm:text-base transition-all border ${
             selected === opt
               ? opt === "+"
                 ? "bg-amber-500 border-amber-400 text-white shadow-lg shadow-amber-500/30 scale-110"
@@ -162,7 +162,7 @@ function MatchCard({
 
   return (
     <div
-      className={`rounded-2xl border p-5 space-y-4 transition ${
+      className={`rounded-2xl border p-4 sm:p-5 space-y-4 transition ${
         editable ? "bg-white/10 border-white/20" : "bg-white/5 border-white/10 opacity-75"
       }`}
     >
@@ -175,7 +175,7 @@ function MatchCard({
         <StatusPill status={match.status} dict={dict} />
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         {/* Home team */}
         <div className="flex-1 space-y-2">
           <div className="flex items-center justify-end gap-2">
