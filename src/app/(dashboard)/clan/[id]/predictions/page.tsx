@@ -42,18 +42,14 @@ export default async function PredictionsPage({ params }: { params: Promise<{ id
         <p className="text-xs font-semibold text-blue-400/70 uppercase tracking-wide">
           {dict.predictions.scoring_title}
         </p>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <div className="flex flex-col items-center gap-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2 py-3">
             <span className="text-emerald-400 font-black text-lg leading-none tabular-nums">+{exactPts}</span>
             <span className="text-[11px] text-emerald-300/80 text-center leading-tight">{dict.predictions.scoring_exact}</span>
           </div>
           <div className="flex flex-col items-center gap-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 px-2 py-3">
             <span className="text-blue-300 font-black text-lg leading-none tabular-nums">+{signPts}</span>
-            <span className="text-[11px] text-blue-300/80 text-center leading-tight">{dict.predictions.scoring_winner}</span>
-          </div>
-          <div className="flex flex-col items-center gap-1.5 rounded-lg bg-white/5 border border-white/10 px-2 py-3">
-            <span className="text-blue-400/60 font-black text-lg leading-none tabular-nums">0</span>
-            <span className="text-[11px] text-blue-400/50 text-center leading-tight">{dict.predictions.scoring_miss}</span>
+            <span className="text-[11px] text-blue-300/80 text-center leading-tight">1X2</span>
           </div>
         </div>
       </div>
