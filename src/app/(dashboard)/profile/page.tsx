@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ChevronRight, LogOut, UserCircle2, KeyRound } from 'lucide-react'
