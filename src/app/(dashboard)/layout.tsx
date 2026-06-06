@@ -53,7 +53,7 @@ export default async function DashboardLayout({
         inviteDict={dict.invite}
         settingsTitle={dict.clan_settings.title}
       />
-      <NavBar activeClanId={activeClanId} />
+      <NavBar activeClanId={activeClanId} navDict={dict.nav} />
 
       <main className="pt-14 md:pl-20 pb-nav">
         <div className="max-w-5xl mx-auto px-4 pt-4 pb-10">{children}</div>

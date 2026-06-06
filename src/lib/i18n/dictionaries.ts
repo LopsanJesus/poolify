@@ -20,6 +20,9 @@ const en = {
     points_short: 'pts',
   },
   nav: {
+    home: 'Home',
+    matches: 'Matches',
+    ranking: 'Ranking',
     profile: 'Profile',
     rules: 'Rules',
     my_pools: 'My pools',
@@ -312,6 +315,9 @@ const es: typeof en = {
     points_short: 'pts',
   },
   nav: {
+    home: 'Inicio',
+    matches: 'Partidos',
+    ranking: 'Clasificación',
     profile: 'Perfil',
     rules: 'Normas',
     my_pools: 'Mis porras',
@@ -604,6 +610,9 @@ const de: typeof en = {
     points_short: 'Pkt',
   },
   nav: {
+    home: 'Home',
+    matches: 'Spiele',
+    ranking: 'Rangliste',
     profile: 'Profil',
     rules: 'Regeln',
     my_pools: 'Meine Tippspiele',

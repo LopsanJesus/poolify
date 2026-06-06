@@ -2,17 +2,24 @@
 import { Calendar, Home, Trophy, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { Dict } from "@/lib/i18n/dictionaries";
 
-export function NavBar({ activeClanId }: { activeClanId: string | null }) {
+export function NavBar({
+  activeClanId,
+  navDict,
+}: {
+  activeClanId: string | null
+  navDict: Dict['nav']
+}) {
   const pathname = usePathname();
 
   const homeHref = activeClanId ? `/clan/${activeClanId}` : "/dashboard";
 
   const links = [
-    { href: homeHref, icon: Home, label: "Home" },
-    { href: "/matches", icon: Calendar, label: "Matches" },
-    { href: "/ranking", icon: Trophy, label: "Ranking" },
-    { href: "/profile", icon: User, label: "Profile" },
+    { href: homeHref, icon: Home, label: navDict.home },
+    { href: "/matches", icon: Calendar, label: navDict.matches },
+    { href: "/ranking", icon: Trophy, label: navDict.ranking },
+    { href: "/profile", icon: User, label: navDict.profile },
   ];
 
   const isActive = (href: string) => {
