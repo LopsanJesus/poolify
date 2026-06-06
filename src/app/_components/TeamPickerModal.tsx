@@ -7,16 +7,24 @@ import { FlagImage } from './FlagImage'
 import type { Team } from '@/lib/types'
 import { TEAM_FLAG_CODE } from '@/lib/team-flags'
 
-// Synthetic team list from the static flag map — used when the DB teams table is empty
-const FALLBACK_TEAMS: Team[] = Object.keys(TEAM_FLAG_CODE)
-  .sort()
-  .map((name) => ({
-    id: name,
-    name,
-    flag_code: TEAM_FLAG_CODE[name] ?? null,
-    tournament_id: null,
-    created_at: '',
-  }))
+// Synthetic team list — one entry per flag code (deduplicates aliases like Brasil/Brazil)
+const FALLBACK_TEAMS: Team[] = (() => {
+  const seen = new Set<string>()
+  return Object.entries(TEAM_FLAG_CODE)
+    .filter(([, code]) => {
+      if (seen.has(code)) return false
+      seen.add(code)
+      return true
+    })
+    .map(([name, code]) => ({
+      id: name,
+      name,
+      flag_code: code,
+      tournament_id: null,
+      created_at: '',
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+})()
 
 export function TeamPickerModal({
   open,
