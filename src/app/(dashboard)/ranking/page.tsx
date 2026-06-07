@@ -64,27 +64,21 @@ export default async function RankingPage() {
         </div>
       ) : (
         <div className="rounded-xl border border-white/10 overflow-hidden">
-          <table className="w-full text-sm table-fixed">
-            <thead>
-              <tr className="border-b border-white/10 text-blue-400/70 text-xs uppercase tracking-wide">
-                <th className="text-left px-4 py-3 w-10">#</th>
-                <th className="text-left px-4 py-3">{dict.clan.ranking_name}</th>
-                <th className="text-center px-2 py-3 w-20">{dict.clan.ranking_exact}</th>
-                <th className="text-center px-2 py-3 w-16">{dict.clan.ranking_points}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ranking.map((entry, i) => (
-                <RankingRow
-                  key={entry.user_id}
-                  entry={entry}
-                  position={i}
-                  isMe={entry.user_id === user.id}
-                  clanDict={dict.clan}
-                />
-              ))}
-            </tbody>
-          </table>
+          <div className="grid grid-cols-[2.5rem_1fr_5rem_4rem] text-xs uppercase tracking-wide text-blue-400/70 border-b border-white/10 px-4 py-3">
+            <span>#</span>
+            <span>{dict.clan.ranking_name}</span>
+            <span className="text-center">{dict.clan.ranking_exact}</span>
+            <span className="text-center">{dict.clan.ranking_points}</span>
+          </div>
+          {ranking.map((entry, i) => (
+            <RankingRow
+              key={entry.user_id}
+              entry={entry}
+              position={i}
+              isMe={entry.user_id === user.id}
+              clanDict={dict.clan}
+            />
+          ))}
         </div>
       )}
     </div>
@@ -109,28 +103,24 @@ function RankingRow({
   clanDict: Dict["clan"];
 }) {
   return (
-    <tr
-      className={`border-b border-white/5 last:border-0 transition ${
+    <div
+      className={`grid grid-cols-[2.5rem_1fr_5rem_4rem] items-center px-4 py-3 border-b border-white/5 last:border-0 transition text-sm ${
         isMe ? "bg-emerald-500/10" : "hover:bg-white/5"
       }`}
     >
-      <td className="px-4 py-3">
-        <span className={`font-mono font-bold text-xs ${position < 3 ? MEDAL_COLORS[position] : "text-blue-400"}`}>
-          #{position + 1}
+      <span className={`font-mono font-bold text-xs ${position < 3 ? MEDAL_COLORS[position] : "text-blue-400"}`}>
+        #{position + 1}
+      </span>
+      <div className="flex items-center gap-1 min-w-0">
+        <span className={`font-semibold truncate ${isMe ? "text-emerald-300" : "text-white"}`}>
+          {entry.username}
         </span>
-      </td>
-      <td className="px-4 py-3 max-w-0">
-        <div className="flex items-center gap-1 min-w-0">
-          <span className={`font-semibold truncate ${isMe ? "text-emerald-300" : "text-white"}`}>
-            {entry.username}
-          </span>
-          {isMe && (
-            <span className="text-xs text-emerald-400 shrink-0">({clanDict.you})</span>
-          )}
-        </div>
-      </td>
-      <td className="px-2 py-3 text-center text-white/80 whitespace-nowrap">{entry.exact}</td>
-      <td className="px-2 py-3 text-center font-bold text-white whitespace-nowrap">{entry.total}</td>
-    </tr>
+        {isMe && (
+          <span className="text-xs text-emerald-400 shrink-0">({clanDict.you})</span>
+        )}
+      </div>
+      <span className="text-center text-white/80">{entry.exact}</span>
+      <span className="text-center font-bold text-white">{entry.total}</span>
+    </div>
   );
 }
