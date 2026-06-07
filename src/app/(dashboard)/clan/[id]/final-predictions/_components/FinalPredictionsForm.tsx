@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState, useEffect, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
 import { saveTournamentPrediction } from '@/app/actions/tournament'
 import type { FinalPredictionsConfig, TournamentPrediction, Team } from '@/lib/types'
@@ -30,9 +31,10 @@ export function FinalPredictionsForm({
   }
   const [state, action, pending] = useActionState(save, undefined)
   const [showToast, setShowToast] = useState(false)
+  const [dirty, setDirty] = useState(false)
 
   useEffect(() => {
-    if (state?.success) setShowToast(true)
+    if (state?.success) { setShowToast(true); setDirty(false) }
   }, [state?.success])
 
   const [selections, setSelections] = useState<Record<TeamKey, string>>({
@@ -45,6 +47,7 @@ export function FinalPredictionsForm({
 
   function set(key: TeamKey, val: string) {
     setSelections((s) => ({ ...s, [key]: val }))
+    setDirty(true)
   }
 
   function excluded(key: TeamKey) {
@@ -61,7 +64,8 @@ export function FinalPredictionsForm({
   ]
 
   return (
-    <form action={action} className="space-y-4">
+    <>
+    <form id="final-predictions-form" action={action} className="space-y-4">
       {/* Hidden inputs carry the selections into the server action */}
       {teamFields.map(({ key }) =>
         selections[key] ? (
@@ -72,12 +76,6 @@ export function FinalPredictionsForm({
       {state?.error && (
         <div className="rounded-lg bg-red-500/20 border border-red-500/40 px-4 py-3 text-red-300 text-sm">{state.error}</div>
       )}
-
-      <SuccessToast
-        show={showToast}
-        message={dict.saved}
-        onDone={() => setShowToast(false)}
-      />
 
       {/* Team pickers */}
       {teamFields.map(({ key, label, pts }) => (
@@ -110,6 +108,7 @@ export function FinalPredictionsForm({
           name="top_scorer"
           defaultValue={(existing?.top_scorer as string) ?? ''}
           placeholder={dict.placeholder_player}
+          onChange={() => setDirty(true)}
           className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-blue-300/40 focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
         />
       </div>
@@ -127,15 +126,17 @@ export function FinalPredictionsForm({
             type="text"
             name={`custom_${f.id}`}
             defaultValue={existing?.custom_answers?.[f.id] ?? ''}
+            onChange={() => setDirty(true)}
             className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white placeholder-blue-300/40 focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
           />
         </div>
       ))}
 
+      {/* Desktop inline button */}
       <button
         type="submit"
         disabled={pending}
-        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-purple-500 hover:bg-purple-400 text-white font-semibold transition disabled:opacity-60"
+        className="hidden md:flex w-full items-center justify-center gap-2 py-3 rounded-xl bg-purple-500 hover:bg-purple-400 text-white font-semibold transition disabled:opacity-60"
       >
         {pending && <Loader2 className="w-4 h-4 animate-spin" />}
         {pending ? commonDict.saving : dict.save_cta}
@@ -155,5 +156,36 @@ export function FinalPredictionsForm({
         />
       ))}
     </form>
+
+    <SuccessToast
+      show={showToast}
+      message={dict.saved}
+      onDone={() => setShowToast(false)}
+    />
+
+    {/* Mobile floating save button — only when dirty, above navbar */}
+    <AnimatePresence>
+      {dirty && (
+        <motion.div
+          className="md:hidden fixed inset-x-0 z-40 px-4 pb-3"
+          style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}
+          initial={{ y: 80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 80, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+        >
+          <button
+            type="submit"
+            form="final-predictions-form"
+            disabled={pending}
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-purple-500 hover:bg-purple-400 active:bg-purple-600 text-white font-semibold shadow-lg shadow-purple-900/50 transition disabled:opacity-60"
+          >
+            {pending && <Loader2 className="w-4 h-4 animate-spin" />}
+            {pending ? commonDict.saving : dict.save_cta}
+          </button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+    </>
   )
 }

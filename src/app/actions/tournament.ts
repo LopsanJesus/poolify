@@ -76,7 +76,7 @@ export async function saveTournamentPrediction(
 
   // Don't create a record if the user hasn't filled anything in
   if (!winner && !runner_up && !semi1 && !semi2 && !top_scorer) {
-    return { success: true }
+    return {}
   }
 
   const clan = await getClanData(clanId)

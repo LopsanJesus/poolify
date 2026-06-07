@@ -67,10 +67,10 @@ export default async function RankingPage() {
           <table className="w-full text-sm table-fixed">
             <thead>
               <tr className="border-b border-white/10 text-blue-400/70 text-xs uppercase tracking-wide">
-                <th className="text-left px-4 py-3 w-8">#</th>
-                <th className="text-left px-4 py-3">{dict.clan.ranking_name}</th>
+                <th className="text-center px-4 py-3 w-8">#</th>
+                <th className="text-center px-4 py-3">{dict.clan.ranking_name}</th>
                 <th className="text-center px-4 py-3 w-12">{dict.clan.ranking_exact}</th>
-                <th className="text-right px-4 py-3 w-16">{dict.clan.ranking_points}</th>
+                <th className="text-center px-4 py-3 w-16">{dict.clan.ranking_points}</th>
               </tr>
             </thead>
             <tbody>

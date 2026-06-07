@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from 'framer-motion'
 import { X } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 interface ModalProps {
@@ -13,6 +13,8 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children }: ModalProps) {
+  const [keyboardOffset, setKeyboardOffset] = useState(0)
+
   // Close on Escape
   useEffect(() => {
     if (!open) return
@@ -26,6 +28,25 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
     if (open) document.body.style.overflow = 'hidden'
     else document.body.style.overflow = ''
     return () => { document.body.style.overflow = '' }
+  }, [open])
+
+  // Push sheet above virtual keyboard
+  useEffect(() => {
+    if (!open) { setKeyboardOffset(0); return }
+    const vv = window.visualViewport
+    if (!vv) return
+    const update = () => {
+      const offset = window.innerHeight - vv.height - vv.offsetTop
+      setKeyboardOffset(Math.max(0, offset))
+    }
+    update()
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+      setKeyboardOffset(0)
+    }
   }, [open])
 
   if (typeof document === 'undefined') return null
@@ -47,6 +68,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
           {/* Sheet */}
           <motion.div
             className="relative w-full max-w-md bg-blue-950 border-t border-white/10 rounded-t-2xl shadow-2xl"
+            style={{ marginBottom: keyboardOffset }}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
