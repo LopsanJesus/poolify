@@ -1,4 +1,3 @@
-import { GroupSwitcher } from "@/app/(dashboard)/_components/GroupSwitcher";
 import { getClanRanking, getUserClans, getClanData } from "@/app/actions/clans";
 import { getActiveClanId } from "@/lib/active-clan";
 import type { Dict } from "@/lib/i18n/dictionaries";
@@ -48,14 +47,6 @@ export default async function RankingPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-end">
-        <GroupSwitcher
-          currentId={clan.id}
-          clans={clans}
-          label={dict.clan.switch_pool}
-        />
-      </div>
-
       {hasFinalPredictions && (
         <Link
           href={`/clan/${clan.id}/final-predictions`}
