@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 
 const MEDAL_COLORS = ["text-yellow-400", "text-slate-300", "text-orange-400"];
+const COLS = "2.5rem 1fr 5rem 4rem";
 
 export default async function RankingPage() {
   const supabase = await createClient();
@@ -63,13 +64,19 @@ export default async function RankingPage() {
           <p className="text-blue-300 font-medium">{dict.clan.no_ranking}</p>
         </div>
       ) : (
-        <div className="rounded-xl border border-white/10 overflow-hidden">
-          <div className="grid grid-cols-[2.5rem_1fr_5rem_4rem] text-xs uppercase tracking-wide text-blue-400/70 border-b border-white/10 px-4 py-3">
-            <span>#</span>
-            <span>{dict.clan.ranking_name}</span>
-            <span className="text-center">{dict.clan.ranking_exact}</span>
-            <span className="text-center">{dict.clan.ranking_points}</span>
+        <div
+          className="rounded-xl border border-white/10 overflow-hidden grid"
+          style={{ gridTemplateColumns: COLS }}
+        >
+          {/* Header */}
+          <div className="contents text-xs uppercase tracking-wide text-blue-400/70">
+            <span className="px-4 py-3 border-b border-white/10 text-xs uppercase tracking-wide text-blue-400/70">#</span>
+            <span className="px-4 py-3 border-b border-white/10 text-xs uppercase tracking-wide text-blue-400/70">{dict.clan.ranking_name}</span>
+            <span className="px-4 py-3 border-b border-white/10 text-xs uppercase tracking-wide text-blue-400/70 text-center">{dict.clan.ranking_exact}</span>
+            <span className="px-4 py-3 border-b border-white/10 text-xs uppercase tracking-wide text-blue-400/70 text-center">{dict.clan.ranking_points}</span>
           </div>
+
+          {/* Rows */}
           {ranking.map((entry, i) => (
             <RankingRow
               key={entry.user_id}
@@ -102,16 +109,16 @@ function RankingRow({
   isMe: boolean;
   clanDict: Dict["clan"];
 }) {
+  const cell = `px-4 py-3 flex items-center border-b border-white/5 text-sm ${isMe ? "bg-emerald-500/10" : ""}`;
+
   return (
-    <div
-      className={`grid grid-cols-[2.5rem_1fr_5rem_4rem] items-center px-4 py-3 border-b border-white/5 last:border-0 transition text-sm ${
-        isMe ? "bg-emerald-500/10" : "hover:bg-white/5"
-      }`}
-    >
-      <span className={`font-mono font-bold text-xs ${position < 3 ? MEDAL_COLORS[position] : "text-blue-400"}`}>
-        #{position + 1}
-      </span>
-      <div className="flex items-center gap-1 min-w-0">
+    <>
+      <div className={cell}>
+        <span className={`font-mono font-bold text-xs ${position < 3 ? MEDAL_COLORS[position] : "text-blue-400"}`}>
+          #{position + 1}
+        </span>
+      </div>
+      <div className={`${cell} gap-1 min-w-0`}>
         <span className={`font-semibold truncate ${isMe ? "text-emerald-300" : "text-white"}`}>
           {entry.username}
         </span>
@@ -119,8 +126,8 @@ function RankingRow({
           <span className="text-xs text-emerald-400 shrink-0">({clanDict.you})</span>
         )}
       </div>
-      <span className="text-center text-white/80">{entry.exact}</span>
-      <span className="text-center font-bold text-white">{entry.total}</span>
-    </div>
+      <div className={`${cell} justify-center text-white/80`}>{entry.exact}</div>
+      <div className={`${cell} justify-center font-bold text-white`}>{entry.total}</div>
+    </>
   );
 }
