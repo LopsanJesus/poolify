@@ -130,7 +130,7 @@ function RankingRow({
         </div>
       </td>
       <td className="px-4 py-3 text-center text-white/80 whitespace-nowrap">{entry.exact}</td>
-      <td className="px-4 py-3 text-right font-bold text-white whitespace-nowrap">{entry.total}</td>
+      <td className="px-4 py-3 text-center font-bold text-white whitespace-nowrap">{entry.total}</td>
     </tr>
   );
 }
