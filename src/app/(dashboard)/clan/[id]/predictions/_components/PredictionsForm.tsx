@@ -11,7 +11,7 @@ import { FlagImage } from "@/app/_components/FlagImage";
 import { translateTeam } from "@/lib/team-flags";
 import { SuccessToast } from "@/app/_components/SuccessToast";
 
-type MatchWithPrediction = Match & { prediction: Prediction | null };
+type MatchWithPrediction = Match & { prediction: Prediction | null; matchDeadlinePassed: boolean };
 
 const DATE_LOCALE: Record<Locale, string> = {
   en: "en-US",
@@ -51,10 +51,13 @@ export function PredictionsForm({
     .filter((m) => m.status === "upcoming")
     .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
 
-  const upcomingEmpty  = allUpcoming.filter((m) => m.prediction === null);
-  const upcomingFilled = allUpcoming.filter((m) => m.prediction !== null);
+  // Editable: upcoming matches where per-match deadline (2h before kick-off) hasn't passed
+  const upcomingEditable = allUpcoming.filter((m) => !m.matchDeadlinePassed);
+  const upcomingEmpty  = upcomingEditable.filter((m) => m.prediction === null);
+  const upcomingFilled = upcomingEditable.filter((m) => m.prediction !== null);
 
-  const locked = matchesWithPreds.filter((m) => m.status !== "upcoming");
+  // Read-only: live, finished, or upcoming within 2h of kick-off
+  const locked = matchesWithPreds.filter((m) => m.status !== "upcoming" || m.matchDeadlinePassed);
 
   return (
     <>
@@ -74,7 +77,7 @@ export function PredictionsForm({
         <form id="predictions-form" action={action} className="space-y-4">
           <input type="hidden" name="clan_id" value={clanId} />
 
-          {allUpcoming.length === 0 ? (
+          {upcomingEditable.length === 0 ? (
             <p className="text-center text-blue-400/70 text-sm py-6">
               {dict.no_upcoming_predictions}
             </p>
@@ -123,7 +126,7 @@ export function PredictionsForm({
           )}
 
           {/* Desktop inline button */}
-          {allUpcoming.length > 0 && (
+          {upcomingEditable.length > 0 && (
             <button
               type="submit"
               disabled={pending}
@@ -156,7 +159,7 @@ export function PredictionsForm({
 
       {/* Mobile floating save button — only when dirty, above navbar */}
       <AnimatePresence>
-        {dirty && allUpcoming.length > 0 && (
+        {dirty && upcomingEditable.length > 0 && (
           <motion.div
             className="md:hidden fixed inset-x-0 z-40 px-4 pb-3"
             style={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom, 0px))" }}

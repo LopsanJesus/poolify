@@ -110,10 +110,16 @@ export async function getMatchesWithPredictions(clanId: string) {
   }
 
   const predictions = (predData ?? []) as Prediction[]
-  return matches.map((match) => ({
-    ...match,
-    prediction: predictions.find((p) => p.match_id === match.id) ?? null,
-  }))
+  const now = new Date()
+  return matches.map((match) => {
+    const matchDeadline = new Date(match.match_date)
+    matchDeadline.setHours(matchDeadline.getHours() - 2)
+    return {
+      ...match,
+      prediction: predictions.find((p) => p.match_id === match.id) ?? null,
+      matchDeadlinePassed: now >= matchDeadline,
+    }
+  })
 }
 
 export async function savePredictions(_: unknown, formData: FormData) {
@@ -133,6 +139,7 @@ export async function savePredictions(_: unknown, formData: FormData) {
   const settings = ((clanData as { settings?: ClanSettings } | null)?.settings ?? DEFAULT_CLAN_SETTINGS)
 
   const VALID: PredScore[] = ['0', '1', '2', '+']
+  const now = new Date()
 
   const upserts = matchIds.flatMap((matchId) => {
     const homeRaw = (formData.get(`home_${matchId}`) as string)?.trim()
@@ -146,6 +153,13 @@ export async function savePredictions(_: unknown, formData: FormData) {
     const awayScore = awayRaw as PredScore
 
     const match = matches.find((m) => m.id === matchId)
+
+    // Server-side per-match deadline check: skip matches within 2h of kick-off
+    if (match) {
+      const matchDeadline = new Date(match.match_date)
+      matchDeadline.setHours(matchDeadline.getHours() - 2)
+      if (now >= matchDeadline) return []
+    }
     let points = 0
     if (
       match?.status === 'finished' &&

@@ -37,14 +37,17 @@ export default async function ClanPage({
   const now = new Date();
   const isPastDeadline = deadline ? now >= deadline : false;
 
-  const upcomingMatches = matchesWithPreds.filter((m) => m.status === "upcoming");
-  const missingUpcoming = upcomingMatches.filter((m) => !m.prediction).length;
+  // Only count upcoming matches where per-match deadline (2h before kick-off) hasn't passed
+  const editableUpcoming = matchesWithPreds.filter(
+    (m) => m.status === "upcoming" && !m.matchDeadlinePassed
+  );
+  const missingUpcoming = editableUpcoming.filter((m) => !m.prediction).length;
   const hasFinalPredictions = settings.final_predictions != null;
   const missingFinalPreds = hasFinalPredictions && (!myFinalPred || !myFinalPred.winner);
 
-  // Banner logic: show match banner first; if all match preds done, show final banner.
-  // Both hide after deadline.
-  const showMatchBanner = !isPastDeadline && missingUpcoming > 0;
+  // Show match banner whenever there are editable upcoming matches without predictions.
+  // Final predictions banner still respects the global (tournament-start) deadline.
+  const showMatchBanner = missingUpcoming > 0;
   const showFinalBanner = !isPastDeadline && !showMatchBanner && missingFinalPreds;
 
   return (
@@ -71,7 +74,6 @@ export default async function ClanPage({
         clanDict={dict.clan}
         commonDict={dict.common}
         locale={locale}
-        isPastDeadline={isPastDeadline}
       />
     </div>
   );

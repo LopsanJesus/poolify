@@ -6,7 +6,7 @@ import { MatchCard } from '@/app/(dashboard)/clan/[id]/_components/MatchCard'
 import type { Match, Prediction } from '@/lib/types'
 import type { Dict, Locale } from '@/lib/i18n/dictionaries'
 
-type MatchWithPrediction = Match & { prediction: Prediction | null }
+type MatchWithPrediction = Match & { prediction: Prediction | null; matchDeadlinePassed: boolean }
 
 const DATE_LOCALE: Record<Locale, string> = { en: 'en-US', es: 'es-ES', de: 'de-DE' }
 
@@ -55,7 +55,6 @@ export function DateCarousel({
   clanDict,
   commonDict,
   locale,
-  isPastDeadline = false,
 }: {
   matches: MatchWithPrediction[]
   clanId: string
@@ -63,7 +62,6 @@ export function DateCarousel({
   clanDict: Dict['clan']
   commonDict: Dict['common']
   locale: Locale
-  isPastDeadline?: boolean
 }) {
   const byDate = new Map<string, MatchWithPrediction[]>()
   for (const m of matches) {
@@ -186,7 +184,7 @@ export function DateCarousel({
                   clanDict={clanDict}
                   commonDict={commonDict}
                   locale={locale}
-                  isPastDeadline={isPastDeadline}
+                  isPastDeadline={m.matchDeadlinePassed}
                 />
               ))}
             </div>
