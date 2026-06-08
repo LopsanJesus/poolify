@@ -3,12 +3,12 @@ import { getActiveClanId } from "@/lib/active-clan";
 import type { Dict } from "@/lib/i18n/dictionaries";
 import { getDict } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
-import { Trophy, Star } from "lucide-react";
+import { Trophy, Star, Target } from "lucide-react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
 const MEDAL_COLORS = ["text-yellow-400", "text-slate-300", "text-orange-400"];
-const COLS = "2.5rem 1fr 5rem 4rem";
+const COLS = "2.5rem 1fr 3.5rem 3.5rem";
 
 export default async function RankingPage() {
   const supabase = await createClient();
@@ -68,15 +68,13 @@ export default async function RankingPage() {
           className="rounded-xl border border-white/10 overflow-hidden grid"
           style={{ gridTemplateColumns: COLS }}
         >
-          {/* Header */}
-          <div className="contents text-xs uppercase tracking-wide text-blue-400/70">
-            <span className="px-4 py-3 border-b border-white/10 text-xs uppercase tracking-wide text-blue-400/70">#</span>
-            <span className="px-4 py-3 border-b border-white/10 text-xs uppercase tracking-wide text-blue-400/70">{dict.clan.ranking_name}</span>
-            <span className="px-4 py-3 border-b border-white/10 text-xs uppercase tracking-wide text-blue-400/70 text-center">{dict.clan.ranking_exact}</span>
-            <span className="px-4 py-3 border-b border-white/10 text-xs uppercase tracking-wide text-blue-400/70 text-center">{dict.clan.ranking_points}</span>
+          <div className="contents">
+            <span className="px-4 py-3 border-b border-white/10 text-blue-400/70">#</span>
+            <span className="px-4 py-3 border-b border-white/10 text-blue-400/70 text-xs uppercase tracking-wide">{dict.clan.ranking_name}</span>
+            <span className="px-4 py-3 border-b border-white/10 text-blue-400/70"><Target className="w-3.5 h-3.5" /></span>
+            <span className="px-4 py-3 border-b border-white/10 text-blue-400/70"><Star className="w-3.5 h-3.5" /></span>
           </div>
 
-          {/* Rows */}
           {ranking.map((entry, i) => (
             <RankingRow
               key={entry.user_id}
@@ -126,8 +124,8 @@ function RankingRow({
           <span className="text-xs text-emerald-400 shrink-0">({clanDict.you})</span>
         )}
       </div>
-      <div className={`${cell} justify-center text-white/80`}>{entry.exact}</div>
-      <div className={`${cell} justify-center font-bold text-white`}>{entry.total}</div>
+      <div className={`${cell} text-white/80`}>{entry.exact}</div>
+      <div className={`${cell} font-bold text-white`}>{entry.total}</div>
     </>
   );
 }
