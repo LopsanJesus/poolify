@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ChevronRight, KeyRound, Languages, LogOut, UserCircle2 } from 'lucide-react'
+import { AlertTriangle, ChevronRight, KeyRound, Languages, LogOut, User, UserCircle2 } from 'lucide-react'
 import { logout } from '@/app/actions/auth'
 import { LanguageModal } from './LanguageModal'
 import { LOCALE_LABELS, type Dict, type Locale } from '@/lib/i18n/dictionaries'
@@ -12,11 +12,13 @@ export function ProfileClient({
   email,
   locale,
   dict,
+  personalInfoComplete,
 }: {
   username: string | null
   email: string
   locale: Locale
   dict: Dict
+  personalInfoComplete: boolean
 }) {
   const [langOpen, setLangOpen] = useState(false)
 
@@ -32,6 +34,23 @@ export function ProfileClient({
           <p className="text-blue-300 text-sm truncate">{email}</p>
         </div>
       </section>
+
+      {/* Personal info */}
+      <Link
+        href="/profile/personal-info"
+        className="flex items-center justify-between rounded-2xl bg-white/5 border border-white/10 p-5 hover:bg-white/10 transition group"
+      >
+        <div className="flex items-center gap-3">
+          <User className="w-5 h-5 text-purple-400" />
+          <span className="text-white font-semibold">Información personal</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {!personalInfoComplete && (
+            <AlertTriangle className="w-4 h-4 text-amber-400" />
+          )}
+          <ChevronRight className="w-5 h-5 text-blue-400 group-hover:text-white transition" />
+        </div>
+      </Link>
 
       {/* Password */}
       <Link

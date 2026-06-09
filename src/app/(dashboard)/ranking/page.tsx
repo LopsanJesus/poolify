@@ -1,14 +1,12 @@
 import { getClanRanking, getUserClans, getClanData } from "@/app/actions/clans";
 import { getActiveClanId } from "@/lib/active-clan";
-import type { Dict } from "@/lib/i18n/dictionaries";
 import { getDict } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
-import { Trophy, Star, Target } from "lucide-react";
+import { getUserPersonalInfo } from "@/app/actions/personal-info";
+import { Trophy, Star } from "lucide-react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-
-const MEDAL_COLORS = ["text-yellow-400", "text-slate-300", "text-orange-400"];
-const COLS = "2.5rem 1fr 3.5rem 3.5rem";
+import { RankingWithModal } from "./_components/RankingWithModal";
 
 export default async function RankingPage() {
   const supabase = await createClient();
@@ -46,6 +44,12 @@ export default async function RankingPage() {
 
   const hasFinalPredictions = clanData?.settings?.final_predictions != null;
 
+  // Fetch personal info for all ranking members in parallel
+  const personalInfoEntries = await Promise.all(
+    ranking.map(async (entry) => [entry.user_id, await getUserPersonalInfo(entry.user_id)] as const)
+  );
+  const personalInfoMap = Object.fromEntries(personalInfoEntries);
+
   return (
     <div className="space-y-4">
       {hasFinalPredictions && (
@@ -64,68 +68,13 @@ export default async function RankingPage() {
           <p className="text-blue-300 font-medium">{dict.clan.no_ranking}</p>
         </div>
       ) : (
-        <div
-          className="rounded-xl border border-white/10 overflow-hidden grid"
-          style={{ gridTemplateColumns: COLS }}
-        >
-          <div className="contents">
-            <span className="px-4 py-3 border-b border-white/10 text-blue-400/70">#</span>
-            <span className="px-4 py-3 border-b border-white/10 text-blue-400/70 text-xs uppercase tracking-wide">{dict.clan.ranking_name}</span>
-            <span className="px-4 py-3 border-b border-white/10 text-blue-400/70"><Target className="w-3.5 h-3.5" /></span>
-            <span className="px-4 py-3 border-b border-white/10 text-blue-400/70"><Star className="w-3.5 h-3.5" /></span>
-          </div>
-
-          {ranking.map((entry, i) => (
-            <RankingRow
-              key={entry.user_id}
-              entry={entry}
-              position={i}
-              isMe={entry.user_id === user.id}
-              clanDict={dict.clan}
-            />
-          ))}
-        </div>
+        <RankingWithModal
+          ranking={ranking}
+          currentUserId={user.id}
+          clanDict={dict.clan}
+          personalInfoMap={personalInfoMap}
+        />
       )}
     </div>
-  );
-}
-
-function RankingRow({
-  entry,
-  position,
-  isMe,
-  clanDict,
-}: {
-  entry: {
-    user_id: string;
-    username: string;
-    total: number;
-    exact: number;
-    winner: number;
-  };
-  position: number;
-  isMe: boolean;
-  clanDict: Dict["clan"];
-}) {
-  const cell = `px-4 py-3 flex items-center border-b border-white/5 text-sm ${isMe ? "bg-emerald-500/10" : ""}`;
-
-  return (
-    <>
-      <div className={cell}>
-        <span className={`font-mono font-bold text-xs ${position < 3 ? MEDAL_COLORS[position] : "text-blue-400"}`}>
-          #{position + 1}
-        </span>
-      </div>
-      <div className={`${cell} gap-1 min-w-0`}>
-        <span className={`font-semibold truncate ${isMe ? "text-emerald-300" : "text-white"}`}>
-          {entry.username}
-        </span>
-        {isMe && (
-          <span className="text-xs text-emerald-400 shrink-0">({clanDict.you})</span>
-        )}
-      </div>
-      <div className={`${cell} text-white/80`}>{entry.exact}</div>
-      <div className={`${cell} font-bold text-white`}>{entry.total}</div>
-    </>
   );
 }

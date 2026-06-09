@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getDict } from '@/lib/i18n/server'
+import { getMyPersonalInfo } from '@/app/actions/personal-info'
 import { ProfileClient } from './_components/ProfileClient'
 
 export default async function ProfilePage() {
@@ -10,10 +11,19 @@ export default async function ProfilePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: profile }, { dict, locale }] = await Promise.all([
+  const [{ data: profile }, { dict, locale }, personalInfo] = await Promise.all([
     supabase.from('profiles').select('username, language').eq('id', user.id).single(),
     getDict(),
+    getMyPersonalInfo(),
   ])
+
+  const personalInfoComplete = !!(
+    personalInfo?.bet_amount != null &&
+    personalInfo?.religion &&
+    personalInfo?.sexual_orientation &&
+    personalInfo?.race &&
+    personalInfo?.fav_cabo_verde_player
+  )
 
   return (
     <ProfileClient
@@ -21,6 +31,7 @@ export default async function ProfilePage() {
       email={user.email!}
       locale={locale}
       dict={dict}
+      personalInfoComplete={personalInfoComplete}
     />
   )
 }

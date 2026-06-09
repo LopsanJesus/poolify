@@ -37,8 +37,6 @@ export function PredictionsForm({
   const [state, action, pending] = useActionState(savePredictions, undefined);
   const [dirty, setDirty] = useState(false);
   const [showToast, setShowToast] = useState(false);
-  // TODO: remove randomize-all debug button before launch
-  const [randomizeAllToken, setRandomizeAllToken] = useState(0);
 
   useEffect(() => {
     if (state?.success) {
@@ -62,18 +60,6 @@ export function PredictionsForm({
   return (
     <>
       <div className="space-y-8">
-        {/* TODO: remove this debug button before launch */}
-        {upcomingEmpty.length > 0 && (
-          <button
-            type="button"
-            onClick={() => { setRandomizeAllToken((t) => t + 1); setDirty(true); }}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-blue-400/70 text-xs hover:bg-white/10 transition"
-          >
-            <Shuffle className="w-3.5 h-3.5" />
-            Randomizar todos (debug)
-          </button>
-        )}
-
         <form id="predictions-form" action={action} className="space-y-4">
           <input type="hidden" name="clan_id" value={clanId} />
 
@@ -91,7 +77,6 @@ export function PredictionsForm({
                   locale={locale}
                   editable
                   onDirty={() => setDirty(true)}
-                  randomizeSignal={randomizeAllToken}
                 />
               ))}
 
@@ -250,26 +235,15 @@ function MatchCard({
   locale,
   editable,
   onDirty,
-  randomizeSignal,
 }: {
   match: MatchWithPrediction;
   dict: Dict["predictions"];
   locale: Locale;
   editable: boolean;
   onDirty?: () => void;
-  randomizeSignal?: number;
 }) {
   const [homeScore, setHomeScore] = useState<PredScore | "">((match.prediction?.home_score ?? "") as PredScore | "");
   const [awayScore, setAwayScore] = useState<PredScore | "">((match.prediction?.away_score ?? "") as PredScore | "");
-
-  useEffect(() => {
-    if (randomizeSignal && randomizeSignal > 0) {
-      setHomeScore(randomPick());
-      setAwayScore(randomPick());
-      onDirty?.();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [randomizeSignal]);
 
   function handleRandomize() {
     setHomeScore(randomPick());

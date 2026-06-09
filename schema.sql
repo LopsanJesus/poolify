@@ -44,7 +44,14 @@ create table public.profiles (
   username        text not null unique,
   default_clan_id uuid,                             -- set on demand; FK added below after clans exists
   language        text not null default 'en' check (language in ('en','es','de')),
-  created_at      timestamptz not null default now()
+  created_at      timestamptz not null default now(),
+  -- Personal info (locked once all fields are filled)
+  bet_amount      numeric,
+  religion        text,
+  sexual_orientation text,
+  race            text,
+  fav_cabo_verde_player text,
+  personal_info_locked boolean not null default false
 );
 alter table public.profiles enable row level security;
 
@@ -285,6 +292,14 @@ create policy "Clan owner can manage clan_tournaments"
 -- ── Incremental Migration Notes ─────────────────────────────
 -- If a previous version of this schema is already deployed, run the
 -- following statements (they are no-ops on a fresh install):
+--
+-- NEW (personal info):
+--   alter table public.profiles add column if not exists bet_amount numeric;
+--   alter table public.profiles add column if not exists religion text;
+--   alter table public.profiles add column if not exists sexual_orientation text;
+--   alter table public.profiles add column if not exists race text;
+--   alter table public.profiles add column if not exists fav_cabo_verde_player text;
+--   alter table public.profiles add column if not exists personal_info_locked boolean not null default false;
 --
 --   alter table public.profiles
 --     add column if not exists default_clan_id uuid
