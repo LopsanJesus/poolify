@@ -224,6 +224,38 @@ export async function removeClanMember(clanId: string, targetUserId: string): Pr
   return {}
 }
 
+export async function transferClanOwnership(clanId: string, newOwnerId: string): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const { dict } = await getDict()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: dict.common.error }
+
+  const clan = await getClanData(clanId)
+  if (!clan || clan.owner_id !== user.id) return { error: dict.common.error }
+  if (newOwnerId === user.id) return { error: dict.clan_settings.transfer_same_user }
+
+  // Verify new owner is a member of the clan
+  const { data: membership } = await supabase
+    .from('clan_members')
+    .select('user_id')
+    .eq('clan_id', clanId)
+    .eq('user_id', newOwnerId)
+    .single()
+  if (!membership) return { error: dict.clan_settings.transfer_not_member }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('clans')
+    .update({ owner_id: newOwnerId })
+    .eq('id', clanId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/clan/${clanId}/settings`)
+  revalidatePath(`/clan/${clanId}`)
+  return {}
+}
+
 export async function joinClanByCode(code: string): Promise<{ error?: string; clanId?: string }> {
   const supabase = await createClient()
   const { dict } = await getDict()

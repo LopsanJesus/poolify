@@ -1,9 +1,8 @@
 'use client'
 
 import { useActionState, useState, useTransition } from 'react'
-import { Loader2, Check, Trophy, Users, Star, Plus, Trash2 } from 'lucide-react'
-import { updateClanSettings } from '@/app/actions/clans'
-import { removeClanMember } from '@/app/actions/clans'
+import { Loader2, Check, Trophy, Users, Star, Plus, Trash2, ShieldAlert } from 'lucide-react'
+import { updateClanSettings, removeClanMember, transferClanOwnership } from '@/app/actions/clans'
 import { saveTournamentResults } from '@/app/actions/tournament'
 import type { ClanSettings, Team } from '@/lib/types'
 import type { Dict } from '@/lib/i18n/dictionaries'
@@ -200,6 +199,16 @@ export function ClanSettingsForm({
         </ul>
       </section>
 
+      {/* ── Transfer ownership (owner only) ── */}
+      {!readOnly && (
+        <TransferOwnershipSection
+          clanId={clanId}
+          members={members}
+          currentUserId={currentUserId}
+          dict={dict}
+        />
+      )}
+
       {/* ── Mark results (owner, after tournament) ── */}
       {!readOnly && (
         <form action={resultsAction} className="space-y-4">
@@ -274,6 +283,86 @@ export function ClanSettingsForm({
         </form>
       )}
     </div>
+  )
+}
+
+function TransferOwnershipSection({
+  clanId,
+  members,
+  currentUserId,
+  dict,
+}: {
+  clanId: string
+  members: Member[]
+  currentUserId: string
+  dict: Dict['clan_settings']
+}) {
+  const otherMembers = members.filter((m) => m.user_id !== currentUserId)
+  const [selected, setSelected] = useState('')
+  const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+  const [done, setDone] = useState(false)
+
+  function handleTransfer() {
+    if (!selected) return
+    if (!confirm(dict.transfer_confirm)) return
+    setError(null)
+    startTransition(async () => {
+      const res = await transferClanOwnership(clanId, selected)
+      if (res.error) {
+        setError(res.error)
+      } else {
+        setDone(true)
+      }
+    })
+  }
+
+  return (
+    <section className="rounded-2xl bg-red-500/5 border border-red-500/20 p-5 space-y-4">
+      <div className="flex items-center gap-2">
+        <ShieldAlert className="w-5 h-5 text-red-400" />
+        <h2 className="text-white font-semibold">{dict.section_transfer}</h2>
+      </div>
+      <p className="text-blue-400/70 text-xs">{dict.transfer_hint}</p>
+
+      {error && (
+        <div className="rounded-lg bg-red-500/20 border border-red-500/40 px-4 py-3 text-red-300 text-sm">
+          {error}
+        </div>
+      )}
+      {done && (
+        <div className="rounded-lg bg-emerald-500/20 border border-emerald-500/40 px-4 py-3 text-emerald-300 text-sm flex items-center gap-2">
+          <Check className="w-4 h-4" /> {dict.transfer_done}
+        </div>
+      )}
+
+      {!done && (
+        <div className="flex gap-2">
+          <select
+            value={selected}
+            onChange={(e) => setSelected(e.target.value)}
+            disabled={isPending}
+            className="flex-1 px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-red-500 transition disabled:opacity-60 text-sm"
+          >
+            <option value="" disabled className="bg-blue-950">{dict.transfer_select}</option>
+            {otherMembers.map((m) => (
+              <option key={m.user_id} value={m.user_id} className="bg-blue-950">
+                @{m.username}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={handleTransfer}
+            disabled={!selected || isPending}
+            className="px-4 py-2.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 font-semibold text-sm transition disabled:opacity-50 flex items-center gap-2 shrink-0"
+          >
+            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            {dict.transfer_cta}
+          </button>
+        </div>
+      )}
+    </section>
   )
 }
 
