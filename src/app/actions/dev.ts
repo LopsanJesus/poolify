@@ -632,6 +632,24 @@ export async function addUserToClan(userId: string, clanId: string) {
   return { success: true };
 }
 
+export async function removeUserFromClan(userId: string, clanId: string) {
+  await checkAuth();
+  const admin = createAdminClient();
+
+  await admin.from("predictions").delete().eq("user_id", userId).eq("clan_id", clanId);
+  await admin.from("tournament_predictions").delete().eq("user_id", userId).eq("clan_id", clanId);
+  const { error } = await admin
+    .from("clan_members")
+    .delete()
+    .eq("user_id", userId)
+    .eq("clan_id", clanId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/dev-shell");
+  return { success: true };
+}
+
 const SEED_CLAN_NAME = "Porra de prueba";
 
 export async function seedDatabase() {

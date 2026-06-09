@@ -2,6 +2,7 @@
 
 import {
   addUserToClan,
+  removeUserFromClan,
   createTestUser,
   deleteAllTestUsers,
   deleteTestUser,
@@ -277,6 +278,25 @@ export function DevShellClient({
     }
   };
 
+  const handleRemoveFromClan = async (userId: string, clanId: string) => {
+    if (!clanId) return;
+    if (!confirm("Remove user from this clan? Their predictions for this clan will also be deleted.")) return;
+    setLoading(`remove-${userId}`);
+    try {
+      const res = await removeUserFromClan(userId, clanId);
+      if (res.error) {
+        alert(res.error);
+      } else {
+        alert("Removed from clan.");
+        router.refresh();
+      }
+    } catch (err) {
+      alert("Error removing from clan");
+    } finally {
+      setLoading(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Create User Section */}
@@ -455,7 +475,7 @@ export function DevShellClient({
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="flex justify-center">
+                    <div className="flex flex-col gap-2 items-center">
                       <select
                         onChange={(e) =>
                           handleAddToClan(user.id, e.target.value)
@@ -466,6 +486,27 @@ export function DevShellClient({
                       >
                         <option value="" disabled className="bg-blue-900">
                           Add to Clan...
+                        </option>
+                        {clans.map((clan) => (
+                          <option
+                            key={clan.id}
+                            value={clan.id}
+                            className="bg-blue-900"
+                          >
+                            {clan.name}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        onChange={(e) =>
+                          handleRemoveFromClan(user.id, e.target.value)
+                        }
+                        className="bg-white/5 border border-red-500/20 rounded-lg px-3 py-2 text-sm text-red-300 focus:outline-none focus:ring-2 focus:ring-red-500/50 cursor-pointer"
+                        defaultValue=""
+                        disabled={!!loading}
+                      >
+                        <option value="" disabled className="bg-blue-900">
+                          Remove from Clan...
                         </option>
                         {clans.map((clan) => (
                           <option

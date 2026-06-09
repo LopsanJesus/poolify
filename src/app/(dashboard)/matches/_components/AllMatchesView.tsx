@@ -125,12 +125,13 @@ function MatchRow({
   pointsSign: number
 }) {
   const isFinished = match.status === 'finished'
+  const isLive = match.status === 'live'
   const [rankingRows, setRankingRows] = useState<MatchRankingEntry[] | null>(null)
   const [isPending, startTransition] = useTransition()
 
   function handleToggle() {
     onToggle()
-    if (!isExpanded && isFinished && clanId && rankingRows === null) {
+    if (!isExpanded && (isFinished || isLive) && clanId && rankingRows === null) {
       startTransition(async () => {
         const data = await getRankingUpToMatch(clanId, match.id)
         setRankingRows(data)
@@ -214,11 +215,11 @@ function MatchRow({
             )}
           </div>
 
-          {/* Match ranking — only when finished and clan is set */}
-          {isFinished && clanId && (
+          {/* Match ranking — when finished or live and clan is set */}
+          {(isFinished || isLive) && clanId && (
             <div className="bg-black/30 px-3 py-3">
               <p className="text-[10px] font-semibold text-blue-400/60 uppercase tracking-wide mb-2">
-                {clanDict.match_ranking}
+                {isLive ? clanDict.live_ranking : clanDict.match_ranking}
               </p>
               {isPending || rankingRows === null ? (
                 <div className="space-y-2">
@@ -239,6 +240,7 @@ function MatchRow({
                       clanDict={clanDict}
                       pointsExact={pointsExact}
                       pointsSign={pointsSign}
+                      hideMatchPrediction={isLive}
                     />
                   ))}
                 </div>
@@ -258,6 +260,7 @@ function MatchRankingRow({
   clanDict,
   pointsExact,
   pointsSign,
+  hideMatchPrediction = false,
 }: {
   entry: MatchRankingEntry
   rank: number
@@ -265,6 +268,7 @@ function MatchRankingRow({
   clanDict: Dict['clan']
   pointsExact: number
   pointsSign: number
+  hideMatchPrediction?: boolean
 }) {
   const pred = entry.prediction
 
@@ -285,19 +289,21 @@ function MatchRankingRow({
         )}
       </span>
 
-      {/* Prediction for this match + points gained */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        {pred ? (
-          <>
-            <span className="font-mono text-xs text-white/60 tabular-nums">
-              {pred.home_score}–{pred.away_score}
-            </span>
-            <PointsBadge points={pred.points} exactPts={pointsExact} signPts={pointsSign} />
-          </>
-        ) : (
-          <span className="text-xs text-white/25">—</span>
-        )}
-      </div>
+      {/* Prediction for this match + points gained — hidden for live matches */}
+      {!hideMatchPrediction && (
+        <div className="flex items-center gap-1.5 shrink-0">
+          {pred ? (
+            <>
+              <span className="font-mono text-xs text-white/60 tabular-nums">
+                {pred.home_score}–{pred.away_score}
+              </span>
+              <PointsBadge points={pred.points} exactPts={pointsExact} signPts={pointsSign} />
+            </>
+          ) : (
+            <span className="text-xs text-white/25">—</span>
+          )}
+        </div>
+      )}
 
       {/* Total points */}
       <span className="w-12 text-right font-bold text-white tabular-nums text-sm shrink-0">

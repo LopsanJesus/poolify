@@ -283,7 +283,7 @@ export async function getRankingUpToMatch(clanId: string, matchId: string): Prom
     .eq('id', matchId)
     .single()
 
-  if (!matchData || matchData.status !== 'finished') return []
+  if (!matchData || (matchData.status !== 'finished' && matchData.status !== 'live')) return []
 
   const matchDate = matchData.match_date
 

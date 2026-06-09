@@ -1,7 +1,7 @@
 import { getAllMatches, getUserPredictionsForClan } from "@/app/actions/predictions";
 import { getDict } from "@/lib/i18n/server";
 import { getActiveClanId } from "@/lib/active-clan";
-import { getClanData, getTournamentDeadline, getUserClans } from "@/app/actions/clans";
+import { getClanData, getUserClans } from "@/app/actions/clans";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { AllMatchesView } from "./_components/AllMatchesView";
@@ -18,10 +18,9 @@ export default async function MatchesPage() {
   if (!user) redirect("/login");
 
   const cookieClanId = await getActiveClanId();
-  const [matches, { dict, locale }, deadline, userClans] = await Promise.all([
+  const [matches, { dict, locale }, userClans] = await Promise.all([
     getAllMatches(cookieClanId ?? undefined),
     getDict(),
-    getTournamentDeadline(),
     getUserClans(),
   ]);
 
@@ -44,8 +43,7 @@ export default async function MatchesPage() {
     hasFinalPredictions = clanData?.settings?.final_predictions != null;
   }
 
-  const isPastDeadline = deadline ? new Date() >= deadline : false;
-  const showPredictionLinks = activeClanId && !isPastDeadline;
+  const showPredictionLinks = !!activeClanId;
 
   return (
     <div className="space-y-6">

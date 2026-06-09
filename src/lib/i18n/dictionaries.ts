@@ -110,8 +110,11 @@ const en = {
     missing_banner_title: 'You have {n} match(es) without a prediction',
     missing_banner_desc: "Don't leave points on the table — submit them now.",
     missing_banner_cta: 'Fill predictions',
+    view_banner_title: 'Your match predictions',
+    view_banner_desc: 'Tournament is underway — see how your picks did.',
     copy_code: 'Copy code',
     match_ranking: 'Ranking after this match',
+    live_ranking: 'Live ranking',
     ranking_gained: 'Gained',
   },
   predictions: {
@@ -287,6 +290,7 @@ const en = {
     banner_title: 'Final predictions pending',
     banner_desc: 'Fill in your final predictions before the deadline.',
     banner_cta: 'Fill now',
+    banner_view_cta: 'View bets',
   },
   invite: {
     button: 'Invite',
@@ -405,8 +409,11 @@ const es: typeof en = {
     missing_banner_title: 'Te faltan {n} pronóstico(s) por rellenar',
     missing_banner_desc: 'No dejes puntos sobre la mesa — complétalos ahora.',
     missing_banner_cta: 'Rellenar pronósticos',
+    view_banner_title: 'Tus pronósticos',
+    view_banner_desc: 'El torneo está en marcha — consulta cómo van tus apuestas.',
     copy_code: 'Copiar código',
     match_ranking: 'Clasificación tras este partido',
+    live_ranking: 'Clasificación en vivo',
     ranking_gained: 'Ganado',
   },
   predictions: {
@@ -582,6 +589,7 @@ const es: typeof en = {
     banner_title: 'Apuestas finales pendientes',
     banner_desc: 'Rellena tus apuestas finales antes del cierre.',
     banner_cta: 'Rellenar ahora',
+    banner_view_cta: 'Ver apuestas',
   },
   invite: {
     button: 'Invitar',
@@ -701,8 +709,11 @@ const de: typeof en = {
     missing_banner_title: 'Dir fehlen noch {n} Tipp(s)',
     missing_banner_desc: 'Lass keine Punkte liegen — gib sie jetzt ab.',
     missing_banner_cta: 'Tipps abgeben',
+    view_banner_title: 'Deine Tipps',
+    view_banner_desc: 'Das Turnier läuft — sieh nach, wie deine Tipps abschneiden.',
     copy_code: 'Code kopieren',
     match_ranking: 'Rangliste nach diesem Spiel',
+    live_ranking: 'Live-Rangliste',
     ranking_gained: 'Gewonnen',
   },
   predictions: {
@@ -879,6 +890,7 @@ const de: typeof en = {
     banner_title: 'Endtipps ausstehend',
     banner_desc: 'Gib deine Endtipps vor dem Ablauf ab.',
     banner_cta: 'Jetzt ausfüllen',
+    banner_view_cta: 'Wetten ansehen',
   },
   invite: {
     button: 'Einladen',

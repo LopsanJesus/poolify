@@ -46,9 +46,14 @@ export default async function ClanPage({
   const missingFinalPreds = hasFinalPredictions && (!myFinalPred || !myFinalPred.winner);
 
   // Show match banner whenever there are editable upcoming matches without predictions.
-  // Final predictions banner still respects the global (tournament-start) deadline.
+  // After deadline, show a view-only link so users can consult their predictions.
   const showMatchBanner = missingUpcoming > 0;
-  const showFinalBanner = !isPastDeadline && !showMatchBanner && missingFinalPreds;
+  const showMatchViewLink = isPastDeadline && !showMatchBanner;
+  // Final predictions: show to fill (before deadline) or to view (after deadline)
+  const showFinalBanner = hasFinalPredictions && (
+    (!isPastDeadline && !showMatchBanner && missingFinalPreds) ||
+    isPastDeadline
+  );
 
   return (
     <div className="space-y-6">
@@ -62,8 +67,21 @@ export default async function ClanPage({
             format={format}
           />
         )}
+        {showMatchViewLink && (
+          <MissingPredictionsBanner
+            clanId={id}
+            count={0}
+            dict={dict.clan}
+            format={format}
+            viewOnly
+          />
+        )}
         {showFinalBanner && (
-          <MissingFinalPredictionsBanner clanId={id} dict={dict.final_predictions} />
+          <MissingFinalPredictionsBanner
+            clanId={id}
+            dict={dict.final_predictions}
+            viewOnly={isPastDeadline}
+          />
         )}
       </div>
 
