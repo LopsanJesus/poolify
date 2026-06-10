@@ -1,8 +1,8 @@
 'use client'
 
 import { useActionState, useState, useTransition } from 'react'
-import { Loader2, Check, Trophy, Users, Star, Plus, Trash2, ShieldAlert } from 'lucide-react'
-import { updateClanSettings, removeClanMember, transferClanOwnership } from '@/app/actions/clans'
+import { Loader2, Check, Trophy, Users, Star, ShieldAlert } from 'lucide-react'
+import { updateClanSettings, updateFinalPredictionsConfig, removeClanMember, transferClanOwnership } from '@/app/actions/clans'
 import { saveTournamentResults } from '@/app/actions/tournament'
 import type { ClanSettings, Team } from '@/lib/types'
 import type { Dict } from '@/lib/i18n/dictionaries'
@@ -31,13 +31,13 @@ export function ClanSettingsForm({
   teams?: Team[]
 }) {
   const [state, action, pending] = useActionState(updateClanSettings, undefined)
+  const [finalState, finalAction, finalPending] = useActionState(updateFinalPredictionsConfig, undefined)
   async function saveResults(_: { error?: string; success?: boolean } | undefined, fd: FormData) {
     return saveTournamentResults(clanId, fd)
   }
   const [resultsState, resultsAction, resultsPending] = useActionState(saveResults, undefined)
 
   const fp = settings.final_predictions
-  const [customFields, setCustomFields] = useState(fp?.custom_fields ?? [])
 
   const [resSelections, setResSelections] = useState<Record<ResKey, string>>({
     res_winner: '', res_runner_up: '', res_semi1: '', res_semi2: '',
@@ -49,20 +49,11 @@ export function ClanSettingsForm({
       .filter(([k, v]) => k !== key && v !== '').map(([, v]) => v)
   }
 
-  function addField() {
-    setCustomFields((prev) => [...prev, { id: crypto.randomUUID(), label: '', points: 3 }])
-  }
-  function removeField(id: string) {
-    setCustomFields((prev) => prev.filter((f) => f.id !== id))
-  }
-
   return (
     <div className="space-y-6">
-      {/* ── Scoring form ── */}
+      {/* ── Scoring + Access form ── */}
       <form action={readOnly ? undefined : action} className="space-y-6">
         <input type="hidden" name="clan_id" value={clanId} />
-        {/* Sync custom fields as JSON */}
-        <input type="hidden" name="custom_fields_json" value={JSON.stringify(customFields)} />
 
         {state?.error && (
           <div className="rounded-lg bg-red-500/20 border border-red-500/40 px-4 py-3 text-red-300 text-sm">
@@ -111,65 +102,6 @@ export function ClanSettingsForm({
           </label>
         </section>
 
-        {/* Final predictions config — owner only */}
-        {!readOnly && (
-          <section className="rounded-2xl bg-white/5 border border-white/10 p-5 space-y-4">
-            <div className="flex items-center gap-2">
-              <Star className="w-5 h-5 text-purple-400" />
-              <h2 className="text-white font-semibold">{dict.section_final_preds}</h2>
-            </div>
-            <p className="text-blue-400/70 text-xs">{dict.final_preds_hint}</p>
-
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                ['final_winner_pts',    dict.winner_pts_label,     fp?.winner_pts    ?? 10],
-                ['final_runner_up_pts', dict.runner_up_pts_label,  fp?.runner_up_pts ?? 7],
-                ['final_semi1_pts',     dict.semi1_pts_label,      fp?.semi1_pts     ?? 5],
-                ['final_semi2_pts',     dict.semi2_pts_label,      fp?.semi2_pts     ?? 5],
-                ['final_top_scorer_pts',dict.top_scorer_pts_label, fp?.top_scorer_pts ?? 5],
-              ].map(([name, label, def]) => (
-                <div key={name as string}>
-                  <label className="block text-xs text-blue-300 mb-1">{label as string}</label>
-                  <input type="number" name={name as string} min={0} max={100} defaultValue={def as number}
-                    className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition" />
-                </div>
-              ))}
-            </div>
-
-            {/* Custom fields */}
-            <div className="space-y-2">
-              <p className="text-sm text-blue-300 font-medium">{dict.custom_fields_label}</p>
-              {customFields.map((f, i) => (
-                <div key={f.id} className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder={dict.custom_field_label_placeholder}
-                    value={f.label}
-                    onChange={(e) => setCustomFields((prev) => prev.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
-                    className="flex-1 px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
-                  />
-                  <input
-                    type="number"
-                    placeholder={dict.custom_field_pts_placeholder}
-                    value={f.points}
-                    min={0}
-                    onChange={(e) => setCustomFields((prev) => prev.map((x, j) => j === i ? { ...x, points: parseInt(e.target.value) || 0 } : x))}
-                    className="w-16 px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition text-center"
-                  />
-                  <button type="button" onClick={() => removeField(f.id)}
-                    className="w-9 h-9 flex items-center justify-center rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300 transition">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-              <button type="button" onClick={addField}
-                className="flex items-center gap-1.5 text-sm text-blue-300 hover:text-white transition">
-                <Plus className="w-4 h-4" /> {dict.add_custom_field}
-              </button>
-            </div>
-          </section>
-        )}
-
         {!readOnly && (
           <button type="submit" disabled={pending}
             className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white font-semibold transition disabled:opacity-60">
@@ -178,6 +110,54 @@ export function ClanSettingsForm({
           </button>
         )}
       </form>
+
+      {/* ── Final predictions config form — owner only ── */}
+      {!readOnly && (
+        <form action={finalAction} className="space-y-4">
+          <input type="hidden" name="clan_id" value={clanId} />
+
+          <section className="rounded-2xl bg-purple-500/5 border border-purple-500/20 p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <Star className="w-5 h-5 text-purple-400" />
+              <h2 className="text-white font-semibold">{dict.section_final_preds}</h2>
+            </div>
+            <p className="text-blue-400/70 text-xs">{dict.final_preds_hint}</p>
+
+            {finalState?.error && (
+              <div className="rounded-lg bg-red-500/20 border border-red-500/40 px-4 py-3 text-red-300 text-sm">
+                {finalState.error}
+              </div>
+            )}
+            {finalState?.success && (
+              <div className="rounded-lg bg-purple-500/20 border border-purple-500/40 px-4 py-3 text-purple-300 text-sm flex items-center gap-2">
+                <Check className="w-4 h-4" /> {dict.saved}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                ['final_winner_pts',     dict.winner_pts_label,     fp?.winner_pts     ?? 10],
+                ['final_runner_up_pts',  dict.runner_up_pts_label,  fp?.runner_up_pts  ?? 7],
+                ['final_semi1_pts',      dict.semi1_pts_label,      fp?.semi1_pts      ?? 5],
+                ['final_semi2_pts',      dict.semi2_pts_label,      fp?.semi2_pts      ?? 5],
+                ['final_top_scorer_pts', dict.top_scorer_pts_label, fp?.top_scorer_pts ?? 5],
+              ].map(([name, label, def]) => (
+                <div key={name as string}>
+                  <label className="block text-xs text-blue-300 mb-1">{label as string}</label>
+                  <input type="number" name={name as string} min={0} max={100} defaultValue={def as number}
+                    className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition" />
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <button type="submit" disabled={finalPending}
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-purple-500 hover:bg-purple-400 text-white font-semibold transition disabled:opacity-60">
+            {finalPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            {finalPending ? commonDict.saving : dict.save}
+          </button>
+        </form>
+      )}
 
       {/* ── Members list ── */}
       <section className="rounded-2xl bg-white/5 border border-white/10 p-5 space-y-3">
@@ -337,7 +317,7 @@ function TransferOwnershipSection({
       )}
 
       {!done && (
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <select
             value={selected}
             onChange={(e) => setSelected(e.target.value)}
@@ -355,7 +335,7 @@ function TransferOwnershipSection({
             type="button"
             onClick={handleTransfer}
             disabled={!selected || isPending}
-            className="px-4 py-2.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 font-semibold text-sm transition disabled:opacity-50 flex items-center gap-2 shrink-0"
+            className="px-4 py-2.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 font-semibold text-sm transition disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             {dict.transfer_cta}

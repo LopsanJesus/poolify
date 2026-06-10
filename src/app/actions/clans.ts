@@ -153,34 +153,67 @@ export async function updateClanSettings(_: unknown, formData: FormData) {
   if (isNaN(pointsExact) || pointsExact < 0) return { error: dict.common.error }
   if (isNaN(pointsSign) || pointsSign < 0) return { error: dict.common.error }
 
-  const winnerPts     = parseInt(formData.get('final_winner_pts')     as string, 10)
-  const runnerUpPts   = parseInt(formData.get('final_runner_up_pts')  as string, 10)
-  const semi1Pts      = parseInt(formData.get('final_semi1_pts')      as string, 10)
-  const semi2Pts      = parseInt(formData.get('final_semi2_pts')      as string, 10)
-  const topScorerPts  = parseInt(formData.get('final_top_scorer_pts') as string, 10)
-  const customFieldsRaw = formData.get('custom_fields_json') as string | null
-
-  let customFields: FinalPredictionsCustomField[] = []
-  try {
-    if (customFieldsRaw) customFields = JSON.parse(customFieldsRaw)
-  } catch { /* ignore */ }
-
-  const hasFinalPredConfig = !isNaN(winnerPts) && !isNaN(runnerUpPts)
+  // Preserve existing final_predictions when saving scoring/access
+  const { data: existing } = await supabase
+    .from('clans')
+    .select('settings')
+    .eq('id', clanId)
+    .single()
+  const existingSettings = existing?.settings as ClanSettings | null
 
   const settings: ClanSettings = {
     points_exact: pointsExact,
     points_sign: pointsSign,
     can_members_invite: canMembersInvite,
-    ...(hasFinalPredConfig ? {
-      final_predictions: {
-        winner_pts: winnerPts,
-        runner_up_pts: runnerUpPts,
-        semi1_pts: isNaN(semi1Pts) ? 5 : semi1Pts,
-        semi2_pts: isNaN(semi2Pts) ? 5 : semi2Pts,
-        top_scorer_pts: isNaN(topScorerPts) ? 5 : topScorerPts,
-        custom_fields: customFields,
-      },
-    } : {}),
+    ...(existingSettings?.final_predictions ? { final_predictions: existingSettings.final_predictions } : {}),
+  }
+
+  const { error } = await supabase
+    .from('clans')
+    .update({ settings })
+    .eq('id', clanId)
+    .eq('owner_id', user.id)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/clan/${clanId}`)
+  revalidatePath(`/clan/${clanId}/settings`)
+
+  return { success: 'settings_saved' as const }
+}
+
+export async function updateFinalPredictionsConfig(_: unknown, formData: FormData) {
+  const supabase = await createClient()
+  const { dict } = await getDict()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: dict.common.error }
+
+  const clanId = formData.get('clan_id') as string
+  const winnerPts    = parseInt(formData.get('final_winner_pts')     as string, 10)
+  const runnerUpPts  = parseInt(formData.get('final_runner_up_pts')  as string, 10)
+  const semi1Pts     = parseInt(formData.get('final_semi1_pts')      as string, 10)
+  const semi2Pts     = parseInt(formData.get('final_semi2_pts')      as string, 10)
+  const topScorerPts = parseInt(formData.get('final_top_scorer_pts') as string, 10)
+
+  if (isNaN(winnerPts) || isNaN(runnerUpPts)) return { error: dict.common.error }
+
+  const { data: existing } = await supabase
+    .from('clans')
+    .select('settings')
+    .eq('id', clanId)
+    .single()
+  const existingSettings = existing?.settings as ClanSettings | null
+
+  const settings: ClanSettings = {
+    ...(existingSettings ?? { points_exact: 4, points_sign: 1, can_members_invite: true }),
+    final_predictions: {
+      winner_pts: winnerPts,
+      runner_up_pts: runnerUpPts,
+      semi1_pts: isNaN(semi1Pts) ? 5 : semi1Pts,
+      semi2_pts: isNaN(semi2Pts) ? 5 : semi2Pts,
+      top_scorer_pts: isNaN(topScorerPts) ? 5 : topScorerPts,
+      custom_fields: existingSettings?.final_predictions?.custom_fields ?? [],
+    },
   }
 
   const { error } = await supabase
