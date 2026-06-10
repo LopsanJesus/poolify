@@ -5,6 +5,7 @@ import { Star, Target } from 'lucide-react'
 import { Modal } from '@/app/_components/Modal'
 import type { Dict } from '@/lib/i18n/dictionaries'
 import type { PersonalInfo } from '@/app/actions/personal-info'
+import type { TournamentPrediction, FinalPredictionsConfig } from '@/lib/types'
 
 const MEDAL_COLORS = ['text-yellow-400', 'text-slate-300', 'text-orange-400']
 const COLS = '2.5rem 1fr 3.5rem 3.5rem'
@@ -18,19 +19,32 @@ type RankingEntry = {
 }
 
 type PersonalInfoMap = Record<string, PersonalInfo | null>
+type FinalPredsMap = Record<string, TournamentPrediction>
 
 export function RankingWithModal({
   ranking,
   currentUserId,
   clanDict,
   personalInfoMap,
+  finalPredsMap = {},
+  isPastDeadline = false,
+  finalPredictionsConfig = null,
+  finalPredictionsDict,
 }: {
   ranking: RankingEntry[]
   currentUserId: string
   clanDict: Dict['clan']
   personalInfoMap: PersonalInfoMap
+  finalPredsMap?: FinalPredsMap
+  isPastDeadline?: boolean
+  finalPredictionsConfig?: FinalPredictionsConfig | null
+  finalPredictionsDict?: Dict['final_predictions']
 }) {
-  const [selected, setSelected] = useState<{ entry: RankingEntry; info: PersonalInfo | null } | null>(null)
+  const [selected, setSelected] = useState<{
+    entry: RankingEntry
+    info: PersonalInfo | null
+    finalPred: TournamentPrediction | null
+  } | null>(null)
 
   return (
     <>
@@ -52,7 +66,11 @@ export function RankingWithModal({
             <div
               key={entry.user_id}
               className="contents"
-              onClick={() => setSelected({ entry, info: personalInfoMap[entry.user_id] ?? null })}
+              onClick={() => setSelected({
+                entry,
+                info: personalInfoMap[entry.user_id] ?? null,
+                finalPred: finalPredsMap[entry.user_id] ?? null,
+              })}
             >
               <div className={cell}>
                 <span className={`font-mono font-bold text-xs ${i < 3 ? MEDAL_COLORS[i] : 'text-blue-400'}`}>
@@ -78,6 +96,10 @@ export function RankingWithModal({
         <PersonalInfoModal
           entry={selected.entry}
           info={selected.info}
+          finalPred={selected.finalPred}
+          isPastDeadline={isPastDeadline}
+          finalPredictionsConfig={finalPredictionsConfig}
+          finalPredictionsDict={finalPredictionsDict}
           onClose={() => setSelected(null)}
         />
       )}
@@ -88,31 +110,62 @@ export function RankingWithModal({
 function PersonalInfoModal({
   entry,
   info,
+  finalPred,
+  isPastDeadline,
+  finalPredictionsConfig,
+  finalPredictionsDict,
   onClose,
 }: {
   entry: RankingEntry
   info: PersonalInfo | null
+  finalPred: TournamentPrediction | null
+  isPastDeadline: boolean
+  finalPredictionsConfig: FinalPredictionsConfig | null
+  finalPredictionsDict?: Dict['final_predictions']
   onClose: () => void
 }) {
   const hasInfo = info && (
     info.bet_amount != null || info.religion || info.sexual_orientation || info.race || info.fav_cabo_verde_player
   )
 
+  const showFinalPreds = isPastDeadline && finalPredictionsConfig && finalPred && finalPredictionsDict
+
   return (
     <Modal open title={entry.username} onClose={onClose}>
-      {!hasInfo ? (
-        <p className="text-blue-400/60 text-sm italic py-2">Este usuario no ha rellenado su información personal.</p>
-      ) : (
-        <div className="space-y-3">
-          {info.bet_amount != null && (
-            <InfoRow label="Apuesta" value={`${info.bet_amount} €`} />
-          )}
-          {info.religion && <InfoRow label="Religión" value={info.religion} />}
-          {info.sexual_orientation && <InfoRow label="Orientación sexual" value={info.sexual_orientation} />}
-          {info.race && <InfoRow label="Raza" value={info.race} />}
-          {info.fav_cabo_verde_player && <InfoRow label="Jugador Cabo Verde favorito" value={info.fav_cabo_verde_player} />}
-        </div>
-      )}
+      <div className="space-y-4">
+        {!hasInfo ? (
+          <p className="text-blue-400/60 text-sm italic py-2">Este usuario no ha rellenado su información personal.</p>
+        ) : (
+          <div className="space-y-0">
+            {info.bet_amount != null && (
+              <InfoRow label="Apuesta" value={`${info.bet_amount} €`} />
+            )}
+            {info.religion && <InfoRow label="Religión" value={info.religion} />}
+            {info.sexual_orientation && <InfoRow label="Orientación sexual" value={info.sexual_orientation} />}
+            {info.race && <InfoRow label="Raza" value={info.race} />}
+            {info.fav_cabo_verde_player && <InfoRow label="Jugador Cabo Verde favorito" value={info.fav_cabo_verde_player} />}
+          </div>
+        )}
+
+        {showFinalPreds && (
+          <div className="space-y-0 pt-2 border-t border-white/10">
+            <p className="text-purple-400/80 text-xs uppercase tracking-wide font-semibold pb-2 flex items-center gap-1.5">
+              <Star className="w-3 h-3" />
+              {finalPredictionsDict.title}
+            </p>
+            {finalPred.winner && <InfoRow label={finalPredictionsDict.field_winner} value={finalPred.winner} />}
+            {finalPred.runner_up && <InfoRow label={finalPredictionsDict.field_runner_up} value={finalPred.runner_up} />}
+            {finalPred.semi1 && <InfoRow label={finalPredictionsDict.field_semi1} value={finalPred.semi1} />}
+            {finalPred.semi2 && <InfoRow label={finalPredictionsDict.field_semi2} value={finalPred.semi2} />}
+            {finalPred.top_scorer && <InfoRow label={finalPredictionsDict.field_top_scorer} value={finalPred.top_scorer} />}
+            {finalPredictionsConfig.custom_fields?.map((f) =>
+              finalPred.custom_answers?.[f.id] ? (
+                <InfoRow key={f.id} label={f.label} value={finalPred.custom_answers[f.id]} />
+              ) : null
+            )}
+          </div>
+        )}
+      </div>
     </Modal>
   )
 }

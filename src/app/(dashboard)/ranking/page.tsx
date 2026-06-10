@@ -1,8 +1,9 @@
-import { getClanRanking, getUserClans, getClanData } from "@/app/actions/clans";
+import { getClanRanking, getUserClans, getClanData, getTournamentDeadline } from "@/app/actions/clans";
 import { getActiveClanId } from "@/lib/active-clan";
 import { getDict } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserPersonalInfo } from "@/app/actions/personal-info";
+import { getAllTournamentPredictions } from "@/app/actions/tournament";
 import { Trophy, Star } from "lucide-react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -36,19 +37,27 @@ export default async function RankingPage() {
 
   const clan = clans.find((c) => c.id === clanId) ?? clans[0];
 
-  const [ranking, { dict }, clanData] = await Promise.all([
+  const [ranking, { dict }, clanData, deadline] = await Promise.all([
     getClanRanking(clan.id),
     getDict(),
     getClanData(clan.id),
+    getTournamentDeadline(),
   ]);
 
   const hasFinalPredictions = clanData?.settings?.final_predictions != null;
+  const finalPredictionsConfig = clanData?.settings?.final_predictions ?? null;
+  const isPastDeadline = deadline ? new Date() >= deadline : false;
 
-  // Fetch personal info for all ranking members in parallel
-  const personalInfoEntries = await Promise.all(
-    ranking.map(async (entry) => [entry.user_id, await getUserPersonalInfo(entry.user_id)] as const)
-  );
+  // Fetch personal info and (if past deadline) final predictions in parallel
+  const [personalInfoEntries, allFinalPreds] = await Promise.all([
+    Promise.all(
+      ranking.map(async (entry) => [entry.user_id, await getUserPersonalInfo(entry.user_id)] as const)
+    ),
+    isPastDeadline && hasFinalPredictions ? getAllTournamentPredictions(clan.id) : Promise.resolve([]),
+  ]);
+
   const personalInfoMap = Object.fromEntries(personalInfoEntries);
+  const finalPredsMap = Object.fromEntries(allFinalPreds.map((p) => [p.user_id, p]));
 
   return (
     <div className="space-y-4">
@@ -73,6 +82,10 @@ export default async function RankingPage() {
           currentUserId={user.id}
           clanDict={dict.clan}
           personalInfoMap={personalInfoMap}
+          finalPredsMap={finalPredsMap}
+          isPastDeadline={isPastDeadline}
+          finalPredictionsConfig={finalPredictionsConfig}
+          finalPredictionsDict={dict.final_predictions}
         />
       )}
     </div>
