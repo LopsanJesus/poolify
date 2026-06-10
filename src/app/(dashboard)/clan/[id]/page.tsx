@@ -51,7 +51,7 @@ export default async function ClanPage({
   const showMatchViewLink = isPastDeadline && !showMatchBanner;
   // Final predictions: show to fill (before deadline) or to view (after deadline)
   const showFinalBanner = hasFinalPredictions && (
-    (!isPastDeadline && !showMatchBanner && missingFinalPreds) ||
+    (!isPastDeadline && missingFinalPreds) ||
     isPastDeadline
   );
 
