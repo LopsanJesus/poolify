@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { calculatePoints } from '@/lib/scoring'
+import { matchRound, getRoundDeadlines } from '@/lib/rounds'
 import type { Match, Prediction, ClanSettings, PredScore } from '@/lib/types'
 import { DEFAULT_CLAN_SETTINGS } from '@/lib/types'
 
@@ -111,13 +112,13 @@ export async function getMatchesWithPredictions(clanId: string) {
 
   const predictions = (predData ?? []) as Prediction[]
   const now = new Date()
+  const roundDeadlines = getRoundDeadlines(matches)
   return matches.map((match) => {
-    const matchDeadline = new Date(match.match_date)
-    matchDeadline.setHours(matchDeadline.getHours() - 2)
+    const deadline = roundDeadlines.get(matchRound(match.stage))
     return {
       ...match,
       prediction: predictions.find((p) => p.match_id === match.id) ?? null,
-      matchDeadlinePassed: now >= matchDeadline,
+      matchDeadlinePassed: deadline ? now >= deadline : false,
     }
   })
 }
@@ -140,6 +141,7 @@ export async function savePredictions(_: unknown, formData: FormData) {
 
   const VALID: PredScore[] = ['0', '1', '2', '+']
   const now = new Date()
+  const roundDeadlines = getRoundDeadlines(matches)
 
   const upserts = matchIds.flatMap((matchId) => {
     const homeRaw = (formData.get(`home_${matchId}`) as string)?.trim()
@@ -154,11 +156,10 @@ export async function savePredictions(_: unknown, formData: FormData) {
 
     const match = matches.find((m) => m.id === matchId)
 
-    // Server-side per-match deadline check: skip matches within 2h of kick-off
+    // Server-side round deadline check: skip matches whose round has already started
     if (match) {
-      const matchDeadline = new Date(match.match_date)
-      matchDeadline.setHours(matchDeadline.getHours() - 2)
-      if (now >= matchDeadline) return []
+      const deadline = roundDeadlines.get(matchRound(match.stage))
+      if (deadline && now >= deadline) return []
     }
     let points = 0
     if (
