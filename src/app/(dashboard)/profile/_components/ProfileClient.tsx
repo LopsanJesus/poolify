@@ -42,7 +42,7 @@ export function ProfileClient({
       >
         <div className="flex items-center gap-3">
           <User className="w-5 h-5 text-purple-400" />
-          <span className="text-white font-semibold">Información personal</span>
+          <span className="text-white font-semibold">{dict.profile.section_personal_info}</span>
         </div>
         <div className="flex items-center gap-2">
           {!personalInfoComplete && (

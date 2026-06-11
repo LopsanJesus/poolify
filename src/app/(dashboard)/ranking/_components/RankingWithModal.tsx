@@ -25,6 +25,7 @@ export function RankingWithModal({
   ranking,
   currentUserId,
   clanDict,
+  profileDict,
   personalInfoMap,
   finalPredsMap = {},
   isPastDeadline = false,
@@ -34,6 +35,7 @@ export function RankingWithModal({
   ranking: RankingEntry[]
   currentUserId: string
   clanDict: Dict['clan']
+  profileDict: Dict['profile']
   personalInfoMap: PersonalInfoMap
   finalPredsMap?: FinalPredsMap
   isPastDeadline?: boolean
@@ -100,6 +102,7 @@ export function RankingWithModal({
           isPastDeadline={isPastDeadline}
           finalPredictionsConfig={finalPredictionsConfig}
           finalPredictionsDict={finalPredictionsDict}
+          profileDict={profileDict}
           onClose={() => setSelected(null)}
         />
       )}
@@ -114,6 +117,7 @@ function PersonalInfoModal({
   isPastDeadline,
   finalPredictionsConfig,
   finalPredictionsDict,
+  profileDict,
   onClose,
 }: {
   entry: RankingEntry
@@ -122,6 +126,7 @@ function PersonalInfoModal({
   isPastDeadline: boolean
   finalPredictionsConfig: FinalPredictionsConfig | null
   finalPredictionsDict?: Dict['final_predictions']
+  profileDict: Dict['profile']
   onClose: () => void
 }) {
   const hasInfo = info && (
@@ -134,16 +139,16 @@ function PersonalInfoModal({
     <Modal open title={entry.username} onClose={onClose}>
       <div className="space-y-4">
         {!hasInfo ? (
-          <p className="text-blue-400/60 text-sm italic py-2">Este usuario no ha rellenado su información personal.</p>
+          <p className="text-blue-400/60 text-sm italic py-2">{profileDict.personal_info_empty}</p>
         ) : (
           <div className="space-y-0">
             {info.bet_amount != null && (
-              <InfoRow label="Apuesta" value={`${info.bet_amount} €`} />
+              <InfoRow label={profileDict.bet_label} value={`${info.bet_amount} €`} />
             )}
-            {info.religion && <InfoRow label="Religión" value={info.religion} />}
-            {info.sexual_orientation && <InfoRow label="Orientación sexual" value={info.sexual_orientation} />}
-            {info.race && <InfoRow label="Raza" value={info.race} />}
-            {info.fav_cabo_verde_player && <InfoRow label="Jugador Cabo Verde favorito" value={info.fav_cabo_verde_player} />}
+            {info.religion && <InfoRow label={profileDict.religion_label} value={info.religion} />}
+            {info.sexual_orientation && <InfoRow label={profileDict.sexual_orientation_label} value={info.sexual_orientation} />}
+            {info.race && <InfoRow label={profileDict.race_label} value={info.race} />}
+            {info.fav_cabo_verde_player && <InfoRow label={profileDict.fav_cabo_verde_player_label} value={info.fav_cabo_verde_player} />}
           </div>
         )}
 

@@ -4,8 +4,9 @@ import { useActionState, useEffect, useState } from 'react'
 import { Loader2, Lock } from 'lucide-react'
 import { savePersonalInfo, type PersonalInfo } from '@/app/actions/personal-info'
 import { SuccessToast } from '@/app/_components/SuccessToast'
+import type { Dict } from '@/lib/i18n/dictionaries'
 
-export function PersonalInfoForm({ info }: { info: PersonalInfo | null }) {
+export function PersonalInfoForm({ info, dict }: { info: PersonalInfo | null; dict: Dict['profile'] }) {
   const [state, action, pending] = useActionState(savePersonalInfo, undefined)
   const [showToast, setShowToast] = useState(false)
 
@@ -41,16 +42,16 @@ export function PersonalInfoForm({ info }: { info: PersonalInfo | null }) {
       {locked && (
         <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-sm">
           <Lock className="w-4 h-4 shrink-0" />
-          Esta información ya no puede modificarse.
+          {dict.personal_info_locked}
         </div>
       )}
 
       <form action={action} className="space-y-4">
-        {field('¿Cuánto apuestas? (€)', 'bet_amount', info?.bet_amount != null ? String(info.bet_amount) : null, 'number')}
-        {field('Religión', 'religion', info?.religion ?? null)}
-        {field('Orientación sexual', 'sexual_orientation', info?.sexual_orientation ?? null)}
-        {field('Raza', 'race', info?.race ?? null)}
-        {field('Jugador de Cabo Verde favorito', 'fav_cabo_verde_player', info?.fav_cabo_verde_player ?? null)}
+        {field(dict.bet_amount_label, 'bet_amount', info?.bet_amount != null ? String(info.bet_amount) : null, 'number')}
+        {field(dict.religion_label, 'religion', info?.religion ?? null)}
+        {field(dict.sexual_orientation_label, 'sexual_orientation', info?.sexual_orientation ?? null)}
+        {field(dict.race_label, 'race', info?.race ?? null)}
+        {field(dict.fav_cabo_verde_player_label, 'fav_cabo_verde_player', info?.fav_cabo_verde_player ?? null)}
 
         {state?.error && (
           <p className="text-red-300 text-sm px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20">
@@ -65,14 +66,14 @@ export function PersonalInfoForm({ info }: { info: PersonalInfo | null }) {
             className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-semibold transition disabled:opacity-60 text-sm"
           >
             {pending && <Loader2 className="w-4 h-4 animate-spin" />}
-            {pending ? 'Guardando…' : 'Guardar información personal'}
+            {pending ? dict.saving_personal_info : dict.save_personal_info}
           </button>
         )}
       </form>
 
       <SuccessToast
         show={showToast}
-        message="Información guardada correctamente."
+        message={dict.personal_info_saved}
         onDone={() => setShowToast(false)}
       />
     </>

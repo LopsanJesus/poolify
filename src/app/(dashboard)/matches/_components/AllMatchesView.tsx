@@ -5,6 +5,7 @@ import { ChevronDown } from 'lucide-react'
 import type { Match, Prediction } from '@/lib/types'
 import type { Dict, Locale } from '@/lib/i18n/dictionaries'
 import { stageLabel } from '@/lib/stages'
+import { translateTeam } from '@/lib/team-flags'
 import { FlagImage } from '@/app/_components/FlagImage'
 import { getRankingUpToMatch } from '@/app/actions/clans'
 import type { MatchRankingEntry } from '@/app/actions/clans'
@@ -160,7 +161,7 @@ function MatchRow({
           <div className="flex-1 flex flex-col items-start gap-0.5">
             <FlagImage team={match.home_team ?? ''} size={28} />
             <span className="text-white font-semibold text-xs leading-tight break-words">
-              {match.home_team ?? '?'}
+              {match.home_team ? translateTeam(match.home_team, locale) : '?'}
             </span>
           </div>
 
@@ -187,7 +188,7 @@ function MatchRow({
           <div className="flex-1 flex flex-col items-end gap-0.5">
             <FlagImage team={match.away_team ?? ''} size={28} />
             <span className="text-white font-semibold text-xs leading-tight break-words text-right">
-              {match.away_team ?? '?'}
+              {match.away_team ? translateTeam(match.away_team, locale) : '?'}
             </span>
           </div>
 

@@ -7,6 +7,7 @@ import { startMatch, updateLiveScore, finishMatch } from '@/app/actions/matches'
 import type { Match, Prediction } from '@/lib/types'
 import type { Dict, Locale } from '@/lib/i18n/dictionaries'
 import { stageLabel } from '@/lib/stages'
+import { translateTeam } from '@/lib/team-flags'
 import { FlagImage } from '@/app/_components/FlagImage'
 
 const DATE_LOCALE: Record<Locale, string> = { en: 'en-US', es: 'es-ES', de: 'de-DE' }
@@ -62,7 +63,7 @@ export function MatchCard({
         <div className="flex items-center gap-4">
           <div className="flex-1 text-right">
             <div className="text-white font-semibold flex items-center justify-end gap-2">
-              {match.home_team ?? <TBD />} <TeamFlag team={match.home_team} />
+              {match.home_team ? translateTeam(match.home_team, locale) : <TBD />} <TeamFlag team={match.home_team} />
             </div>
           </div>
 
@@ -89,7 +90,7 @@ export function MatchCard({
 
           <div className="flex-1">
             <div className="text-white font-semibold flex items-center gap-2">
-              <TeamFlag team={match.away_team} /> {match.away_team ?? <TBD />}
+              <TeamFlag team={match.away_team} /> {match.away_team ? translateTeam(match.away_team, locale) : <TBD />}
             </div>
           </div>
         </div>

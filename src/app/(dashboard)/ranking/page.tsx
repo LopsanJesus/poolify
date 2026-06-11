@@ -70,6 +70,7 @@ export default async function RankingPage() {
           ranking={ranking}
           currentUserId={user.id}
           clanDict={dict.clan}
+          profileDict={dict.profile}
           personalInfoMap={personalInfoMap}
           finalPredsMap={finalPredsMap}
           isPastDeadline={isPastDeadline}

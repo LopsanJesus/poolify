@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { getDict } from '@/lib/i18n/server'
 
 export type PersonalInfo = {
   bet_amount: number | null
@@ -53,7 +54,8 @@ export async function savePersonalInfo(
     .single()
 
   if ((current as PersonalInfo | null)?.personal_info_locked) {
-    return { error: 'Ya no puedes modificar tu información personal.' }
+    const { dict } = await getDict()
+    return { error: dict.profile.personal_info_locked }
   }
 
   const betAmountRaw = formData.get('bet_amount') as string
