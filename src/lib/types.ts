@@ -19,6 +19,7 @@ export interface ClanSettings {
   points_exact: number
   points_sign: number
   can_members_invite: boolean
+  live_results_all_members?: boolean
   final_predictions?: FinalPredictionsConfig
 }
 

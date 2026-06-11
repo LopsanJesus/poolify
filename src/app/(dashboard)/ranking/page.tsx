@@ -4,9 +4,8 @@ import { getDict } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserPersonalInfo } from "@/app/actions/personal-info";
 import { getAllTournamentPredictions } from "@/app/actions/tournament";
-import { Trophy, Star } from "lucide-react";
+import { Trophy } from "lucide-react";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { RankingWithModal } from "./_components/RankingWithModal";
 
 export default async function RankingPage() {
@@ -61,16 +60,6 @@ export default async function RankingPage() {
 
   return (
     <div className="space-y-4">
-      {hasFinalPredictions && (
-        <Link
-          href={`/clan/${clan.id}/final-predictions`}
-          className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 hover:bg-purple-500/20 transition text-sm font-medium"
-        >
-          <Star className="w-4 h-4 shrink-0" />
-          {dict.final_predictions.title}
-        </Link>
-      )}
-
       {ranking.length === 0 ? (
         <div className="text-center py-16 rounded-2xl border border-dashed border-white/20">
           <Trophy className="w-12 h-12 text-blue-500/50 mx-auto mb-3" />

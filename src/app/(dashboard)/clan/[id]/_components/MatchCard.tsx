@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { ChevronDown, Loader2, Users } from 'lucide-react'
+import { ChevronDown, Loader2, Minus, Plus, Users } from 'lucide-react'
 import { getClanPredictionsForMatch, type ClanPredictionEntry } from '@/app/actions/predictions'
+import { startMatch, updateLiveScore, finishMatch } from '@/app/actions/matches'
 import type { Match, Prediction } from '@/lib/types'
 import type { Dict, Locale } from '@/lib/i18n/dictionaries'
 import { stageLabel } from '@/lib/stages'
@@ -20,6 +21,7 @@ export function MatchCard({
   commonDict,
   locale,
   isPastDeadline = false,
+  canEditLive = false,
 }: {
   clanId: string
   match: MatchWithPrediction
@@ -28,6 +30,7 @@ export function MatchCard({
   commonDict: Dict['common']
   locale: Locale
   isPastDeadline?: boolean
+  canEditLive?: boolean
 }) {
   const [expanded, setExpanded] = useState(false)
   const [rows, setRows] = useState<ClanPredictionEntry[] | null>(null)
@@ -64,7 +67,7 @@ export function MatchCard({
           </div>
 
           <div className="text-center px-3">
-            {isFinished ? (
+            {isFinished || match.status === 'live' ? (
               <p className="text-white font-bold text-lg">
                 {match.home_score} – {match.away_score}
               </p>
@@ -107,6 +110,10 @@ export function MatchCard({
           </div>
         </div>
       </div>
+
+      {canEditLive && (match.status === 'live' || match.status === 'upcoming') && (
+        <LiveControls match={match} clanId={clanId} clanDict={clanDict} />
+      )}
 
       <button
         type="button"
@@ -194,6 +201,118 @@ function StatusBadge({
     <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300">
       {clanDict.status_upcoming}
     </span>
+  )
+}
+
+function LiveControls({
+  match,
+  clanId,
+  clanDict,
+}: {
+  match: MatchWithPrediction
+  clanId: string
+  clanDict: Dict['clan']
+}) {
+  const [pending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
+  const homeScore = match.home_score ?? 0
+  const awayScore = match.away_score ?? 0
+
+  function handleStart() {
+    setError(null)
+    startTransition(async () => {
+      const res = await startMatch(match.id, clanId)
+      if (res.error) setError(res.error)
+    })
+  }
+
+  function adjustScore(team: 'home' | 'away', delta: number) {
+    setError(null)
+    const newHome = team === 'home' ? Math.max(0, homeScore + delta) : homeScore
+    const newAway = team === 'away' ? Math.max(0, awayScore + delta) : awayScore
+    startTransition(async () => {
+      const res = await updateLiveScore(match.id, clanId, newHome, newAway)
+      if (res.error) setError(res.error)
+    })
+  }
+
+  function handleFinish() {
+    setError(null)
+    startTransition(async () => {
+      const res = await finishMatch(match.id, clanId)
+      if (res.error) setError(res.error)
+    })
+  }
+
+  if (match.status === 'upcoming') {
+    if (new Date() < new Date(match.match_date)) return null
+    return (
+      <div className="px-4 py-3 border-t border-white/10 bg-white/5">
+        <button
+          type="button"
+          onClick={handleStart}
+          disabled={pending}
+          className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold transition disabled:opacity-60"
+        >
+          {pending && <Loader2 className="w-4 h-4 animate-spin" />}
+          {clanDict.start_match}
+        </button>
+        {error && <p className="text-xs text-red-300 text-center mt-2">{error}</p>}
+      </div>
+    )
+  }
+
+  return (
+    <div className="px-4 py-3 border-t border-white/10 bg-white/5 space-y-3">
+      <p className="text-xs text-blue-400 text-center font-medium">{clanDict.live_score}</p>
+      <div className="flex items-center justify-center gap-6">
+        <ScoreStepper value={homeScore} onChange={(d) => adjustScore('home', d)} disabled={pending} />
+        <span className="text-blue-300/40 font-bold">–</span>
+        <ScoreStepper value={awayScore} onChange={(d) => adjustScore('away', d)} disabled={pending} />
+      </div>
+      <button
+        type="button"
+        onClick={handleFinish}
+        disabled={pending}
+        className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 text-sm font-semibold transition disabled:opacity-60"
+      >
+        {pending && <Loader2 className="w-4 h-4 animate-spin" />}
+        {clanDict.finish_match}
+      </button>
+      {error && <p className="text-xs text-red-300 text-center">{error}</p>}
+    </div>
+  )
+}
+
+function ScoreStepper({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: number
+  onChange: (delta: number) => void
+  disabled: boolean
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => onChange(-1)}
+        disabled={disabled || value === 0}
+        className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/10 border border-white/15 text-blue-200 hover:bg-white/20 transition disabled:opacity-40"
+      >
+        <Minus className="w-4 h-4" />
+      </button>
+      <span className="w-8 text-center font-mono text-xl font-bold text-white">{value}</span>
+      <button
+        type="button"
+        onClick={() => onChange(1)}
+        disabled={disabled}
+        className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/10 border border-white/15 text-blue-200 hover:bg-white/20 transition disabled:opacity-40"
+      >
+        <Plus className="w-4 h-4" />
+      </button>
+    </div>
   )
 }
 

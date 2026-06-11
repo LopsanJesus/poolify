@@ -100,6 +100,14 @@ export function ClanSettingsForm({
               <p className="text-blue-400 text-xs mt-0.5">{dict.can_members_invite_hint}</p>
             </div>
           </label>
+          <label className={`flex items-start gap-3 ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}>
+            <input type="checkbox" name="live_results_all_members" defaultChecked={settings.live_results_all_members !== false} disabled={readOnly}
+              className="mt-0.5 w-4 h-4 accent-emerald-500 disabled:opacity-60" />
+            <div>
+              <p className="text-white text-sm font-medium">{dict.live_results_label}</p>
+              <p className="text-blue-400 text-xs mt-0.5">{dict.live_results_hint}</p>
+            </div>
+          </label>
         </section>
 
         {!readOnly && (

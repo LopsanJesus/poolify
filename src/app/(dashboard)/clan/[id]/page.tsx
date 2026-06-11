@@ -26,6 +26,7 @@ export default async function ClanPage({
   if (!clan) notFound();
 
   const settings = clan.settings ?? DEFAULT_CLAN_SETTINGS;
+  const canEditLive = clan.owner_id === user.id || settings.live_results_all_members !== false;
 
   const [matchesWithPreds, { dict, locale }, deadline, myFinalPred] = await Promise.all([
     getMatchesWithPredictions(id),
@@ -92,6 +93,7 @@ export default async function ClanPage({
         clanDict={dict.clan}
         commonDict={dict.common}
         locale={locale}
+        canEditLive={canEditLive}
       />
     </div>
   );
