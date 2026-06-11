@@ -99,6 +99,47 @@ export async function updateLiveScore(
   return {}
 }
 
+// Recalculates points for every prediction made for this match, across all clans.
+// Shared by the live "finish match" flow and the admin panel's result correction.
+export async function recalcPredictionPoints(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  matchId: string,
+  homeScore: number,
+  awayScore: number,
+) {
+  const { data: predictions } = await supabase
+    .from('predictions')
+    .select('id, clan_id, home_score, away_score')
+    .eq('match_id', matchId)
+
+  if (!predictions || predictions.length === 0) return
+
+  const clanIds = [...new Set(predictions.map((p) => p.clan_id))]
+  const { data: clansData } = await supabase
+    .from('clans')
+    .select('id, settings')
+    .in('id', clanIds)
+
+  const settingsMap = new Map<string, ClanSettings>()
+  for (const c of clansData ?? []) {
+    settingsMap.set(c.id, (c.settings as ClanSettings) ?? DEFAULT_CLAN_SETTINGS)
+  }
+
+  for (const pred of predictions) {
+    const points = calculatePoints(
+      pred.home_score,
+      pred.away_score,
+      homeScore,
+      awayScore,
+      settingsMap.get(pred.clan_id),
+    )
+    await supabase
+      .from('predictions')
+      .update({ points, updated_at: new Date().toISOString() })
+      .eq('id', pred.id)
+  }
+}
+
 export async function finishMatch(matchId: string, clanId: string): Promise<{ error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -122,44 +163,7 @@ export async function finishMatch(matchId: string, clanId: string): Promise<{ er
 
   if (matchError) return { error: matchError.message }
 
-  // Recalculate points for all predictions for this match across all clans
-  const { data: predictions } = await supabase
-    .from('predictions')
-    .select('id, clan_id, home_score, away_score')
-    .eq('match_id', matchId)
-
-  if (predictions && predictions.length > 0) {
-    // Fetch settings for all involved clans
-    const clanIds = [...new Set(predictions.map((p) => p.clan_id))]
-    const { data: clansData } = await supabase
-      .from('clans')
-      .select('id, settings')
-      .in('id', clanIds)
-
-    const settingsMap = new Map<string, ClanSettings>()
-    for (const c of clansData ?? []) {
-      settingsMap.set(c.id, (c.settings as ClanSettings) ?? DEFAULT_CLAN_SETTINGS)
-    }
-
-    const updates = predictions.map((pred) => ({
-      id: pred.id,
-      points: calculatePoints(
-        pred.home_score,
-        pred.away_score,
-        match.home_score!,
-        match.away_score!,
-        settingsMap.get(pred.clan_id),
-      ),
-      updated_at: new Date().toISOString(),
-    }))
-
-    for (const upd of updates) {
-      await supabase
-        .from('predictions')
-        .update({ points: upd.points, updated_at: upd.updated_at })
-        .eq('id', upd.id)
-    }
-  }
+  await recalcPredictionPoints(supabase, matchId, match.home_score, match.away_score)
 
   revalidatePath(`/clan/${clanId}`)
   revalidatePath(`/clan/${clanId}/predictions`)

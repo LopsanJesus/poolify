@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { ChevronDown, Loader2, Minus, Plus, Users } from 'lucide-react'
+import { ChevronDown, Loader2, Users } from 'lucide-react'
 import { getClanPredictionsForMatch, type ClanPredictionEntry } from '@/app/actions/predictions'
 import { startMatch, updateLiveScore, finishMatch } from '@/app/actions/matches'
 import type { Match, Prediction } from '@/lib/types'
@@ -9,6 +9,7 @@ import type { Dict, Locale } from '@/lib/i18n/dictionaries'
 import { stageLabel } from '@/lib/stages'
 import { translateTeam } from '@/lib/team-flags'
 import { FlagImage } from '@/app/_components/FlagImage'
+import { LiveScoreButtons } from '@/app/_components/ScoreSelector'
 
 const DATE_LOCALE: Record<Locale, string> = { en: 'en-US', es: 'es-ES', de: 'de-DE' }
 
@@ -227,10 +228,10 @@ function LiveControls({
     })
   }
 
-  function adjustScore(team: 'home' | 'away', delta: number) {
+  function setScore(team: 'home' | 'away', score: number) {
     setError(null)
-    const newHome = team === 'home' ? Math.max(0, homeScore + delta) : homeScore
-    const newAway = team === 'away' ? Math.max(0, awayScore + delta) : awayScore
+    const newHome = team === 'home' ? score : homeScore
+    const newAway = team === 'away' ? score : awayScore
     startTransition(async () => {
       const res = await updateLiveScore(match.id, clanId, newHome, newAway)
       if (res.error) setError(res.error)
@@ -266,10 +267,10 @@ function LiveControls({
   return (
     <div className="px-4 py-3 border-t border-white/10 bg-white/5 space-y-3">
       <p className="text-xs text-blue-400 text-center font-medium">{clanDict.live_score}</p>
-      <div className="flex items-center justify-center gap-6">
-        <ScoreStepper value={homeScore} onChange={(d) => adjustScore('home', d)} disabled={pending} />
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+        <LiveScoreButtons value={homeScore} onChange={(v) => setScore('home', v)} disabled={pending} />
         <span className="text-blue-300/40 font-bold">–</span>
-        <ScoreStepper value={awayScore} onChange={(d) => adjustScore('away', d)} disabled={pending} />
+        <LiveScoreButtons value={awayScore} onChange={(v) => setScore('away', v)} disabled={pending} />
       </div>
       <button
         type="button"
@@ -281,38 +282,6 @@ function LiveControls({
         {clanDict.finish_match}
       </button>
       {error && <p className="text-xs text-red-300 text-center">{error}</p>}
-    </div>
-  )
-}
-
-function ScoreStepper({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: number
-  onChange: (delta: number) => void
-  disabled: boolean
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <button
-        type="button"
-        onClick={() => onChange(-1)}
-        disabled={disabled || value === 0}
-        className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/10 border border-white/15 text-blue-200 hover:bg-white/20 transition disabled:opacity-40"
-      >
-        <Minus className="w-4 h-4" />
-      </button>
-      <span className="w-8 text-center font-mono text-xl font-bold text-white">{value}</span>
-      <button
-        type="button"
-        onClick={() => onChange(1)}
-        disabled={disabled}
-        className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/10 border border-white/15 text-blue-200 hover:bg-white/20 transition disabled:opacity-40"
-      >
-        <Plus className="w-4 h-4" />
-      </button>
     </div>
   )
 }

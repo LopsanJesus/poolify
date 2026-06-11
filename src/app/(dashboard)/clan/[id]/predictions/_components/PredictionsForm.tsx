@@ -10,6 +10,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { FlagImage } from "@/app/_components/FlagImage";
 import { translateTeam } from "@/lib/team-flags";
 import { SuccessToast } from "@/app/_components/SuccessToast";
+import { ScoreButtons, SCORE_OPTIONS } from "@/app/_components/ScoreSelector";
 
 type MatchWithPrediction = Match & { prediction: Prediction | null; matchDeadlinePassed: boolean };
 
@@ -18,8 +19,6 @@ const DATE_LOCALE: Record<Locale, string> = {
   es: "es-ES",
   de: "de-DE",
 };
-
-const SCORE_OPTIONS: PredScore[] = ["0", "1", "2", "+"];
 
 export function PredictionsForm({
   clanId,
@@ -169,60 +168,6 @@ export function PredictionsForm({
   );
 }
 
-// ── Score selector (controlled) ───────────────────────────────
-
-function ScoreSelector({
-  name,
-  value,
-  onChange,
-  disabled,
-}: {
-  name: string;
-  value: PredScore | "";
-  onChange?: (v: PredScore | "") => void;
-  disabled?: boolean;
-}) {
-  if (disabled) {
-    return (
-      <div className="flex justify-center">
-        <span
-          className={`min-w-[2.5rem] text-center text-xl font-bold px-3 py-2 rounded-lg border ${
-            value === "+"
-              ? "bg-amber-500/20 border-amber-500/40 text-amber-300"
-              : "bg-blue-900/60 border-white/20 text-white"
-          }`}
-        >
-          {value || "–"}
-        </span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-4 gap-1">
-      {name && value !== "" && (
-        <input type="hidden" name={name} value={value} />
-      )}
-      {SCORE_OPTIONS.map((opt) => (
-        <button
-          key={opt}
-          type="button"
-          onClick={() => onChange?.(opt === value ? "" : opt)}
-          className={`h-9 w-full rounded-lg font-bold text-sm transition-all border ${
-            value === opt
-              ? opt === "+"
-                ? "bg-amber-500 border-amber-400 text-white shadow-lg shadow-amber-500/30 scale-110"
-                : "bg-emerald-500 border-emerald-400 text-white shadow-lg shadow-emerald-500/30 scale-110"
-              : "bg-white/5 border-white/15 text-blue-200 hover:bg-white/15 hover:border-white/30"
-          }`}
-        >
-          {opt}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function randomPick(): PredScore {
   return SCORE_OPTIONS[Math.floor(Math.random() * SCORE_OPTIONS.length)];
 }
@@ -297,10 +242,10 @@ function MatchCard({
         </div>
 
         {/* Row 2 — score selectors */}
-        <ScoreSelector
+        <ScoreButtons
           name={editable ? `home_${match.id}` : ""}
           value={homeScore}
-          onChange={(v) => { setHomeScore(v); onDirty?.(); }}
+          onSelect={(v) => { setHomeScore(v); onDirty?.(); }}
           disabled={!editable}
         />
         <div className="flex items-center justify-center shrink-0 px-1">
@@ -312,10 +257,10 @@ function MatchCard({
             <span className="text-blue-300/40 font-bold text-base">–</span>
           )}
         </div>
-        <ScoreSelector
+        <ScoreButtons
           name={editable ? `away_${match.id}` : ""}
           value={awayScore}
-          onChange={(v) => { setAwayScore(v); onDirty?.(); }}
+          onSelect={(v) => { setAwayScore(v); onDirty?.(); }}
           disabled={!editable}
         />
       </div>

@@ -71,16 +71,19 @@ export interface Database {
           id: string; username: string; created_at: string
           default_clan_id: string | null
           language: 'en' | 'es' | 'de'
+          is_admin: boolean
         }
         Insert: {
           id: string; username: string; created_at?: string
           default_clan_id?: string | null
           language?: 'en' | 'es' | 'de'
+          is_admin?: boolean
         }
         Update: {
           id?: string; username?: string; created_at?: string
           default_clan_id?: string | null
           language?: 'en' | 'es' | 'de'
+          is_admin?: boolean
         }
         Relationships: []
       }
@@ -107,17 +110,20 @@ export interface Database {
           home_score: number | null; away_score: number | null
           stage: string; status: 'upcoming' | 'live' | 'finished'
           tournament_id: string | null; created_at: string
+          ratified: boolean
         }
         Insert: {
           id?: string; home_team?: string | null; away_team?: string | null; match_date: string
           home_score?: number | null; away_score?: number | null
           stage?: string; status?: 'upcoming' | 'live' | 'finished'
           tournament_id?: string | null
+          ratified?: boolean
         }
         Update: {
           home_score?: number | null; away_score?: number | null
           status?: 'upcoming' | 'live' | 'finished'
           tournament_id?: string | null
+          ratified?: boolean
         }
         Relationships: []
       }

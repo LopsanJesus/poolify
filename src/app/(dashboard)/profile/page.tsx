@@ -12,7 +12,7 @@ export default async function ProfilePage() {
   if (!user) redirect('/login')
 
   const [{ data: profile }, { dict, locale }, personalInfo] = await Promise.all([
-    supabase.from('profiles').select('username, language').eq('id', user.id).single(),
+    supabase.from('profiles').select('username, language, is_admin').eq('id', user.id).single(),
     getDict(),
     getMyPersonalInfo(),
   ])
@@ -32,6 +32,7 @@ export default async function ProfilePage() {
       locale={locale}
       dict={dict}
       personalInfoComplete={personalInfoComplete}
+      isAdmin={!!profile?.is_admin}
     />
   )
 }

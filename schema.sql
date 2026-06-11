@@ -51,7 +51,8 @@ create table public.profiles (
   sexual_orientation text,
   race            text,
   fav_cabo_verde_player text,
-  personal_info_locked boolean not null default false
+  personal_info_locked boolean not null default false,
+  is_admin        boolean not null default false
 );
 alter table public.profiles enable row level security;
 
@@ -180,7 +181,8 @@ create table public.matches (
   stage         text not null default 'Group Stage',
   status        text not null default 'upcoming' check (status in ('upcoming','live','finished')),
   tournament_id uuid references public.tournaments(id) on delete set null,
-  created_at    timestamptz not null default now()
+  created_at    timestamptz not null default now(),
+  ratified      boolean not null default false
 );
 alter table public.matches enable row level security;
 
@@ -329,3 +331,9 @@ create policy "Clan owner can manage clan_tournaments"
 --   alter table public.predictions
 --     add constraint predictions_home_score_check check (home_score in ('0','1','2','+')),
 --     add constraint predictions_away_score_check check (away_score in ('0','1','2','+'));
+--
+-- NEW (admin panel: global admins + match ratification):
+--   alter table public.profiles add column if not exists is_admin boolean not null default false;
+--   alter table public.matches add column if not exists ratified boolean not null default false;
+--   -- Promote a user to admin manually:
+--   --   update public.profiles set is_admin = true where username = 'your_username';
