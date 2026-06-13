@@ -61,43 +61,49 @@ export function MatchCard({
   return (
     <div className="rounded-xl bg-white/5 border border-white/10 overflow-hidden">
       <div className="p-4">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between gap-2 mb-2">
           <span className="text-xs text-blue-400">{stageLabel(match.stage, locale)}</span>
-          <StatusBadge status={match.status} clanDict={clanDict} />
+          <div className="flex items-center gap-2 shrink-0">
+            {match.status === 'upcoming' && (
+              <span className="text-xs text-blue-300/60 font-mono whitespace-nowrap">
+                {new Date(match.match_date).toLocaleDateString(DATE_LOCALE[locale], {
+                  day: '2-digit', month: 'short',
+                })}{' '}
+                {new Date(match.match_date).toLocaleTimeString(DATE_LOCALE[locale], {
+                  hour: '2-digit', minute: '2-digit',
+                })}
+              </span>
+            )}
+            <StatusBadge status={match.status} clanDict={clanDict} />
+          </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex-1 min-w-0 text-right">
-            <div className="text-white font-semibold flex items-center justify-end gap-2">
-              {match.home_team ? translateTeam(match.home_team, locale) : <TBD />} <TeamFlag team={match.home_team} />
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <TeamFlag team={match.home_team} />
+              <span className="text-white font-semibold truncate">
+                {match.home_team ? translateTeam(match.home_team, locale) : <TBD />}
+              </span>
             </div>
-          </div>
-
-          <div className="text-center px-3 shrink-0">
-            {isFinished || match.status === 'live' ? (
-              <p className="text-white font-bold text-lg whitespace-nowrap">
-                {formatMatchScore(match.home_score)} – {formatMatchScore(match.away_score)}
-              </p>
-            ) : (
-              <div>
-                <p className="text-blue-400 font-mono text-sm">
-                  {new Date(match.match_date).toLocaleDateString(DATE_LOCALE[locale], {
-                    day: '2-digit', month: 'short',
-                  })}
-                </p>
-                <p className="text-blue-300/60 font-mono text-xs text-center">
-                  {new Date(match.match_date).toLocaleTimeString(DATE_LOCALE[locale], {
-                    hour: '2-digit', minute: '2-digit',
-                  })}
-                </p>
-              </div>
+            {(isFinished || match.status === 'live') && (
+              <span className="text-white font-bold text-lg tabular-nums shrink-0">
+                {formatMatchScore(match.home_score)}
+              </span>
             )}
           </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="text-white font-semibold flex items-center gap-2">
-              <TeamFlag team={match.away_team} /> {match.away_team ? translateTeam(match.away_team, locale) : <TBD />}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <TeamFlag team={match.away_team} />
+              <span className="text-white font-semibold truncate">
+                {match.away_team ? translateTeam(match.away_team, locale) : <TBD />}
+              </span>
             </div>
+            {(isFinished || match.status === 'live') && (
+              <span className="text-white font-bold text-lg tabular-nums shrink-0">
+                {formatMatchScore(match.away_score)}
+              </span>
+            )}
           </div>
         </div>
 
