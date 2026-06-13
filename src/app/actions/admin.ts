@@ -88,7 +88,7 @@ export async function adminUpdateMatchScore(
   if (error) return { error: error.message }
 
   if (match.status === 'finished') {
-    await recalcPredictionPoints(supabase, matchId, homeScore, awayScore)
+    await recalcPredictionPoints(admin, matchId, homeScore, awayScore)
   }
 
   revalidatePath('/admin/matches')
@@ -121,7 +121,7 @@ export async function adminFinishMatch(matchId: string): Promise<{ error?: strin
 
   if (error) return { error: error.message }
 
-  await recalcPredictionPoints(supabase, matchId, match.home_score, match.away_score)
+  await recalcPredictionPoints(admin, matchId, match.home_score, match.away_score)
 
   revalidatePath('/admin/matches')
   revalidatePath('/matches')

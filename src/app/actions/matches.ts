@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { calculatePoints } from '@/lib/scoring'
 import type { ClanSettings } from '@/lib/types'
 import { DEFAULT_CLAN_SETTINGS } from '@/lib/types'
@@ -53,7 +54,8 @@ export async function startMatch(matchId: string, clanId: string): Promise<{ err
   if (match.status !== 'upcoming') return { error: 'El partido no está en estado "próximo"' }
   if (new Date() < new Date(match.match_date)) return { error: 'Todavía no es la hora del partido' }
 
-  const { error } = await supabase
+  const admin = createAdminClient()
+  const { error } = await admin
     .from('matches')
     .update({ status: 'live', home_score: 0, away_score: 0 })
     .eq('id', matchId)
@@ -87,7 +89,8 @@ export async function updateLiveScore(
 
   if (!match || match.status !== 'live') return { error: 'El partido no está en vivo' }
 
-  const { error } = await supabase
+  const admin = createAdminClient()
+  const { error } = await admin
     .from('matches')
     .update({ home_score: homeScore, away_score: awayScore })
     .eq('id', matchId)
@@ -156,14 +159,15 @@ export async function finishMatch(matchId: string, clanId: string): Promise<{ er
   if (!match || match.status !== 'live') return { error: 'El partido no está en vivo' }
   if (match.home_score == null || match.away_score == null) return { error: 'Marcador no definido' }
 
-  const { error: matchError } = await supabase
+  const admin = createAdminClient()
+  const { error: matchError } = await admin
     .from('matches')
     .update({ status: 'finished' })
     .eq('id', matchId)
 
   if (matchError) return { error: matchError.message }
 
-  await recalcPredictionPoints(supabase, matchId, match.home_score, match.away_score)
+  await recalcPredictionPoints(admin, matchId, match.home_score, match.away_score)
 
   revalidatePath(`/clan/${clanId}`)
   revalidatePath(`/clan/${clanId}/predictions`)
