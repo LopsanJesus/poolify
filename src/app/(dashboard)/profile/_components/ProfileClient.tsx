@@ -37,6 +37,20 @@ export function ProfileClient({
         </div>
       </section>
 
+      {/* Admin panel */}
+      {isAdmin && (
+        <Link
+          href="/admin"
+          className="flex items-center justify-between rounded-2xl bg-white/5 border border-white/10 p-5 hover:bg-white/10 transition group"
+        >
+          <div className="flex items-center gap-3">
+            <Shield className="w-5 h-5 text-amber-400" />
+            <span className="text-white font-semibold">{dict.profile.section_admin}</span>
+          </div>
+          <ChevronRight className="w-5 h-5 text-blue-400 group-hover:text-white transition" />
+        </Link>
+      )}
+
       {/* Personal info */}
       <Link
         href="/profile/personal-info"
@@ -88,20 +102,6 @@ export function ProfileClient({
         current={locale}
         dict={dict.profile}
       />
-
-      {/* Admin panel */}
-      {isAdmin && (
-        <Link
-          href="/admin"
-          className="flex items-center justify-between rounded-2xl bg-white/5 border border-white/10 p-5 hover:bg-white/10 transition group"
-        >
-          <div className="flex items-center gap-3">
-            <Shield className="w-5 h-5 text-amber-400" />
-            <span className="text-white font-semibold">{dict.profile.section_admin}</span>
-          </div>
-          <ChevronRight className="w-5 h-5 text-blue-400 group-hover:text-white transition" />
-        </Link>
-      )}
 
       {/* Logout */}
       <section className="rounded-2xl bg-white/5 border border-white/10 p-5 space-y-3">
