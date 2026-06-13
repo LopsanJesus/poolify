@@ -65,6 +65,8 @@ export default async function PredictionsPage({ params }: { params: Promise<{ id
         dict={dict.predictions}
         commonDict={dict.common}
         locale={locale}
+        pointsExact={exactPts}
+        pointsSign={signPts}
       />
     </div>
   )

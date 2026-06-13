@@ -26,12 +26,16 @@ export function PredictionsForm({
   dict,
   commonDict,
   locale,
+  pointsExact,
+  pointsSign,
 }: {
   clanId: string;
   matchesWithPreds: MatchWithPrediction[];
   dict: Dict["predictions"];
   commonDict: Dict["common"];
   locale: Locale;
+  pointsExact: number;
+  pointsSign: number;
 }) {
   const [state, action, pending] = useActionState(savePredictions, undefined);
   const [dirty, setDirty] = useState(false);
@@ -76,6 +80,8 @@ export function PredictionsForm({
                   locale={locale}
                   editable
                   onDirty={() => setDirty(true)}
+                  pointsExact={pointsExact}
+                  pointsSign={pointsSign}
                 />
               ))}
 
@@ -96,6 +102,8 @@ export function PredictionsForm({
                       locale={locale}
                       editable
                       onDirty={() => setDirty(true)}
+                      pointsExact={pointsExact}
+                      pointsSign={pointsSign}
                     />
                   ))}
                 </>
@@ -129,7 +137,7 @@ export function PredictionsForm({
               {dict.status_finished_ro}
             </p>
             {locked.map((match) => (
-              <MatchCard key={match.id} match={match} dict={dict} locale={locale} editable={false} />
+              <MatchCard key={match.id} match={match} dict={dict} locale={locale} editable={false} pointsExact={pointsExact} pointsSign={pointsSign} />
             ))}
           </div>
         )}
@@ -180,12 +188,16 @@ function MatchCard({
   locale,
   editable,
   onDirty,
+  pointsExact,
+  pointsSign,
 }: {
   match: MatchWithPrediction;
   dict: Dict["predictions"];
   locale: Locale;
   editable: boolean;
   onDirty?: () => void;
+  pointsExact: number;
+  pointsSign: number;
 }) {
   const [homeScore, setHomeScore] = useState<PredScore | "">((match.prediction?.home_score ?? "") as PredScore | "");
   const [awayScore, setAwayScore] = useState<PredScore | "">((match.prediction?.away_score ?? "") as PredScore | "");
@@ -277,7 +289,7 @@ function MatchCard({
 
       {match.prediction && match.status === "finished" && (
         <div className="text-center">
-          <PointsBadge points={match.prediction.points} dict={dict} />
+          <PointsBadge points={match.prediction.points} exactPts={pointsExact} signPts={pointsSign} dict={dict} />
         </div>
       )}
     </div>
@@ -304,14 +316,24 @@ function StatusPill({ status, dict }: { status: string; dict: Dict["predictions"
   );
 }
 
-function PointsBadge({ points, dict }: { points: number; dict: Dict["predictions"] }) {
-  if (points === 4)
+function PointsBadge({
+  points,
+  exactPts,
+  signPts,
+  dict,
+}: {
+  points: number;
+  exactPts: number;
+  signPts: number;
+  dict: Dict["predictions"];
+}) {
+  if (points === exactPts)
     return (
       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-500/30 text-emerald-300 text-sm font-bold">
         {dict.pill_exact}
       </span>
     );
-  if (points === 1)
+  if (points === signPts)
     return (
       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-500/30 text-blue-300 text-sm font-bold">
         {dict.pill_winner}

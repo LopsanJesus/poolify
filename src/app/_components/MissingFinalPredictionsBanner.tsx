@@ -5,11 +5,9 @@ import type { Dict } from "@/lib/i18n/dictionaries";
 export function MissingFinalPredictionsBanner({
   clanId,
   dict,
-  viewOnly = false,
 }: {
   clanId: string;
   dict: Dict["final_predictions"];
-  viewOnly?: boolean;
 }) {
   return (
     <Link
@@ -24,7 +22,7 @@ export function MissingFinalPredictionsBanner({
         <p className="text-purple-200/70 text-xs sm:text-sm mt-0.5">{dict.banner_desc}</p>
       </div>
       <div className="flex items-center gap-1.5 text-purple-400 text-sm font-bold bg-purple-500/10 px-3 py-1.5 rounded-lg group-hover:bg-purple-500/20 transition shrink-0 mt-2 sm:mt-0">
-        {viewOnly ? dict.banner_view_cta : dict.banner_cta}
+        {dict.banner_cta}
         <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
       </div>
     </Link>

@@ -24,6 +24,8 @@ export function MatchCard({
   locale,
   isPastDeadline = false,
   canEditLive = false,
+  pointsExact,
+  pointsSign,
 }: {
   clanId: string
   match: MatchWithPrediction
@@ -33,6 +35,8 @@ export function MatchCard({
   locale: Locale
   isPastDeadline?: boolean
   canEditLive?: boolean
+  pointsExact: number
+  pointsSign: number
 }) {
   const [expanded, setExpanded] = useState(false)
   const [rows, setRows] = useState<ClanPredictionEntry[] | null>(null)
@@ -104,7 +108,7 @@ export function MatchCard({
                 <span className="text-sm text-blue-200 font-mono">
                   {match.prediction.home_score} – {match.prediction.away_score}
                 </span>
-                {isFinished && <PointsBadge points={match.prediction.points} />}
+                {isFinished && <PointsBadge points={match.prediction.points} exactPts={pointsExact} signPts={pointsSign} />}
               </>
             ) : (
               <span className="text-xs text-red-300 font-medium">{clanDict.not_submitted}</span>
@@ -156,7 +160,7 @@ export function MatchCard({
                       <span className="font-mono">
                         {reveal ? `${r.home_score} – ${r.away_score}` : '• – •'}
                       </span>
-                      {isFinished && <PointsBadge points={r.points} small />}
+                      {isFinished && <PointsBadge points={r.points} exactPts={pointsExact} signPts={pointsSign} small />}
                     </span>
                   </li>
                 )
@@ -286,17 +290,27 @@ function LiveControls({
   )
 }
 
-function PointsBadge({ points, small = false }: { points: number; small?: boolean }) {
+function PointsBadge({
+  points,
+  exactPts,
+  signPts,
+  small = false,
+}: {
+  points: number
+  exactPts: number
+  signPts: number
+  small?: boolean
+}) {
   const size = small ? 'text-[10px] px-1.5 py-0' : 'text-xs px-2 py-0.5'
-  if (points === 4)
+  if (points === exactPts)
     return (
       <span className={`rounded-full bg-emerald-500/30 text-emerald-300 font-bold ${size}`}>
-        +4
+        +{exactPts}
       </span>
     )
-  if (points === 1)
+  if (points === signPts)
     return (
-      <span className={`rounded-full bg-blue-500/30 text-blue-300 font-bold ${size}`}>+1</span>
+      <span className={`rounded-full bg-blue-500/30 text-blue-300 font-bold ${size}`}>+{signPts}</span>
     )
   return <span className={`rounded-full bg-red-500/20 text-red-400 ${size}`}>0</span>
 }

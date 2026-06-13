@@ -1,7 +1,7 @@
 import { MissingPredictionsBanner } from "@/app/_components/MissingPredictionsBanner";
 import { MissingFinalPredictionsBanner } from "@/app/_components/MissingFinalPredictionsBanner";
 import { DateCarousel } from "@/app/(dashboard)/matches/_components/DateCarousel";
-import { getClanData, getTournamentDeadline } from "@/app/actions/clans";
+import { getClanData } from "@/app/actions/clans";
 import { getMatchesWithPredictions } from "@/app/actions/predictions";
 import { getMyTournamentPrediction } from "@/app/actions/tournament";
 import { format, getDict } from "@/lib/i18n/server";
@@ -28,15 +28,11 @@ export default async function ClanPage({
   const settings = clan.settings ?? DEFAULT_CLAN_SETTINGS;
   const canEditLive = clan.owner_id === user.id || settings.live_results_all_members !== false;
 
-  const [matchesWithPreds, { dict, locale }, deadline, myFinalPred] = await Promise.all([
+  const [matchesWithPreds, { dict, locale }, myFinalPred] = await Promise.all([
     getMatchesWithPredictions(id),
     getDict(),
-    getTournamentDeadline(),
     getMyTournamentPrediction(id),
   ]);
-
-  const now = new Date();
-  const isPastDeadline = deadline ? now >= deadline : false;
 
   // Only count upcoming matches where per-match deadline (2h before kick-off) hasn't passed
   const editableUpcoming = matchesWithPreds.filter(
@@ -46,15 +42,9 @@ export default async function ClanPage({
   const hasFinalPredictions = settings.final_predictions != null;
   const missingFinalPreds = hasFinalPredictions && (!myFinalPred || !myFinalPred.winner);
 
-  // Show match banner whenever there are editable upcoming matches without predictions.
-  // After deadline, show a view-only link so users can consult their predictions.
+  // Show banners only while there are pending predictions to make
   const showMatchBanner = missingUpcoming > 0;
-  const showMatchViewLink = isPastDeadline && !showMatchBanner;
-  // Final predictions: show to fill (before deadline) or to view (after deadline)
-  const showFinalBanner = hasFinalPredictions && (
-    (!isPastDeadline && !showMatchBanner && missingFinalPreds) ||
-    isPastDeadline
-  );
+  const showFinalBanner = hasFinalPredictions && missingFinalPreds;
 
   return (
     <div className="space-y-6">
@@ -68,20 +58,10 @@ export default async function ClanPage({
             format={format}
           />
         )}
-        {showMatchViewLink && (
-          <MissingPredictionsBanner
-            clanId={id}
-            count={0}
-            dict={dict.clan}
-            format={format}
-            viewOnly
-          />
-        )}
         {showFinalBanner && (
           <MissingFinalPredictionsBanner
             clanId={id}
             dict={dict.final_predictions}
-            viewOnly={isPastDeadline}
           />
         )}
       </div>
@@ -94,6 +74,8 @@ export default async function ClanPage({
         commonDict={dict.common}
         locale={locale}
         canEditLive={canEditLive}
+        pointsExact={settings.points_exact}
+        pointsSign={settings.points_sign}
       />
     </div>
   );

@@ -56,6 +56,8 @@ export function DateCarousel({
   commonDict,
   locale,
   canEditLive = false,
+  pointsExact,
+  pointsSign,
 }: {
   matches: MatchWithPrediction[]
   clanId: string
@@ -64,6 +66,8 @@ export function DateCarousel({
   commonDict: Dict['common']
   locale: Locale
   canEditLive?: boolean
+  pointsExact: number
+  pointsSign: number
 }) {
   const byDate = new Map<string, MatchWithPrediction[]>()
   for (const m of matches) {
@@ -188,6 +192,8 @@ export function DateCarousel({
                   locale={locale}
                   isPastDeadline={m.matchDeadlinePassed}
                   canEditLive={canEditLive}
+                  pointsExact={pointsExact}
+                  pointsSign={pointsSign}
                 />
               ))}
             </div>
