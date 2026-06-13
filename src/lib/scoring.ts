@@ -11,6 +11,13 @@ function predMatches(pred: PredScore, actual: number): boolean {
   return pred === '+' ? actual >= 3 : parseInt(pred, 10) === actual
 }
 
+// Real match scores follow the same 0/1/2/+ convention as predictions:
+// any team that scored 3 or more goals is displayed as "+".
+export function formatMatchScore(score: number | null): string {
+  if (score == null) return '–'
+  return score >= 3 ? '+' : String(score)
+}
+
 export function calculatePoints(
   predHome: PredScore,
   predAway: PredScore,

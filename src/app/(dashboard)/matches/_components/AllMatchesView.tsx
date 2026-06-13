@@ -9,6 +9,7 @@ import { translateTeam } from '@/lib/team-flags'
 import { FlagImage } from '@/app/_components/FlagImage'
 import { getRankingUpToMatch } from '@/app/actions/clans'
 import type { MatchRankingEntry } from '@/app/actions/clans'
+import { formatMatchScore } from '@/lib/scoring'
 
 const DATE_LOCALE: Record<Locale, string> = { en: 'en-US', es: 'es-ES', de: 'de-DE' }
 
@@ -169,7 +170,7 @@ function MatchRow({
           <div className="shrink-0 flex flex-col items-center gap-0.5">
             {isFinished ? (
               <span className="bg-black/60 backdrop-blur-sm text-white font-bold px-2 py-0.5 rounded-lg text-base tabular-nums ring-1 ring-white/10">
-                {match.home_score} – {match.away_score}
+                {formatMatchScore(match.home_score)} – {formatMatchScore(match.away_score)}
               </span>
             ) : match.status === 'live' ? (
               <span className="bg-red-500/80 text-white font-bold text-xs px-2 py-1 rounded-lg animate-pulse">

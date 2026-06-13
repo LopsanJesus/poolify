@@ -10,6 +10,7 @@ import { stageLabel } from '@/lib/stages'
 import { translateTeam } from '@/lib/team-flags'
 import { FlagImage } from '@/app/_components/FlagImage'
 import { LiveScoreButtons } from '@/app/_components/ScoreSelector'
+import { formatMatchScore } from '@/lib/scoring'
 
 const DATE_LOCALE: Record<Locale, string> = { en: 'en-US', es: 'es-ES', de: 'de-DE' }
 
@@ -66,16 +67,16 @@ export function MatchCard({
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="flex-1 text-right">
+          <div className="flex-1 min-w-0 text-right">
             <div className="text-white font-semibold flex items-center justify-end gap-2">
               {match.home_team ? translateTeam(match.home_team, locale) : <TBD />} <TeamFlag team={match.home_team} />
             </div>
           </div>
 
-          <div className="text-center px-3">
+          <div className="text-center px-3 shrink-0">
             {isFinished || match.status === 'live' ? (
-              <p className="text-white font-bold text-lg">
-                {match.home_score} – {match.away_score}
+              <p className="text-white font-bold text-lg whitespace-nowrap">
+                {formatMatchScore(match.home_score)} – {formatMatchScore(match.away_score)}
               </p>
             ) : (
               <div>
@@ -93,7 +94,7 @@ export function MatchCard({
             )}
           </div>
 
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <div className="text-white font-semibold flex items-center gap-2">
               <TeamFlag team={match.away_team} /> {match.away_team ? translateTeam(match.away_team, locale) : <TBD />}
             </div>

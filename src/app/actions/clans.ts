@@ -80,12 +80,13 @@ export async function getUserClans(): Promise<Pick<Clan, 'id' | 'name' | 'invite
 export async function getClanRanking(clanId: string, settings?: ClanSettings) {
   const supabase = await createClient()
 
-  const [{ data: memberData }, { data: predData }] = await Promise.all([
+  const [{ data: memberData }, { data: predData }, { data: clanRow }] = await Promise.all([
     supabase.from('clan_members').select('user_id, joined_at, profiles(username)').eq('clan_id', clanId),
     supabase.from('predictions').select('user_id, points').eq('clan_id', clanId),
+    settings ? Promise.resolve({ data: null }) : supabase.from('clans').select('settings').eq('id', clanId).single(),
   ])
 
-  const exactPts = settings?.points_exact ?? DEFAULT_CLAN_SETTINGS.points_exact
+  const exactPts = settings?.points_exact ?? (clanRow?.settings as ClanSettings | null)?.points_exact ?? DEFAULT_CLAN_SETTINGS.points_exact
 
   type MemberRow = { user_id: string; joined_at: string | null; profiles: { username: string } | null }
   type PredRow   = { user_id: string; points: number | null }
