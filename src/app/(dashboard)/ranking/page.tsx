@@ -36,7 +36,7 @@ export default async function RankingPage() {
 
   const clan = clans.find((c) => c.id === clanId) ?? clans[0];
 
-  const [ranking, { dict }, clanData, deadline] = await Promise.all([
+  const [ranking, { dict, locale }, clanData, deadline] = await Promise.all([
     getClanRanking(clan.id),
     getDict(),
     getClanData(clan.id),
@@ -76,6 +76,7 @@ export default async function RankingPage() {
           isPastDeadline={isPastDeadline}
           finalPredictionsConfig={finalPredictionsConfig}
           finalPredictionsDict={dict.final_predictions}
+          locale={locale}
         />
       )}
     </div>

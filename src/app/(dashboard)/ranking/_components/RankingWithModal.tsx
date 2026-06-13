@@ -3,9 +3,10 @@
 import { useState } from 'react'
 import { Star, Target } from 'lucide-react'
 import { Modal } from '@/app/_components/Modal'
-import type { Dict } from '@/lib/i18n/dictionaries'
+import type { Dict, Locale } from '@/lib/i18n/dictionaries'
 import type { PersonalInfo } from '@/app/actions/personal-info'
 import type { TournamentPrediction, FinalPredictionsConfig } from '@/lib/types'
+import { translateTeam } from '@/lib/team-flags'
 
 const MEDAL_COLORS = ['text-yellow-400', 'text-slate-300', 'text-orange-400']
 const COLS = '2.5rem 1fr 3.5rem 3.5rem'
@@ -31,6 +32,7 @@ export function RankingWithModal({
   isPastDeadline = false,
   finalPredictionsConfig = null,
   finalPredictionsDict,
+  locale,
 }: {
   ranking: RankingEntry[]
   currentUserId: string
@@ -41,6 +43,7 @@ export function RankingWithModal({
   isPastDeadline?: boolean
   finalPredictionsConfig?: FinalPredictionsConfig | null
   finalPredictionsDict?: Dict['final_predictions']
+  locale: Locale
 }) {
   const [selected, setSelected] = useState<{
     entry: RankingEntry
@@ -103,6 +106,7 @@ export function RankingWithModal({
           finalPredictionsConfig={finalPredictionsConfig}
           finalPredictionsDict={finalPredictionsDict}
           profileDict={profileDict}
+          locale={locale}
           onClose={() => setSelected(null)}
         />
       )}
@@ -118,6 +122,7 @@ function PersonalInfoModal({
   finalPredictionsConfig,
   finalPredictionsDict,
   profileDict,
+  locale,
   onClose,
 }: {
   entry: RankingEntry
@@ -127,6 +132,7 @@ function PersonalInfoModal({
   finalPredictionsConfig: FinalPredictionsConfig | null
   finalPredictionsDict?: Dict['final_predictions']
   profileDict: Dict['profile']
+  locale: Locale
   onClose: () => void
 }) {
   const hasInfo = info && (
@@ -158,10 +164,10 @@ function PersonalInfoModal({
               <Star className="w-3 h-3" />
               {finalPredictionsDict.title}
             </p>
-            {finalPred.winner && <InfoRow label={finalPredictionsDict.field_winner} value={finalPred.winner} />}
-            {finalPred.runner_up && <InfoRow label={finalPredictionsDict.field_runner_up} value={finalPred.runner_up} />}
-            {finalPred.semi1 && <InfoRow label={finalPredictionsDict.field_semi1} value={finalPred.semi1} />}
-            {finalPred.semi2 && <InfoRow label={finalPredictionsDict.field_semi2} value={finalPred.semi2} />}
+            {finalPred.winner && <InfoRow label={finalPredictionsDict.field_winner} value={translateTeam(finalPred.winner, locale)} />}
+            {finalPred.runner_up && <InfoRow label={finalPredictionsDict.field_runner_up} value={translateTeam(finalPred.runner_up, locale)} />}
+            {finalPred.semi1 && <InfoRow label={finalPredictionsDict.field_semi1} value={translateTeam(finalPred.semi1, locale)} />}
+            {finalPred.semi2 && <InfoRow label={finalPredictionsDict.field_semi2} value={translateTeam(finalPred.semi2, locale)} />}
             {finalPred.top_scorer && <InfoRow label={finalPredictionsDict.field_top_scorer} value={finalPred.top_scorer} />}
             {finalPredictionsConfig.custom_fields?.map((f) =>
               finalPred.custom_answers?.[f.id] ? (
