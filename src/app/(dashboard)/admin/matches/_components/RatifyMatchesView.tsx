@@ -27,11 +27,33 @@ export function RatifyMatchesView({
     return <p className="text-center text-blue-400/70 text-sm py-6">{dict.no_matches}</p>
   }
 
+  const pending = matches.filter((m) => !m.ratified)
+  const ratified = matches.filter((m) => m.ratified)
+
   return (
     <div className="space-y-3">
-      {matches.map((match) => (
-        <MatchRow key={match.id} match={match} dict={dict} clanDict={clanDict} locale={locale} />
-      ))}
+      {pending.length === 0 ? (
+        <p className="text-center text-blue-400/70 text-sm py-6">{dict.no_matches}</p>
+      ) : (
+        pending.map((match) => (
+          <MatchRow key={match.id} match={match} dict={dict} clanDict={clanDict} locale={locale} />
+        ))
+      )}
+
+      {ratified.length > 0 && (
+        <>
+          <div className="flex items-center gap-3 pt-2">
+            <div className="flex-1 h-px bg-white/10" />
+            <span className="text-xs font-semibold text-blue-400/50 uppercase tracking-wide whitespace-nowrap">
+              {dict.ratified_section_title}
+            </span>
+            <div className="flex-1 h-px bg-white/10" />
+          </div>
+          {ratified.map((match) => (
+            <MatchRow key={match.id} match={match} dict={dict} clanDict={clanDict} locale={locale} />
+          ))}
+        </>
+      )}
     </div>
   )
 }
