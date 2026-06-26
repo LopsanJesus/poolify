@@ -130,6 +130,34 @@ export async function adminFinishMatch(matchId: string): Promise<{ error?: strin
   return {}
 }
 
+export async function adminReopenMatch(matchId: string): Promise<{ error?: string }> {
+  const { dict } = await getDict()
+  if (!await getAdminUserId()) return { error: dict.common.error }
+
+  const supabase = await createClient()
+  const { data: match } = await supabase
+    .from('matches')
+    .select('status, ratified')
+    .eq('id', matchId)
+    .single()
+
+  if (!match || match.ratified) return { error: dict.admin.match_ratified_locked }
+  if (match.status !== 'finished') return { error: dict.common.error }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('matches')
+    .update({ status: 'live' })
+    .eq('id', matchId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/admin/matches')
+  revalidatePath('/matches')
+  revalidatePath('/clan/[id]', 'layout')
+  return {}
+}
+
 export async function ratifyMatch(matchId: string): Promise<{ error?: string }> {
   const { dict } = await getDict()
   if (!await getAdminUserId()) return { error: dict.common.error }

@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Loader2, Lock, ShieldCheck } from 'lucide-react'
-import { adminUpdateMatchScore, adminFinishMatch, ratifyMatch } from '@/app/actions/admin'
+import { Loader2, Lock, RotateCcw, ShieldCheck } from 'lucide-react'
+import { adminUpdateMatchScore, adminFinishMatch, adminReopenMatch, ratifyMatch } from '@/app/actions/admin'
 import { LiveScoreButtons } from '@/app/_components/ScoreSelector'
 import { FlagImage } from '@/app/_components/FlagImage'
 import type { Match } from '@/lib/types'
@@ -102,6 +102,15 @@ function MatchRow({
     })
   }
 
+  function handleReopen() {
+    if (!window.confirm(dict.reopen_confirm)) return
+    setError(null)
+    startTransition(async () => {
+      const res = await adminReopenMatch(match.id)
+      if (res.error) setError(res.error)
+    })
+  }
+
   return (
     <div className="rounded-xl bg-white/5 border border-white/10 p-4 space-y-3">
       <div className="flex items-center justify-between">
@@ -182,16 +191,28 @@ function MatchRow({
             </button>
           )}
           {match.status === 'finished' && (
-            <button
-              type="button"
-              onClick={handleRatify}
-              disabled={pending}
-              className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold transition disabled:opacity-60"
-            >
-              {pending && <Loader2 className="w-4 h-4 animate-spin" />}
-              <ShieldCheck className="w-4 h-4" />
-              {dict.ratify_cta}
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={handleReopen}
+                disabled={pending}
+                className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-sm font-semibold transition disabled:opacity-60"
+              >
+                {pending && <Loader2 className="w-4 h-4 animate-spin" />}
+                <RotateCcw className="w-4 h-4" />
+                {dict.reopen_cta}
+              </button>
+              <button
+                type="button"
+                onClick={handleRatify}
+                disabled={pending}
+                className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-semibold transition disabled:opacity-60"
+              >
+                {pending && <Loader2 className="w-4 h-4 animate-spin" />}
+                <ShieldCheck className="w-4 h-4" />
+                {dict.ratify_cta}
+              </button>
+            </>
           )}
         </div>
       )}

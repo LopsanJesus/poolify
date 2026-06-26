@@ -355,6 +355,8 @@ const en = {
     ratify_confirm: 'Ratify this result? It can never be modified again, by anyone.',
     match_ratified_locked: 'This match has already been ratified and can no longer be modified.',
     match_not_finished: 'The match must be finished before it can be ratified.',
+    reopen_cta: 'Reopen match',
+    reopen_confirm: 'Reopen this match? It will go back to live and can be edited again.',
   },
 }
 
@@ -705,6 +707,8 @@ const es: typeof en = {
     ratify_confirm: '¿Ratificar este resultado? No podrá modificarse nunca más, por nadie.',
     match_ratified_locked: 'Este partido ya ha sido ratificado y no se puede modificar.',
     match_not_finished: 'El partido debe estar finalizado para poder ratificarlo.',
+    reopen_cta: 'Reabrir partido',
+    reopen_confirm: '¿Reabrir este partido? Volverá a estar en juego y podrá editarse de nuevo.',
   },
 }
 
@@ -1057,6 +1061,8 @@ const de: typeof en = {
     ratify_confirm: 'Dieses Ergebnis ratifizieren? Es kann danach von niemandem mehr geändert werden.',
     match_ratified_locked: 'Dieses Spiel wurde bereits ratifiziert und kann nicht mehr geändert werden.',
     match_not_finished: 'Das Spiel muss beendet sein, bevor es ratifiziert werden kann.',
+    reopen_cta: 'Spiel wieder öffnen',
+    reopen_confirm: 'Dieses Spiel wieder öffnen? Es wird wieder live und kann erneut bearbeitet werden.',
   },
 }
 
