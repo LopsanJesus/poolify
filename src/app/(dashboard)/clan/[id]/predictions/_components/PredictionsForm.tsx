@@ -11,7 +11,7 @@ import { FlagImage } from "@/app/_components/FlagImage";
 import { translateTeam } from "@/lib/team-flags";
 import { SuccessToast } from "@/app/_components/SuccessToast";
 import { ScoreButtons, SCORE_OPTIONS } from "@/app/_components/ScoreSelector";
-import { isKnockoutRound } from "@/lib/rounds";
+import { isKnockoutRound, matchRound } from "@/lib/rounds";
 import { deriveQualifierFromScore, whoAdvances } from "@/lib/scoring";
 import type { RoundDeadlineInfo } from "@/app/actions/predictions";
 
@@ -65,33 +65,18 @@ export function PredictionsForm({
 
   const locked = matchesWithPreds.filter((m) => m.status !== "upcoming" || m.matchDeadlinePassed);
 
-  // Find the soonest upcoming deadline to show in the banner
   const now = new Date();
-  const nextDeadlineInfo = roundDeadlines
-    .filter((rd) => rd.deadline > now)
-    .sort((a, b) => a.deadline.getTime() - b.deadline.getTime())[0];
+
+  // Map round → deadline for quick lookup
+  const deadlineByRound = new Map<string, Date>(
+    roundDeadlines.map((rd) => [rd.round, rd.deadline])
+  );
 
   return (
     <>
       <div className="space-y-8">
         <form id="predictions-form" action={action} className="space-y-4">
           <input type="hidden" name="clan_id" value={clanId} />
-
-          {/* Round deadline hint */}
-          {nextDeadlineInfo && upcomingEditable.length > 0 && (
-            <p className="text-center text-xs text-amber-400/80">
-              {dict.deadline_round_closes}{" "}
-              <span className="font-semibold">
-                {nextDeadlineInfo.deadline.toLocaleString(DATE_LOCALE[locale], {
-                  weekday: "short",
-                  day: "2-digit",
-                  month: "short",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </span>
-            </p>
-          )}
 
           {upcomingEditable.length === 0 ? (
             <p className="text-center text-blue-400/70 text-sm py-6">
@@ -110,6 +95,7 @@ export function PredictionsForm({
                   pointsExact={pointsExact}
                   pointsSign={pointsSign}
                   pointsAdvance={pointsAdvance}
+                  roundDeadline={deadlineByRound.get(matchRound(match.stage))}
                 />
               ))}
 
@@ -133,6 +119,7 @@ export function PredictionsForm({
                       pointsExact={pointsExact}
                       pointsSign={pointsSign}
                       pointsAdvance={pointsAdvance}
+                      roundDeadline={deadlineByRound.get(matchRound(match.stage))}
                     />
                   ))}
                 </>
@@ -217,6 +204,7 @@ function MatchCard({
   pointsExact,
   pointsSign,
   pointsAdvance,
+  roundDeadline,
 }: {
   match: MatchWithPrediction;
   dict: Dict["predictions"];
@@ -226,6 +214,7 @@ function MatchCard({
   pointsExact: number;
   pointsSign: number;
   pointsAdvance: number;
+  roundDeadline?: Date;
 }) {
   const [homeScore, setHomeScore] = useState<PredScore | "">((match.prediction?.home_score ?? "") as PredScore | "");
   const [awayScore, setAwayScore] = useState<PredScore | "">((match.prediction?.away_score ?? "") as PredScore | "");
@@ -415,15 +404,31 @@ function MatchCard({
         </div>
       )}
 
-      <p className="text-center text-xs text-blue-400">
-        {new Date(match.match_date).toLocaleDateString(DATE_LOCALE[locale], {
-          weekday: "long",
-          day: "2-digit",
-          month: "long",
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
-      </p>
+      <div className="flex flex-col items-center gap-0.5">
+        <p className="text-center text-xs text-blue-400">
+          {new Date(match.match_date).toLocaleDateString(DATE_LOCALE[locale], {
+            weekday: "long",
+            day: "2-digit",
+            month: "long",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </p>
+        {editable && roundDeadline && (
+          <p className="text-center text-xs text-amber-400/80">
+            {dict.deadline_round_closes}{" "}
+            <span className="font-semibold tabular-nums">
+              {roundDeadline.toLocaleString(DATE_LOCALE[locale], {
+                weekday: "short",
+                day: "2-digit",
+                month: "short",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          </p>
+        )}
+      </div>
 
       {match.prediction && match.status === "finished" && (
         <div className="flex flex-col items-center gap-1.5">
