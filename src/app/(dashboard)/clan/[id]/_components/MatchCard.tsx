@@ -168,6 +168,13 @@ export function MatchCard({
                       <span className="font-mono">
                         {reveal ? `${r.home_score} – ${r.away_score}` : '• – •'}
                       </span>
+                      {reveal && isKnockoutRound(match.stage) && r.qualifier && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-medium whitespace-nowrap">
+                          {r.qualifier === 'home'
+                            ? (match.home_team ?? '?')
+                            : (match.away_team ?? '?')}
+                        </span>
+                      )}
                       {isFinished && <PointsBadge points={r.points} exactPts={pointsExact} signPts={pointsSign} small />}
                     </span>
                   </li>
