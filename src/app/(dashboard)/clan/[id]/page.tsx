@@ -84,6 +84,7 @@ export default async function ClanPage({
         canEditLive={canEditLive}
         pointsExact={settings.points_exact}
         pointsSign={settings.points_sign}
+        pointsAdvance={settings.points_advance ?? 2}
       />
     </div>
   );

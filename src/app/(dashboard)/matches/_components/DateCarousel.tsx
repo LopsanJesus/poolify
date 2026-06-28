@@ -58,6 +58,7 @@ export function DateCarousel({
   canEditLive = false,
   pointsExact,
   pointsSign,
+  pointsAdvance,
 }: {
   matches: MatchWithPrediction[]
   clanId: string
@@ -68,6 +69,7 @@ export function DateCarousel({
   canEditLive?: boolean
   pointsExact: number
   pointsSign: number
+  pointsAdvance: number
 }) {
   const byDate = new Map<string, MatchWithPrediction[]>()
   for (const m of matches) {
@@ -194,6 +196,7 @@ export function DateCarousel({
                   canEditLive={canEditLive}
                   pointsExact={pointsExact}
                   pointsSign={pointsSign}
+                  pointsAdvance={pointsAdvance}
                 />
               ))}
             </div>

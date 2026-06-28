@@ -5,6 +5,7 @@ import { ChevronDown, Loader2, Users } from 'lucide-react'
 import { getClanPredictionsForMatch, type ClanPredictionEntry } from '@/app/actions/predictions'
 import { startMatch, updateLiveScore, finishMatch } from '@/app/actions/matches'
 import { isKnockoutRound } from '@/lib/rounds'
+import { calculatePoints, calculateAdvancePoints, whoAdvances } from '@/lib/scoring'
 import type { Match, Prediction } from '@/lib/types'
 import type { Dict, Locale } from '@/lib/i18n/dictionaries'
 import { stageLabel } from '@/lib/stages'
@@ -40,6 +41,7 @@ export function MatchCard({
   canEditLive = false,
   pointsExact,
   pointsSign,
+  pointsAdvance = 2,
 }: {
   clanId: string
   match: MatchWithPrediction
@@ -51,6 +53,7 @@ export function MatchCard({
   canEditLive?: boolean
   pointsExact: number
   pointsSign: number
+  pointsAdvance: number
 }) {
   const [expanded, setExpanded] = useState(false)
   const [rows, setRows] = useState<ClanPredictionEntry[] | null>(null)
@@ -68,8 +71,25 @@ export function MatchCard({
   }
 
   const isFinished = match.status === 'finished'
-  // Only reveal other users' predictions after the global deadline closes (prevents copying)
+  const isLiveOrFinished = match.status === 'live' || isFinished
+  const knockout = isKnockoutRound(match.stage)
   const canRevealOthers = isPastDeadline
+
+  // Who actually advanced (knockout finished with home_advances resolved)
+  const actualAdvancer = (isFinished && knockout && match.home_score != null && match.away_score != null)
+    ? whoAdvances(match.home_score, match.away_score, match.home_advances)
+    : null
+
+  const scoring = { points_exact: pointsExact, points_sign: pointsSign, points_advance: pointsAdvance }
+
+  function liveMatchPts(pred: ClanPredictionEntry): number {
+    if (match.home_score == null || match.away_score == null) return 0
+    const scorePts = calculatePoints(pred.home_score, pred.away_score, match.home_score, match.away_score, scoring)
+    const advancePts = knockout
+      ? calculateAdvancePoints(pred.qualifier, match.home_score, match.away_score, match.home_advances, scoring)
+      : 0
+    return scorePts + advancePts
+  }
 
   return (
     <div className="rounded-xl bg-white/5 border border-white/10 overflow-hidden">
@@ -94,12 +114,15 @@ export function MatchCard({
         <div className="space-y-1.5">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
-              <TeamFlag team={match.home_team} />
-              <span className="text-white font-semibold truncate">
+              <TeamFlag team={match.home_team} dim={actualAdvancer === 'away'} />
+              <span className={`font-semibold truncate ${
+                actualAdvancer === 'home' ? 'text-emerald-400' :
+                actualAdvancer === 'away' ? 'text-white/35' : 'text-white'
+              }`}>
                 {match.home_team ? translateTeam(match.home_team, locale) : <TBD />}
               </span>
             </div>
-            {(isFinished || match.status === 'live') && (
+            {isLiveOrFinished && (
               <span className="text-white font-bold text-lg tabular-nums shrink-0">
                 {formatMatchScore(match.home_score)}
               </span>
@@ -107,12 +130,15 @@ export function MatchCard({
           </div>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
-              <TeamFlag team={match.away_team} />
-              <span className="text-white font-semibold truncate">
+              <TeamFlag team={match.away_team} dim={actualAdvancer === 'home'} />
+              <span className={`font-semibold truncate ${
+                actualAdvancer === 'away' ? 'text-emerald-400' :
+                actualAdvancer === 'home' ? 'text-white/35' : 'text-white'
+              }`}>
                 {match.away_team ? translateTeam(match.away_team, locale) : <TBD />}
               </span>
             </div>
-            {(isFinished || match.status === 'live') && (
+            {isLiveOrFinished && (
               <span className="text-white font-bold text-lg tabular-nums shrink-0">
                 {formatMatchScore(match.away_score)}
               </span>
@@ -152,51 +178,70 @@ export function MatchCard({
       </button>
 
       {expanded && (
-        <div className="p-4 bg-blue-900/40 border-t border-white/10">
+        <div className="p-3 bg-blue-900/40 border-t border-white/10">
           {pending && !rows ? (
-            <div className="flex items-center gap-2 text-sm text-blue-300">
+            <div className="flex items-center gap-2 text-sm text-blue-300 px-1 py-2">
               <Loader2 className="w-4 h-4 animate-spin" />
               {commonDict.loading}
             </div>
-          ) : rows && rows.length > 0 ? (
-            <ul className="space-y-1.5 text-sm">
-              {rows.map((r) => {
-                const isYou = r.user_id === currentUserId
-                const reveal = canRevealOthers || isYou
-                return (
-                  <li
-                    key={r.user_id}
-                    className={`flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg ${
-                      isYou ? 'bg-emerald-500/15 text-emerald-200' : 'text-blue-100'
-                    }`}
-                  >
-                    <span className="truncate">
-                      {r.username}
-                      {isYou && (
-                        <span className="text-xs text-emerald-400 ml-1.5">({clanDict.you})</span>
-                      )}
-                    </span>
-                    <span className="flex items-center gap-2 shrink-0">
-                      <span className="font-mono">
-                        {reveal ? `${r.home_score} – ${r.away_score}` : '• – •'}
-                      </span>
-                      {reveal && isKnockoutRound(match.stage) && r.qualifier && (
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${
-                          r.qualifier === 'home'
-                            ? 'bg-blue-500/25 text-blue-300'
-                            : 'bg-orange-500/25 text-orange-300'
-                        }`}>
-                          {qualifierLabel(r.qualifier, match.home_team, match.away_team, locale)}
+          ) : rows && rows.length > 0 ? (() => {
+            const hasScore = match.home_score != null && match.away_score != null
+            const sorted = [...rows].sort((a, b) => {
+              const aTotal = a.total_points + (hasScore ? liveMatchPts(a) : 0)
+              const bTotal = b.total_points + (hasScore ? liveMatchPts(b) : 0)
+              return bTotal - aTotal || a.username.localeCompare(b.username)
+            })
+            return (
+              <ul className="space-y-1">
+                {sorted.map((r) => {
+                  const isYou = r.user_id === currentUserId
+                  const reveal = canRevealOthers || isYou
+                  const matchPts = hasScore ? liveMatchPts(r) : null
+                  const totalWithMatch = r.total_points + (matchPts ?? 0)
+                  return (
+                    <li
+                      key={r.user_id}
+                      className={`px-2.5 py-2 rounded-lg ${isYou ? 'bg-emerald-500/15' : ''}`}
+                    >
+                      {/* Row 1: name · score · qualifier */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className={`text-sm font-medium truncate ${isYou ? 'text-emerald-200' : 'text-blue-100'}`}>
+                          {r.username}
+                          {isYou && <span className="text-xs text-emerald-400 ml-1">({clanDict.you})</span>}
                         </span>
-                      )}
-                      {isFinished && <PointsBadge points={r.points} exactPts={pointsExact} signPts={pointsSign} small />}
-                    </span>
-                  </li>
-                )
-              })}
-            </ul>
-          ) : (
-            <p className="text-sm text-blue-400 italic">—</p>
+                        <span className="flex items-center gap-1.5 shrink-0">
+                          <span className="font-mono text-sm text-blue-100">
+                            {reveal ? `${r.home_score} – ${r.away_score}` : '• – •'}
+                          </span>
+                          {reveal && knockout && r.qualifier && (
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                              r.qualifier === 'home'
+                                ? 'bg-blue-500/25 text-blue-300'
+                                : 'bg-orange-500/25 text-orange-300'
+                            }`}>
+                              {qualifierLabel(r.qualifier, match.home_team, match.away_team, locale)}
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      {/* Row 2: total pts · match pts · badge */}
+                      <div className="flex items-center justify-between gap-2 mt-0.5">
+                        <span className="text-[11px] text-blue-400/70">
+                          {totalWithMatch} pts
+                        </span>
+                        {matchPts !== null && (
+                          <span className="flex items-center gap-1.5 shrink-0">
+                            <MatchPtsBadge pts={matchPts} exactPts={pointsExact} signPts={pointsSign} />
+                          </span>
+                        )}
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            )
+          })() : (
+            <p className="text-sm text-blue-400 italic px-1">—</p>
           )}
         </div>
       )}
@@ -204,9 +249,9 @@ export function MatchCard({
   )
 }
 
-function TeamFlag({ team }: { team: string | null }) {
+function TeamFlag({ team, dim = false }: { team: string | null; dim?: boolean }) {
   if (!team) return null
-  return <FlagImage team={team} size={24} />
+  return <FlagImage team={team} size={24} className={dim ? 'opacity-30' : ''} />
 }
 
 function TBD() {
@@ -389,4 +434,15 @@ function PointsBadge({
       <span className={`rounded-full bg-blue-500/30 text-blue-300 font-bold ${size}`}>+{signPts}</span>
     )
   return <span className={`rounded-full bg-red-500/20 text-red-400 ${size}`}>0</span>
+}
+
+// Badge for live/finished match points — always small, with 0 shown as muted
+function MatchPtsBadge({ pts, exactPts, signPts }: { pts: number; exactPts: number; signPts: number }) {
+  if (pts >= exactPts)
+    return <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 font-bold">+{pts}</span>
+  if (pts >= signPts && pts > 0)
+    return <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/30 text-blue-300 font-bold">+{pts}</span>
+  if (pts > 0)
+    return <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold">+{pts}</span>
+  return <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/5 text-white/30">+0</span>
 }

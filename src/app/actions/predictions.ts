@@ -14,6 +14,7 @@ export type ClanPredictionEntry = {
   away_score: PredScore
   points: number
   qualifier: 'home' | 'away' | null
+  total_points: number
 }
 
 /**
@@ -27,13 +28,25 @@ export async function getClanPredictionsForMatch(
 ): Promise<ClanPredictionEntry[]> {
   const supabase = await createClient()
 
-  const { data } = await supabase
-    .from('predictions')
-    .select('user_id, home_score, away_score, points, qualifier, profiles(username)')
-    .eq('clan_id', clanId)
-    .eq('match_id', matchId)
+  const [{ data }, { data: allPreds }] = await Promise.all([
+    supabase
+      .from('predictions')
+      .select('user_id, home_score, away_score, points, qualifier, profiles(username)')
+      .eq('clan_id', clanId)
+      .eq('match_id', matchId),
+    supabase
+      .from('predictions')
+      .select('user_id, points')
+      .eq('clan_id', clanId),
+  ])
 
   if (!data) return []
+
+  // Sum all prediction points per user across the clan
+  const totalByUser = new Map<string, number>()
+  for (const p of allPreds ?? []) {
+    totalByUser.set(p.user_id, (totalByUser.get(p.user_id) ?? 0) + (p.points ?? 0))
+  }
 
   type Row = {
     user_id: string
@@ -45,16 +58,16 @@ export async function getClanPredictionsForMatch(
   }
   const rows = data as unknown as Row[]
 
-  return rows
-    .map((r) => ({
-      user_id: r.user_id,
-      username: r.profiles?.username ?? r.user_id,
-      home_score: r.home_score,
-      away_score: r.away_score,
-      points: r.points ?? 0,
-      qualifier: r.qualifier ?? null,
-    }))
-    .sort((a, b) => b.points - a.points || a.username.localeCompare(b.username))
+  // Return unsorted — sorting happens client-side with live points
+  return rows.map((r) => ({
+    user_id: r.user_id,
+    username: r.profiles?.username ?? r.user_id,
+    home_score: r.home_score,
+    away_score: r.away_score,
+    points: r.points ?? 0,
+    qualifier: r.qualifier ?? null,
+    total_points: totalByUser.get(r.user_id) ?? 0,
+  }))
 }
 
 export async function getUserPredictionsForClan(clanId: string): Promise<Record<string, Prediction>> {
