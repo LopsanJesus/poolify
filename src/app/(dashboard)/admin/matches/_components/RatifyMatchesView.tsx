@@ -167,7 +167,7 @@ function MatchRow({
 
       <p className="text-center text-xs text-blue-300/60">
         {new Date(match.match_date).toLocaleDateString(DATE_LOCALE[locale], {
-          weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+          weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid',
         })}
       </p>
 

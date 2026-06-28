@@ -179,7 +179,7 @@ function MatchRow({
             ) : (
               <span className="bg-black/50 backdrop-blur-sm text-blue-200 font-mono text-sm px-2 py-0.5 rounded-lg tabular-nums">
                 {new Date(match.match_date).toLocaleTimeString(DATE_LOCALE[locale], {
-                  hour: '2-digit', minute: '2-digit', hour12: false,
+                  hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Madrid',
                 })}
               </span>
             )}

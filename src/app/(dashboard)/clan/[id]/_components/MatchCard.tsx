@@ -68,10 +68,10 @@ export function MatchCard({
             {match.status === 'upcoming' && (
               <span className="text-xs text-blue-300/60 font-mono whitespace-nowrap">
                 {new Date(match.match_date).toLocaleDateString(DATE_LOCALE[locale], {
-                  day: '2-digit', month: 'short',
+                  day: '2-digit', month: 'short', timeZone: 'Europe/Madrid',
                 })}{' '}
                 {new Date(match.match_date).toLocaleTimeString(DATE_LOCALE[locale], {
-                  hour: '2-digit', minute: '2-digit',
+                  hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid',
                 })}
               </span>
             )}

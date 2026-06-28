@@ -45,6 +45,7 @@ export function MissingPredictionsBanner({
               month: "short",
               hour: "2-digit",
               minute: "2-digit",
+              timeZone: "Europe/Madrid",
             })}
           </p>
         )}
