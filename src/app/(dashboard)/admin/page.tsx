@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, ChevronRight, ClipboardCheck, PlusCircle, Users } from 'lucide-react'
+import { ArrowLeft, ChevronRight, ClipboardCheck, ListChecks, PlusCircle, Users } from 'lucide-react'
 import { getAdminUserId } from '@/lib/admin'
 import { getDict } from '@/lib/i18n/server'
 
@@ -45,6 +45,20 @@ export default async function AdminPage() {
           <div>
             <p className="text-white font-semibold">{dict.admin.card_matches_title}</p>
             <p className="text-blue-400 text-xs">{dict.admin.card_matches_desc}</p>
+          </div>
+        </div>
+        <ChevronRight className="w-5 h-5 text-blue-400 group-hover:text-white transition shrink-0" />
+      </Link>
+
+      <Link
+        href="/admin/auditar"
+        className="flex items-center justify-between rounded-2xl bg-white/5 border border-white/10 p-5 hover:bg-white/10 transition group"
+      >
+        <div className="flex items-center gap-3">
+          <ListChecks className="w-5 h-5 text-pink-400" />
+          <div>
+            <p className="text-white font-semibold">{dict.admin.card_audit_title}</p>
+            <p className="text-blue-400 text-xs">{dict.admin.card_audit_desc}</p>
           </div>
         </div>
         <ChevronRight className="w-5 h-5 text-blue-400 group-hover:text-white transition shrink-0" />
