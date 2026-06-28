@@ -16,17 +16,6 @@ import { formatMatchScore } from '@/lib/scoring'
 
 const DATE_LOCALE: Record<Locale, string> = { en: 'en-US', es: 'es-ES', de: 'de-DE' }
 
-function qualifierLabel(
-  qualifier: 'home' | 'away',
-  homeTeam: string | null,
-  awayTeam: string | null,
-  locale: Locale,
-): string {
-  const h = translateTeam(homeTeam ?? '?', locale).slice(0, 3).toUpperCase()
-  const a = translateTeam(awayTeam ?? '?', locale).slice(0, 3).toUpperCase()
-  if (h === a) return qualifier === 'home' ? '1' : '2'
-  return qualifier === 'home' ? h : a
-}
 
 type MatchWithPrediction = Match & { prediction: Prediction | null }
 
@@ -209,19 +198,18 @@ export function MatchCard({
                           {r.username}
                           {isYou && <span className="text-xs text-emerald-400 ml-1">({clanDict.you})</span>}
                         </span>
-                        <span className="flex items-center gap-1.5 shrink-0">
-                          <span className="font-mono text-sm text-blue-100">
-                            {reveal ? `${r.home_score} – ${r.away_score}` : '• – •'}
-                          </span>
-                          {reveal && knockout && r.qualifier && (
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-                              r.qualifier === 'home'
-                                ? 'bg-blue-500/25 text-blue-300'
-                                : 'bg-orange-500/25 text-orange-300'
-                            }`}>
-                              {qualifierLabel(r.qualifier, match.home_team, match.away_team, locale)}
-                            </span>
-                          )}
+                        <span className="font-mono text-sm shrink-0">
+                          {reveal ? (
+                            <>
+                              <span className={knockout && r.qualifier === 'home' ? 'text-blue-300 font-bold' : 'text-blue-100'}>
+                                {r.home_score}
+                              </span>
+                              <span className="text-blue-100/50"> – </span>
+                              <span className={knockout && r.qualifier === 'away' ? 'text-orange-300 font-bold' : 'text-blue-100'}>
+                                {r.away_score}
+                              </span>
+                            </>
+                          ) : '• – •'}
                         </span>
                       </div>
                       {/* Row 2: total pts · match pts · badge */}
