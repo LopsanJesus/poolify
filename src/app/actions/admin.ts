@@ -6,9 +6,30 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getAdminUserId } from '@/lib/admin'
 import { getDict } from '@/lib/i18n/server'
 import { recalcPredictionPoints } from './matches'
-import type { Match } from '@/lib/types'
+import type { Match, Team } from '@/lib/types'
 
 export type AdminProfile = { id: string; username: string; is_admin: boolean }
+
+export async function getTeamsForAdmin(): Promise<Team[]> {
+  if (!await getAdminUserId()) return []
+
+  const admin = createAdminClient()
+  const { data: tournament } = await admin
+    .from('tournaments')
+    .select('id')
+    .ilike('name', '%2026%')
+    .single() as { data: { id: string } | null; error: unknown }
+
+  if (!tournament) return []
+
+  const { data: teams } = await (admin as any)
+    .from('teams')
+    .select('*')
+    .eq('tournament_id', tournament.id)
+    .order('name')
+
+  return (teams ?? []) as Team[]
+}
 
 export async function getAllProfiles(): Promise<AdminProfile[]> {
   if (!await getAdminUserId()) return []
@@ -72,7 +93,7 @@ export async function adminUpdateMatchScore(
   const supabase = await createClient()
   const { data: match } = await supabase
     .from('matches')
-    .select('status, ratified, stage, home_advances')
+    .select('status, ratified, stage, home_advances, tournament_id')
     .eq('id', matchId)
     .single()
 
@@ -88,7 +109,7 @@ export async function adminUpdateMatchScore(
   if (error) return { error: error.message }
 
   if (match.status === 'finished') {
-    await recalcPredictionPoints(admin, matchId, homeScore, awayScore, match.stage, match.home_advances)
+    await recalcPredictionPoints(admin, matchId, homeScore, awayScore, match.stage, match.home_advances, match.tournament_id)
   }
 
   revalidatePath('/admin/matches')
@@ -105,7 +126,7 @@ export async function adminFinishMatch(matchId: string): Promise<{ error?: strin
   const supabase = await createClient()
   const { data: match } = await supabase
     .from('matches')
-    .select('status, home_score, away_score, ratified, stage, home_advances')
+    .select('status, home_score, away_score, ratified, stage, home_advances, tournament_id')
     .eq('id', matchId)
     .single()
 
@@ -121,7 +142,7 @@ export async function adminFinishMatch(matchId: string): Promise<{ error?: strin
 
   if (error) return { error: error.message }
 
-  await recalcPredictionPoints(admin, matchId, match.home_score, match.away_score, match.stage, match.home_advances)
+  await recalcPredictionPoints(admin, matchId, match.home_score, match.away_score, match.stage, match.home_advances, match.tournament_id)
 
   revalidatePath('/admin/matches')
   revalidatePath('/matches')
@@ -140,7 +161,7 @@ export async function adminSetHomeAdvances(
   const supabase = await createClient()
   const { data: match } = await supabase
     .from('matches')
-    .select('status, home_score, away_score, ratified, stage')
+    .select('status, home_score, away_score, ratified, stage, tournament_id')
     .eq('id', matchId)
     .single()
 
@@ -156,7 +177,7 @@ export async function adminSetHomeAdvances(
 
   // Recalc if finished so advance points update immediately
   if (match.status === 'finished' && match.home_score != null && match.away_score != null) {
-    await recalcPredictionPoints(admin, matchId, match.home_score, match.away_score, match.stage, homeAdvances)
+    await recalcPredictionPoints(admin, matchId, match.home_score, match.away_score, match.stage, homeAdvances, match.tournament_id)
   }
 
   revalidatePath('/admin/matches')
@@ -250,6 +271,71 @@ export async function adminUpdateMatchTeams(
   if (error) return { error: error.message }
 
   revalidatePath('/admin/matches')
+  revalidatePath('/matches')
+  revalidatePath('/clan/[id]', 'layout')
+  return {}
+}
+
+export type NewMatchInput = {
+  home_team: string
+  away_team: string
+  match_date: string // ISO UTC string
+}
+
+export async function createRoundWithMatches(
+  stage: string,
+  pointsSign: number,
+  pointsExact: number,
+  pointsAdvance: number,
+  newMatches: NewMatchInput[],
+): Promise<{ error?: string }> {
+  const { dict } = await getDict()
+  if (!await getAdminUserId()) return { error: dict.common.error }
+  if (!newMatches.length) return { error: 'No matches provided' }
+
+  const admin = createAdminClient()
+
+  // Find WC2026 tournament
+  const { data: tournament } = await admin
+    .from('tournaments')
+    .select('id')
+    .ilike('name', '%2026%')
+    .single() as { data: { id: string } | null; error: unknown }
+
+  if (!tournament) return { error: 'Tournament not found' }
+
+  // Upsert round config (global per-round scoring)
+  const { error: rcError } = await (admin as any)
+    .from('round_configs')
+    .upsert({
+      tournament_id: tournament.id,
+      stage,
+      points_sign: pointsSign,
+      points_exact: pointsExact,
+      points_advance: pointsAdvance,
+    }, { onConflict: 'tournament_id,stage' })
+
+  if (rcError) return { error: rcError.message }
+
+  // Insert matches
+  const rows = newMatches.map((m) => ({
+    home_team: m.home_team || null,
+    away_team: m.away_team || null,
+    match_date: m.match_date,
+    stage,
+    status: 'upcoming' as const,
+    tournament_id: tournament.id,
+    ratified: false,
+  }))
+
+  const { error: matchError } = await admin
+    .from('matches')
+    .insert(rows)
+
+  if (matchError) return { error: matchError.message }
+
+  revalidatePath('/admin/matches')
+  revalidatePath('/admin')
   revalidatePath('/matches')
   revalidatePath('/clan/[id]', 'layout')
   return {}

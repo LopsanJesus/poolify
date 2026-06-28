@@ -3,9 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { calculatePoints, calculateAdvancePoints } from '@/lib/scoring'
+import { calculatePoints, calculateAdvancePoints, resolveScoringConfig } from '@/lib/scoring'
 import { isKnockoutRound } from '@/lib/rounds'
-import type { ClanSettings } from '@/lib/types'
+import type { ClanSettings, RoundConfig } from '@/lib/types'
 import { DEFAULT_CLAN_SETTINGS } from '@/lib/types'
 
 async function canEditLiveMatch(supabase: Awaited<ReturnType<typeof createClient>>, userId: string, clanId: string) {
@@ -112,6 +112,7 @@ export async function recalcPredictionPoints(
   awayScore: number,
   matchStage?: string,
   homeAdvances?: boolean | null,
+  tournamentId?: string | null,
 ) {
   const { data: predictions } = await supabase
     .from('predictions')
@@ -119,6 +120,20 @@ export async function recalcPredictionPoints(
     .eq('match_id', matchId)
 
   if (!predictions || predictions.length === 0) return
+
+  const knockout = matchStage ? isKnockoutRound(matchStage) : false
+
+  // Fetch round config (global, overrides clan settings for knockout rounds)
+  let roundConfig: RoundConfig | null = null
+  if (knockout && matchStage && tournamentId) {
+    const { data: rc } = await (supabase as any)
+      .from('round_configs')
+      .select('*')
+      .eq('tournament_id', tournamentId)
+      .eq('stage', matchStage)
+      .single()
+    roundConfig = (rc as RoundConfig | null) ?? null
+  }
 
   const clanIds = [...new Set(predictions.map((p) => p.clan_id))]
   const { data: clansData } = await supabase
@@ -131,19 +146,12 @@ export async function recalcPredictionPoints(
     settingsMap.set(c.id, (c.settings as ClanSettings) ?? DEFAULT_CLAN_SETTINGS)
   }
 
-  const knockout = matchStage ? isKnockoutRound(matchStage) : false
-
   for (const pred of predictions) {
-    const settings = settingsMap.get(pred.clan_id)
-    const scorePts = calculatePoints(
-      pred.home_score,
-      pred.away_score,
-      homeScore,
-      awayScore,
-      settings,
-    )
+    const clanSettings = settingsMap.get(pred.clan_id)
+    const scoring = resolveScoringConfig(clanSettings, roundConfig)
+    const scorePts = calculatePoints(pred.home_score, pred.away_score, homeScore, awayScore, scoring)
     const advancePts = knockout
-      ? calculateAdvancePoints(pred.qualifier, homeScore, awayScore, homeAdvances ?? null, settings)
+      ? calculateAdvancePoints(pred.qualifier, homeScore, awayScore, homeAdvances ?? null, scoring)
       : 0
     const points = scorePts + advancePts
     await supabase
@@ -153,7 +161,11 @@ export async function recalcPredictionPoints(
   }
 }
 
-export async function finishMatch(matchId: string, clanId: string): Promise<{ error?: string }> {
+export async function finishMatch(
+  matchId: string,
+  clanId: string,
+  homeAdvancesOverride?: boolean,
+): Promise<{ error?: string }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'No autorizado' }
@@ -162,22 +174,35 @@ export async function finishMatch(matchId: string, clanId: string): Promise<{ er
 
   const { data: match } = await supabase
     .from('matches')
-    .select('status, home_score, away_score, stage, home_advances')
+    .select('status, home_score, away_score, stage, home_advances, tournament_id')
     .eq('id', matchId)
     .single()
 
   if (!match || match.status !== 'live') return { error: 'El partido no está en vivo' }
   if (match.home_score == null || match.away_score == null) return { error: 'Marcador no definido' }
 
+  const effectiveHomeAdvances = homeAdvancesOverride ?? match.home_advances
+
   const admin = createAdminClient()
+  const updatePayload: Record<string, unknown> = { status: 'finished' }
+  if (homeAdvancesOverride !== undefined) updatePayload.home_advances = homeAdvancesOverride
+
   const { error: matchError } = await admin
     .from('matches')
-    .update({ status: 'finished' })
+    .update(updatePayload)
     .eq('id', matchId)
 
   if (matchError) return { error: matchError.message }
 
-  await recalcPredictionPoints(admin, matchId, match.home_score, match.away_score, match.stage, match.home_advances)
+  await recalcPredictionPoints(
+    admin,
+    matchId,
+    match.home_score,
+    match.away_score,
+    match.stage,
+    effectiveHomeAdvances,
+    match.tournament_id,
+  )
 
   revalidatePath(`/clan/${clanId}`)
   revalidatePath(`/clan/${clanId}/predictions`)

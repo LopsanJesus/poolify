@@ -1,5 +1,25 @@
-import type { ClanSettings, PredScore } from './types'
+import type { ClanSettings, PredScore, RoundConfig } from './types'
 import { DEFAULT_CLAN_SETTINGS } from './types'
+
+// Either clan settings or round config can provide scoring values.
+// Round config takes priority when present.
+export type ScoringConfig = {
+  points_exact: number
+  points_sign: number
+  points_advance: number
+}
+
+export function resolveScoringConfig(
+  clanSettings?: ClanSettings,
+  roundConfig?: RoundConfig | null,
+): ScoringConfig {
+  if (roundConfig) return roundConfig
+  return {
+    points_exact:   clanSettings?.points_exact   ?? DEFAULT_CLAN_SETTINGS.points_exact,
+    points_sign:    clanSettings?.points_sign    ?? DEFAULT_CLAN_SETTINGS.points_sign,
+    points_advance: clanSettings?.points_advance ?? DEFAULT_CLAN_SETTINGS.points_advance,
+  }
+}
 
 // "+" means the player predicts 3 or more goals for that team.
 // For sign comparison we treat "+" as its minimum value (3).
@@ -23,7 +43,7 @@ export function calculatePoints(
   predAway: PredScore,
   realHome: number,
   realAway: number,
-  settings?: ClanSettings,
+  settings?: ClanSettings | ScoringConfig,
 ): number {
   const exactPts = settings?.points_exact ?? DEFAULT_CLAN_SETTINGS.points_exact
   const signPts  = settings?.points_sign  ?? DEFAULT_CLAN_SETTINGS.points_sign
@@ -67,7 +87,7 @@ export function calculateAdvancePoints(
   homeScore: number,
   awayScore: number,
   homeAdvances: boolean | null,
-  settings?: ClanSettings,
+  settings?: ClanSettings | ScoringConfig,
 ): number {
   if (!qualifier) return 0
   const advancing = whoAdvances(homeScore, awayScore, homeAdvances)

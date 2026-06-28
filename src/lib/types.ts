@@ -223,6 +223,14 @@ export type Team = {
   created_at: string
 }
 
+export type RoundConfig = {
+  tournament_id: string
+  stage: string
+  points_exact: number
+  points_sign: number
+  points_advance: number
+}
+
 // Convenience row types
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type Clan = Database['public']['Tables']['clans']['Row']

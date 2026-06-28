@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { ChevronDown, Loader2, Users } from 'lucide-react'
 import { getClanPredictionsForMatch, type ClanPredictionEntry } from '@/app/actions/predictions'
 import { startMatch, updateLiveScore, finishMatch } from '@/app/actions/matches'
+import { isKnockoutRound } from '@/lib/rounds'
 import type { Match, Prediction } from '@/lib/types'
 import type { Dict, Locale } from '@/lib/i18n/dictionaries'
 import { stageLabel } from '@/lib/stages'
@@ -228,6 +229,8 @@ function LiveControls({
 }) {
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  // knockout draw: show qualifier picker before finishing
+  const [awaitingAdvances, setAwaitingAdvances] = useState(false)
   const homeScore = match.home_score ?? 0
   const awayScore = match.away_score ?? 0
 
@@ -249,10 +252,20 @@ function LiveControls({
     })
   }
 
-  function handleFinish() {
+  function handleFinishClick() {
+    // Knockout draw → ask who advances before finishing
+    if (isKnockoutRound(match.stage) && homeScore === awayScore) {
+      setAwaitingAdvances(true)
+      return
+    }
+    doFinish()
+  }
+
+  function doFinish(homeAdvances?: boolean) {
     setError(null)
+    setAwaitingAdvances(false)
     startTransition(async () => {
-      const res = await finishMatch(match.id, clanId)
+      const res = await finishMatch(match.id, clanId, homeAdvances)
       if (res.error) setError(res.error)
     })
   }
@@ -283,15 +296,50 @@ function LiveControls({
         <span className="text-blue-300/40 font-bold">–</span>
         <LiveScoreButtons value={awayScore} onChange={(v) => setScore('away', v)} disabled={pending} />
       </div>
-      <button
-        type="button"
-        onClick={handleFinish}
-        disabled={pending}
-        className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 text-sm font-semibold transition disabled:opacity-60"
-      >
-        {pending && <Loader2 className="w-4 h-4 animate-spin" />}
-        {clanDict.finish_match}
-      </button>
+
+      {awaitingAdvances ? (
+        <div className="space-y-2">
+          <p className="text-xs text-amber-300 text-center font-medium">
+            Empate — ¿quién pasa?
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => doFinish(true)}
+              disabled={pending}
+              className="py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-sm font-semibold transition disabled:opacity-60"
+            >
+              {match.home_team ?? 'Local'}
+            </button>
+            <button
+              type="button"
+              onClick={() => doFinish(false)}
+              disabled={pending}
+              className="py-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-sm font-semibold transition disabled:opacity-60"
+            >
+              {match.away_team ?? 'Visitante'}
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAwaitingAdvances(false)}
+            className="w-full text-xs text-blue-400 hover:text-white transition"
+          >
+            Cancelar
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={handleFinishClick}
+          disabled={pending}
+          className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 text-sm font-semibold transition disabled:opacity-60"
+        >
+          {pending && <Loader2 className="w-4 h-4 animate-spin" />}
+          {clanDict.finish_match}
+        </button>
+      )}
+
       {error && <p className="text-xs text-red-300 text-center">{error}</p>}
     </div>
   )

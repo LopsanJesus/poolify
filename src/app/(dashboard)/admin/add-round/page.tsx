@@ -3,16 +3,16 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { getAdminUserId } from '@/lib/admin'
 import { getDict } from '@/lib/i18n/server'
-import { getRatifiableMatches } from '@/app/actions/admin'
-import { RatifyMatchesView } from './_components/RatifyMatchesView'
+import { getTeamsForAdmin } from '@/app/actions/admin'
+import { AddRoundForm } from './_components/AddRoundForm'
 
-export default async function AdminMatchesPage() {
+export default async function AddRoundPage() {
   const adminUserId = await getAdminUserId()
   if (!adminUserId) redirect('/profile')
 
-  const [{ dict, locale }, matches] = await Promise.all([
+  const [{ dict }, teams] = await Promise.all([
     getDict(),
-    getRatifiableMatches(),
+    getTeamsForAdmin(),
   ])
 
   return (
@@ -22,12 +22,11 @@ export default async function AdminMatchesPage() {
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-white">{dict.admin.matches_title}</h1>
-          <p className="text-blue-300 text-sm">{dict.admin.matches_subtitle}</p>
+          <h1 className="text-2xl font-bold text-white">{dict.admin.add_round_title}</h1>
         </div>
       </div>
 
-      <RatifyMatchesView matches={matches} dict={dict.admin} clanDict={dict.clan} locale={locale} />
+      <AddRoundForm teams={teams} dict={dict.admin} />
     </div>
   )
 }

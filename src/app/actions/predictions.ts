@@ -2,9 +2,9 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { calculatePoints, calculateAdvancePoints, deriveQualifierFromScore } from '@/lib/scoring'
+import { calculatePoints, calculateAdvancePoints, deriveQualifierFromScore, resolveScoringConfig } from '@/lib/scoring'
 import { matchRound, getRoundDeadlines, isKnockoutRound } from '@/lib/rounds'
-import type { Match, Prediction, ClanSettings, PredScore } from '@/lib/types'
+import type { Match, Prediction, ClanSettings, PredScore, RoundConfig } from '@/lib/types'
 import { DEFAULT_CLAN_SETTINGS } from '@/lib/types'
 
 export type ClanPredictionEntry = {
@@ -161,7 +161,22 @@ export async function savePredictions(_: unknown, formData: FormData) {
   ])
 
   const matches = (matchData ?? []) as Match[]
-  const settings = ((clanData as { settings?: ClanSettings } | null)?.settings ?? DEFAULT_CLAN_SETTINGS)
+  const clanSettings: ClanSettings = ((clanData as { settings?: ClanSettings } | null)?.settings ?? DEFAULT_CLAN_SETTINGS)
+
+  // Fetch all round configs for knockout scoring overrides
+  const knockoutMatchIds = new Set(
+    matches.filter(m => isKnockoutRound(m.stage) && m.tournament_id).map(m => m.tournament_id!)
+  )
+  let roundConfigMap = new Map<string, RoundConfig>()
+  if (knockoutMatchIds.size > 0) {
+    const { data: rcData } = await (supabase as any)
+      .from('round_configs')
+      .select('*')
+      .in('tournament_id', [...knockoutMatchIds])
+    for (const rc of (rcData ?? []) as RoundConfig[]) {
+      roundConfigMap.set(`${rc.tournament_id}:${rc.stage}`, rc)
+    }
+  }
 
   const VALID: PredScore[] = ['0', '1', '2', '+']
   const now = new Date()
@@ -191,27 +206,24 @@ export async function savePredictions(_: unknown, formData: FormData) {
     if (match && isKnockoutRound(match.stage)) {
       const forcedQualifier = deriveQualifierFromScore(homeScore, awayScore)
       if (forcedQualifier) {
-        // Non-draw: qualifier is forced by score
         qualifier = forcedQualifier
       } else {
-        // Draw: user must pick
         const rawQualifier = (formData.get(`qualifier_${matchId}`) as string)?.trim()
         if (rawQualifier === 'home' || rawQualifier === 'away') {
           qualifier = rawQualifier
         }
-        // If not provided, qualifier stays null (no advance pts)
       }
     }
 
     let points = 0
-    if (
-      match?.status === 'finished' &&
-      match.home_score != null &&
-      match.away_score != null
-    ) {
-      const scorePts = calculatePoints(homeScore, awayScore, match.home_score, match.away_score, settings)
-      const advancePts = match && isKnockoutRound(match.stage)
-        ? calculateAdvancePoints(qualifier, match.home_score, match.away_score, match.home_advances, settings)
+    if (match?.status === 'finished' && match.home_score != null && match.away_score != null) {
+      const roundConfig = match.tournament_id
+        ? (roundConfigMap.get(`${match.tournament_id}:${match.stage}`) ?? null)
+        : null
+      const scoring = resolveScoringConfig(clanSettings, roundConfig)
+      const scorePts = calculatePoints(homeScore, awayScore, match.home_score, match.away_score, scoring)
+      const advancePts = isKnockoutRound(match.stage)
+        ? calculateAdvancePoints(qualifier, match.home_score, match.away_score, match.home_advances, scoring)
         : 0
       points = scorePts + advancePts
     }
