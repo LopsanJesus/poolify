@@ -427,17 +427,15 @@ function PointsBadge({
   small?: boolean
 }) {
   const size = small ? 'text-[10px] px-1.5 py-0' : 'text-xs px-2 py-0.5'
-  if (points === exactPts)
+  if (points <= 0)
+    return <span className={`rounded-full bg-red-500/20 text-red-400 ${size}`}>+0</span>
+  if (points >= exactPts)
     return (
       <span className={`rounded-full bg-emerald-500/30 text-emerald-300 font-bold ${size}`}>
-        +{exactPts}
+        +{points}
       </span>
     )
-  if (points === signPts)
-    return (
-      <span className={`rounded-full bg-blue-500/30 text-blue-300 font-bold ${size}`}>+{signPts}</span>
-    )
-  return <span className={`rounded-full bg-red-500/20 text-red-400 ${size}`}>0</span>
+  return <span className={`rounded-full bg-blue-500/30 text-blue-300 font-bold ${size}`}>+{points}</span>
 }
 
 // Badge for live/finished match points — always small, with 0 shown as muted
