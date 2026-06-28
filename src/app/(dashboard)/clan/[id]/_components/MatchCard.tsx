@@ -201,7 +201,7 @@ export function MatchCard({
                         <span className="font-mono text-sm shrink-0">
                           {reveal ? (
                             <>
-                              <span className={knockout && r.qualifier === 'home' ? 'text-blue-300 font-bold' : 'text-blue-100'}>
+                              <span className={knockout && r.qualifier === 'home' ? 'text-orange-300 font-bold' : 'text-blue-100'}>
                                 {r.home_score}
                               </span>
                               <span className="text-blue-100/50"> – </span>
