@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { ChevronDown, Loader2, Users } from 'lucide-react'
+import { ChevronDown, Loader2, TrendingDown, TrendingUp, Users } from 'lucide-react'
 import { getClanPredictionsForMatch, type ClanPredictionEntry } from '@/app/actions/predictions'
 import { startMatch, updateLiveScore, finishMatch } from '@/app/actions/matches'
 import { isKnockoutRound } from '@/lib/rounds'
@@ -175,18 +175,32 @@ export function MatchCard({
             </div>
           ) : rows && rows.length > 0 ? (() => {
             const hasScore = match.home_score != null && match.away_score != null
+
+            // Ranking WITHOUT this match: total_points minus what this match contributed (r.points)
+            const rankBefore = new Map(
+              [...rows]
+                .sort((a, b) => (b.total_points - b.points) - (a.total_points - a.points) || a.username.localeCompare(b.username))
+                .map((r, i) => [r.user_id, i + 1])
+            )
+
             const sorted = [...rows].sort((a, b) => {
-              const aTotal = a.total_points + (hasScore ? liveMatchPts(a) : 0)
-              const bTotal = b.total_points + (hasScore ? liveMatchPts(b) : 0)
+              const aTotal = a.total_points - a.points + (hasScore ? liveMatchPts(a) : 0)
+              const bTotal = b.total_points - b.points + (hasScore ? liveMatchPts(b) : 0)
               return bTotal - aTotal || a.username.localeCompare(b.username)
             })
+
+            // Position after = index in sorted array
+            const rankAfter = new Map(sorted.map((r, i) => [r.user_id, i + 1]))
             return (
               <ul className="space-y-1">
                 {sorted.map((r) => {
                   const isYou = r.user_id === currentUserId
                   const reveal = canRevealOthers || isYou
                   const matchPts = hasScore ? liveMatchPts(r) : null
-                  const totalWithMatch = r.total_points + (matchPts ?? 0)
+                  const totalWithMatch = r.total_points - r.points + (matchPts ?? 0)
+                  const posBefore = rankBefore.get(r.user_id) ?? 0
+                  const posAfter = rankAfter.get(r.user_id) ?? 0
+                  const posChange = hasScore ? posBefore - posAfter : 0 // positive = moved up
                   return (
                     <li
                       key={r.user_id}
@@ -212,10 +226,12 @@ export function MatchCard({
                           ) : '• – •'}
                         </span>
                       </div>
-                      {/* Row 2: total pts · match pts · badge */}
+                      {/* Row 2: total pts · arrow · match pts · badge */}
                       <div className="flex items-center justify-between gap-2 mt-0.5">
-                        <span className="text-[11px] text-blue-400/70">
+                        <span className="flex items-center gap-1 text-[11px] text-blue-400/70">
                           {totalWithMatch} pts
+                          {posChange > 0 && <TrendingUp className="w-3 h-3 text-emerald-400" />}
+                          {posChange < 0 && <TrendingDown className="w-3 h-3 text-red-400" />}
                         </span>
                         {matchPts !== null && (
                           <span className="flex items-center gap-1.5 shrink-0">
