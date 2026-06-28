@@ -28,7 +28,7 @@ export default async function ClanPage({
   const settings = clan.settings ?? DEFAULT_CLAN_SETTINGS;
   const canEditLive = clan.owner_id === user.id || settings.live_results_all_members !== false;
 
-  const [{ matches: matchesWithPreds }, { dict, locale }, myFinalPred] = await Promise.all([
+  const [{ matches: matchesWithPreds, roundDeadlines }, { dict, locale }, myFinalPred] = await Promise.all([
     getMatchesWithPredictions(id),
     getDict(),
     getMyTournamentPrediction(id),
@@ -44,6 +44,12 @@ export default async function ClanPage({
 
   // Show banners only while there are pending predictions to make
   const showMatchBanner = missingUpcoming > 0;
+
+  // Soonest upcoming deadline across all rounds
+  const now = new Date();
+  const nextDeadline = roundDeadlines
+    .filter((rd) => rd.deadline > now)
+    .sort((a, b) => a.deadline.getTime() - b.deadline.getTime())[0]?.deadline ?? null;
   const showFinalBanner = hasFinalPredictions && missingFinalPreds;
 
   return (
@@ -56,6 +62,8 @@ export default async function ClanPage({
             count={missingUpcoming}
             dict={dict.clan}
             format={format}
+            deadline={nextDeadline}
+            locale={locale}
           />
         )}
         {showFinalBanner && (

@@ -11,7 +11,7 @@ import { FlagImage } from "@/app/_components/FlagImage";
 import { translateTeam } from "@/lib/team-flags";
 import { SuccessToast } from "@/app/_components/SuccessToast";
 import { ScoreButtons, SCORE_OPTIONS } from "@/app/_components/ScoreSelector";
-import { isKnockoutRound, matchRound } from "@/lib/rounds";
+import { isKnockoutRound } from "@/lib/rounds";
 import { deriveQualifierFromScore, whoAdvances } from "@/lib/scoring";
 import type { RoundDeadlineInfo } from "@/app/actions/predictions";
 
@@ -65,13 +65,6 @@ export function PredictionsForm({
 
   const locked = matchesWithPreds.filter((m) => m.status !== "upcoming" || m.matchDeadlinePassed);
 
-  const now = new Date();
-
-  // Map round → deadline for quick lookup
-  const deadlineByRound = new Map<string, Date>(
-    roundDeadlines.map((rd) => [rd.round, rd.deadline])
-  );
-
   return (
     <>
       <div className="space-y-8">
@@ -95,7 +88,6 @@ export function PredictionsForm({
                   pointsExact={pointsExact}
                   pointsSign={pointsSign}
                   pointsAdvance={pointsAdvance}
-                  roundDeadline={deadlineByRound.get(matchRound(match.stage))}
                 />
               ))}
 
@@ -119,7 +111,6 @@ export function PredictionsForm({
                       pointsExact={pointsExact}
                       pointsSign={pointsSign}
                       pointsAdvance={pointsAdvance}
-                      roundDeadline={deadlineByRound.get(matchRound(match.stage))}
                     />
                   ))}
                 </>
@@ -204,7 +195,6 @@ function MatchCard({
   pointsExact,
   pointsSign,
   pointsAdvance,
-  roundDeadline,
 }: {
   match: MatchWithPrediction;
   dict: Dict["predictions"];
@@ -214,7 +204,6 @@ function MatchCard({
   pointsExact: number;
   pointsSign: number;
   pointsAdvance: number;
-  roundDeadline?: Date;
 }) {
   const [homeScore, setHomeScore] = useState<PredScore | "">((match.prediction?.home_score ?? "") as PredScore | "");
   const [awayScore, setAwayScore] = useState<PredScore | "">((match.prediction?.away_score ?? "") as PredScore | "");
@@ -404,31 +393,15 @@ function MatchCard({
         </div>
       )}
 
-      <div className="flex flex-col items-center gap-0.5">
-        <p className="text-center text-xs text-blue-400">
-          {new Date(match.match_date).toLocaleDateString(DATE_LOCALE[locale], {
-            weekday: "long",
-            day: "2-digit",
-            month: "long",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </p>
-        {editable && roundDeadline && (
-          <p className="text-center text-xs text-amber-400/80">
-            {dict.deadline_round_closes}{" "}
-            <span className="font-semibold tabular-nums">
-              {roundDeadline.toLocaleString(DATE_LOCALE[locale], {
-                weekday: "short",
-                day: "2-digit",
-                month: "short",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>
-          </p>
-        )}
-      </div>
+      <p className="text-center text-xs text-blue-400">
+        {new Date(match.match_date).toLocaleDateString(DATE_LOCALE[locale], {
+          weekday: "long",
+          day: "2-digit",
+          month: "long",
+          hour: "2-digit",
+          minute: "2-digit",
+        })}
+      </p>
 
       {match.prediction && match.status === "finished" && (
         <div className="flex flex-col items-center gap-1.5">
