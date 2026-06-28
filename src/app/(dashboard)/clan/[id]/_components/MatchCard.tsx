@@ -180,7 +180,11 @@ export function MatchCard({
                         {reveal ? `${r.home_score} – ${r.away_score}` : '• – •'}
                       </span>
                       {reveal && isKnockoutRound(match.stage) && r.qualifier && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-medium whitespace-nowrap">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium whitespace-nowrap ${
+                          r.qualifier === 'home'
+                            ? 'bg-blue-500/25 text-blue-300'
+                            : 'bg-orange-500/25 text-orange-300'
+                        }`}>
                           {qualifierLabel(r.qualifier, match.home_team, match.away_team)}
                         </span>
                       )}
