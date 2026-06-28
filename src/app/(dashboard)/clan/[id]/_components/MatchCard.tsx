@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { ChevronDown, Loader2, TrendingDown, TrendingUp, Users } from 'lucide-react'
+import { ChevronDown, Loader2, Users } from 'lucide-react'
 import { getClanPredictionsForMatch, type ClanPredictionEntry } from '@/app/actions/predictions'
 import { startMatch, updateLiveScore, finishMatch } from '@/app/actions/matches'
 import { isKnockoutRound } from '@/lib/rounds'
@@ -230,8 +230,8 @@ export function MatchCard({
                       <div className="flex items-center justify-between gap-2 mt-0.5">
                         <span className="flex items-center gap-1 text-[11px] text-blue-400/70">
                           {totalWithMatch} pts
-                          {posChange > 0 && <TrendingUp className="w-3 h-3 text-emerald-400" />}
-                          {posChange < 0 && <TrendingDown className="w-3 h-3 text-red-400" />}
+                          {posChange > 0 && <span className="text-emerald-400 text-[10px] leading-none">▲</span>}
+                          {posChange < 0 && <span className="text-red-400 text-[10px] leading-none">▼</span>}
                         </span>
                         {matchPts !== null && (
                           <span className="flex items-center gap-1.5 shrink-0">
