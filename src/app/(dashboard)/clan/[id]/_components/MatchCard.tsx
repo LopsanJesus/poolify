@@ -19,9 +19,10 @@ function qualifierLabel(
   qualifier: 'home' | 'away',
   homeTeam: string | null,
   awayTeam: string | null,
+  locale: Locale,
 ): string {
-  const h = (homeTeam ?? '?').slice(0, 3).toUpperCase()
-  const a = (awayTeam ?? '?').slice(0, 3).toUpperCase()
+  const h = translateTeam(homeTeam ?? '?', locale).slice(0, 3).toUpperCase()
+  const a = translateTeam(awayTeam ?? '?', locale).slice(0, 3).toUpperCase()
   if (h === a) return qualifier === 'home' ? '1' : '2'
   return qualifier === 'home' ? h : a
 }
@@ -185,7 +186,7 @@ export function MatchCard({
                             ? 'bg-blue-500/25 text-blue-300'
                             : 'bg-orange-500/25 text-orange-300'
                         }`}>
-                          {qualifierLabel(r.qualifier, match.home_team, match.away_team)}
+                          {qualifierLabel(r.qualifier, match.home_team, match.away_team, locale)}
                         </span>
                       )}
                       {isFinished && <PointsBadge points={r.points} exactPts={pointsExact} signPts={pointsSign} small />}
