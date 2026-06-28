@@ -28,13 +28,13 @@ export default async function ClanPage({
   const settings = clan.settings ?? DEFAULT_CLAN_SETTINGS;
   const canEditLive = clan.owner_id === user.id || settings.live_results_all_members !== false;
 
-  const [matchesWithPreds, { dict, locale }, myFinalPred] = await Promise.all([
+  const [{ matches: matchesWithPreds }, { dict, locale }, myFinalPred] = await Promise.all([
     getMatchesWithPredictions(id),
     getDict(),
     getMyTournamentPrediction(id),
   ]);
 
-  // Only count upcoming matches where per-match deadline (2h before kick-off) hasn't passed
+  // Only count upcoming matches where round deadline hasn't passed
   const editableUpcoming = matchesWithPreds.filter(
     (m) => m.status === "upcoming" && !m.matchDeadlinePassed
   );

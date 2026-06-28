@@ -72,7 +72,7 @@ export async function adminUpdateMatchScore(
   const supabase = await createClient()
   const { data: match } = await supabase
     .from('matches')
-    .select('status, ratified')
+    .select('status, ratified, stage, home_advances')
     .eq('id', matchId)
     .single()
 
@@ -88,7 +88,7 @@ export async function adminUpdateMatchScore(
   if (error) return { error: error.message }
 
   if (match.status === 'finished') {
-    await recalcPredictionPoints(admin, matchId, homeScore, awayScore)
+    await recalcPredictionPoints(admin, matchId, homeScore, awayScore, match.stage, match.home_advances)
   }
 
   revalidatePath('/admin/matches')
@@ -105,7 +105,7 @@ export async function adminFinishMatch(matchId: string): Promise<{ error?: strin
   const supabase = await createClient()
   const { data: match } = await supabase
     .from('matches')
-    .select('status, home_score, away_score, ratified')
+    .select('status, home_score, away_score, ratified, stage, home_advances')
     .eq('id', matchId)
     .single()
 
@@ -121,11 +121,136 @@ export async function adminFinishMatch(matchId: string): Promise<{ error?: strin
 
   if (error) return { error: error.message }
 
-  await recalcPredictionPoints(admin, matchId, match.home_score, match.away_score)
+  await recalcPredictionPoints(admin, matchId, match.home_score, match.away_score, match.stage, match.home_advances)
 
   revalidatePath('/admin/matches')
   revalidatePath('/matches')
   revalidatePath('/ranking')
+  revalidatePath('/clan/[id]', 'layout')
+  return {}
+}
+
+export async function adminSetHomeAdvances(
+  matchId: string,
+  homeAdvances: boolean,
+): Promise<{ error?: string }> {
+  const { dict } = await getDict()
+  if (!await getAdminUserId()) return { error: dict.common.error }
+
+  const supabase = await createClient()
+  const { data: match } = await supabase
+    .from('matches')
+    .select('status, home_score, away_score, ratified, stage')
+    .eq('id', matchId)
+    .single()
+
+  if (!match || match.ratified) return { error: dict.admin.match_ratified_locked }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('matches')
+    .update({ home_advances: homeAdvances })
+    .eq('id', matchId)
+
+  if (error) return { error: error.message }
+
+  // Recalc if finished so advance points update immediately
+  if (match.status === 'finished' && match.home_score != null && match.away_score != null) {
+    await recalcPredictionPoints(admin, matchId, match.home_score, match.away_score, match.stage, homeAdvances)
+  }
+
+  revalidatePath('/admin/matches')
+  revalidatePath('/ranking')
+  revalidatePath('/clan/[id]', 'layout')
+  return {}
+}
+
+export async function seedRoundOf32(): Promise<{ error?: string; inserted?: number }> {
+  const { dict } = await getDict()
+  if (!await getAdminUserId()) return { error: dict.common.error }
+
+  const admin = createAdminClient()
+
+  // Find WC2026 tournament
+  const { data: tournament } = await admin
+    .from('tournaments')
+    .select('id')
+    .ilike('name', '%2026%')
+    .single() as { data: { id: string } | null; error: unknown }
+
+  if (!tournament) return { error: 'Tournament "2026" not found' }
+
+  // Round of 32 matches — times in UTC (converted from local US timezones)
+  const matches = [
+    { home_team: '2A',         away_team: '2B',           match_date: '2026-06-28T19:00:00Z' }, // 21:00 Madrid
+    { home_team: '1E',         away_team: '3A/B/C/D/F',   match_date: '2026-06-29T20:30:00Z' }, // 22:30 Madrid
+    { home_team: '1C',         away_team: '2F',           match_date: '2026-06-29T17:00:00Z' }, // 19:00 Madrid
+    { home_team: '1F',         away_team: '2C',           match_date: '2026-06-30T01:00:00Z' }, // 03:00 Madrid Jun 30
+    { home_team: '2E',         away_team: '2I',           match_date: '2026-06-30T17:00:00Z' }, // 19:00 Madrid
+    { home_team: '1I',         away_team: '3C/D/F/G/H',   match_date: '2026-06-30T21:00:00Z' }, // 23:00 Madrid
+    { home_team: '1A',         away_team: '3C/E/F/H/I',   match_date: '2026-07-01T01:00:00Z' }, // 03:00 Madrid Jul 1
+    { home_team: '1L',         away_team: '3E/H/I/J/K',   match_date: '2026-07-01T16:00:00Z' }, // 18:00 Madrid
+    { home_team: '1G',         away_team: '3A/E/H/I/J',   match_date: '2026-07-01T20:00:00Z' }, // 22:00 Madrid
+    { home_team: '1D',         away_team: '3B/E/F/I/J',   match_date: '2026-07-02T00:00:00Z' }, // 02:00 Madrid Jul 2
+    { home_team: '1H',         away_team: '2J',           match_date: '2026-07-02T19:00:00Z' }, // 21:00 Madrid
+    { home_team: '2K',         away_team: '2L',           match_date: '2026-07-02T23:00:00Z' }, // 01:00 Madrid Jul 3
+    { home_team: '1B',         away_team: '3E/F/G/I/J',   match_date: '2026-07-03T03:00:00Z' }, // 05:00 Madrid Jul 3
+    { home_team: '2D',         away_team: '2G',           match_date: '2026-07-03T18:00:00Z' }, // 20:00 Madrid
+    { home_team: '1J',         away_team: '2H',           match_date: '2026-07-03T22:00:00Z' }, // 00:00 Madrid Jul 4
+    { home_team: '1K',         away_team: '3D/E/I/J/L',   match_date: '2026-07-04T01:30:00Z' }, // 03:30 Madrid Jul 4
+  ]
+
+  const rows = matches.map((m) => ({
+    home_team: m.home_team,
+    away_team: m.away_team,
+    match_date: m.match_date,
+    stage: 'round_of_32',
+    status: 'upcoming' as const,
+    tournament_id: tournament.id,
+    ratified: false,
+  }))
+
+  const { error, data } = await admin
+    .from('matches')
+    .insert(rows)
+    .select('id')
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/admin/matches')
+  revalidatePath('/matches')
+  revalidatePath('/clan/[id]', 'layout')
+
+  return { inserted: data?.length ?? rows.length }
+}
+
+export async function adminUpdateMatchTeams(
+  matchId: string,
+  homeTeam: string,
+  awayTeam: string,
+): Promise<{ error?: string }> {
+  const { dict } = await getDict()
+  if (!await getAdminUserId()) return { error: dict.common.error }
+
+  const supabase = await createClient()
+  const { data: match } = await supabase
+    .from('matches')
+    .select('ratified')
+    .eq('id', matchId)
+    .single()
+
+  if (!match || match.ratified) return { error: dict.admin.match_ratified_locked }
+
+  const admin = createAdminClient()
+  const { error } = await admin
+    .from('matches')
+    .update({ home_team: homeTeam, away_team: awayTeam })
+    .eq('id', matchId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath('/admin/matches')
+  revalidatePath('/matches')
   revalidatePath('/clan/[id]', 'layout')
   return {}
 }

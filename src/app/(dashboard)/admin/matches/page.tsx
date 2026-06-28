@@ -5,6 +5,7 @@ import { getAdminUserId } from '@/lib/admin'
 import { getDict } from '@/lib/i18n/server'
 import { getRatifiableMatches } from '@/app/actions/admin'
 import { RatifyMatchesView } from './_components/RatifyMatchesView'
+import { SeedRoundOf32Button } from './_components/SeedRoundOf32Button'
 
 export default async function AdminMatchesPage() {
   const adminUserId = await getAdminUserId()
@@ -26,6 +27,8 @@ export default async function AdminMatchesPage() {
           <p className="text-blue-300 text-sm">{dict.admin.matches_subtitle}</p>
         </div>
       </div>
+
+      <SeedRoundOf32Button dict={dict.admin} />
 
       <RatifyMatchesView matches={matches} dict={dict.admin} clanDict={dict.clan} locale={locale} />
     </div>

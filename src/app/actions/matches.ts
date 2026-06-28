@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { calculatePoints } from '@/lib/scoring'
+import { calculatePoints, calculateAdvancePoints } from '@/lib/scoring'
+import { isKnockoutRound } from '@/lib/rounds'
 import type { ClanSettings } from '@/lib/types'
 import { DEFAULT_CLAN_SETTINGS } from '@/lib/types'
 
@@ -109,10 +110,12 @@ export async function recalcPredictionPoints(
   matchId: string,
   homeScore: number,
   awayScore: number,
+  matchStage?: string,
+  homeAdvances?: boolean | null,
 ) {
   const { data: predictions } = await supabase
     .from('predictions')
-    .select('id, clan_id, home_score, away_score')
+    .select('id, clan_id, home_score, away_score, qualifier')
     .eq('match_id', matchId)
 
   if (!predictions || predictions.length === 0) return
@@ -128,14 +131,21 @@ export async function recalcPredictionPoints(
     settingsMap.set(c.id, (c.settings as ClanSettings) ?? DEFAULT_CLAN_SETTINGS)
   }
 
+  const knockout = matchStage ? isKnockoutRound(matchStage) : false
+
   for (const pred of predictions) {
-    const points = calculatePoints(
+    const settings = settingsMap.get(pred.clan_id)
+    const scorePts = calculatePoints(
       pred.home_score,
       pred.away_score,
       homeScore,
       awayScore,
-      settingsMap.get(pred.clan_id),
+      settings,
     )
+    const advancePts = knockout
+      ? calculateAdvancePoints(pred.qualifier, homeScore, awayScore, homeAdvances ?? null, settings)
+      : 0
+    const points = scorePts + advancePts
     await supabase
       .from('predictions')
       .update({ points, updated_at: new Date().toISOString() })
@@ -152,7 +162,7 @@ export async function finishMatch(matchId: string, clanId: string): Promise<{ er
 
   const { data: match } = await supabase
     .from('matches')
-    .select('status, home_score, away_score')
+    .select('status, home_score, away_score, stage, home_advances')
     .eq('id', matchId)
     .single()
 
@@ -167,7 +177,7 @@ export async function finishMatch(matchId: string, clanId: string): Promise<{ er
 
   if (matchError) return { error: matchError.message }
 
-  await recalcPredictionPoints(admin, matchId, match.home_score, match.away_score)
+  await recalcPredictionPoints(admin, matchId, match.home_score, match.away_score, match.stage, match.home_advances)
 
   revalidatePath(`/clan/${clanId}`)
   revalidatePath(`/clan/${clanId}/predictions`)

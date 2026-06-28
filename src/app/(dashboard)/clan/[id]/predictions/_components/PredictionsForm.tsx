@@ -11,6 +11,9 @@ import { FlagImage } from "@/app/_components/FlagImage";
 import { translateTeam } from "@/lib/team-flags";
 import { SuccessToast } from "@/app/_components/SuccessToast";
 import { ScoreButtons, SCORE_OPTIONS } from "@/app/_components/ScoreSelector";
+import { isKnockoutRound } from "@/lib/rounds";
+import { deriveQualifierFromScore, whoAdvances } from "@/lib/scoring";
+import type { RoundDeadlineInfo } from "@/app/actions/predictions";
 
 type MatchWithPrediction = Match & { prediction: Prediction | null; matchDeadlinePassed: boolean };
 
@@ -23,19 +26,23 @@ const DATE_LOCALE: Record<Locale, string> = {
 export function PredictionsForm({
   clanId,
   matchesWithPreds,
+  roundDeadlines,
   dict,
   commonDict,
   locale,
   pointsExact,
   pointsSign,
+  pointsAdvance,
 }: {
   clanId: string;
   matchesWithPreds: MatchWithPrediction[];
+  roundDeadlines: RoundDeadlineInfo[];
   dict: Dict["predictions"];
   commonDict: Dict["common"];
   locale: Locale;
   pointsExact: number;
   pointsSign: number;
+  pointsAdvance: number;
 }) {
   const [state, action, pending] = useActionState(savePredictions, undefined);
   const [dirty, setDirty] = useState(false);
@@ -52,19 +59,39 @@ export function PredictionsForm({
     .filter((m) => m.status === "upcoming")
     .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
 
-  // Editable: upcoming matches where per-match deadline (2h before kick-off) hasn't passed
   const upcomingEditable = allUpcoming.filter((m) => !m.matchDeadlinePassed);
   const upcomingEmpty  = upcomingEditable.filter((m) => m.prediction === null);
   const upcomingFilled = upcomingEditable.filter((m) => m.prediction !== null);
 
-  // Read-only: live, finished, or upcoming within 2h of kick-off
   const locked = matchesWithPreds.filter((m) => m.status !== "upcoming" || m.matchDeadlinePassed);
+
+  // Find the soonest upcoming deadline to show in the banner
+  const now = new Date();
+  const nextDeadlineInfo = roundDeadlines
+    .filter((rd) => rd.deadline > now)
+    .sort((a, b) => a.deadline.getTime() - b.deadline.getTime())[0];
 
   return (
     <>
       <div className="space-y-8">
         <form id="predictions-form" action={action} className="space-y-4">
           <input type="hidden" name="clan_id" value={clanId} />
+
+          {/* Round deadline hint */}
+          {nextDeadlineInfo && upcomingEditable.length > 0 && (
+            <p className="text-center text-xs text-amber-400/80">
+              {dict.deadline_round_closes}{" "}
+              <span className="font-semibold">
+                {nextDeadlineInfo.deadline.toLocaleString(DATE_LOCALE[locale], {
+                  weekday: "short",
+                  day: "2-digit",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            </p>
+          )}
 
           {upcomingEditable.length === 0 ? (
             <p className="text-center text-blue-400/70 text-sm py-6">
@@ -82,6 +109,7 @@ export function PredictionsForm({
                   onDirty={() => setDirty(true)}
                   pointsExact={pointsExact}
                   pointsSign={pointsSign}
+                  pointsAdvance={pointsAdvance}
                 />
               ))}
 
@@ -104,6 +132,7 @@ export function PredictionsForm({
                       onDirty={() => setDirty(true)}
                       pointsExact={pointsExact}
                       pointsSign={pointsSign}
+                      pointsAdvance={pointsAdvance}
                     />
                   ))}
                 </>
@@ -117,7 +146,6 @@ export function PredictionsForm({
             </div>
           )}
 
-          {/* Desktop inline button */}
           {upcomingEditable.length > 0 && (
             <button
               type="submit"
@@ -130,14 +158,13 @@ export function PredictionsForm({
           )}
         </form>
 
-        {/* Read-only: live + finished */}
         {locked.length > 0 && (
           <div className="space-y-3">
             <p className="text-xs font-semibold text-blue-400/60 uppercase tracking-wide">
               {dict.status_finished_ro}
             </p>
             {locked.map((match) => (
-              <MatchCard key={match.id} match={match} dict={dict} locale={locale} editable={false} pointsExact={pointsExact} pointsSign={pointsSign} />
+              <MatchCard key={match.id} match={match} dict={dict} locale={locale} editable={false} pointsExact={pointsExact} pointsSign={pointsSign} pointsAdvance={pointsAdvance} />
             ))}
           </div>
         )}
@@ -149,7 +176,6 @@ export function PredictionsForm({
         onDone={() => setShowToast(false)}
       />
 
-      {/* Mobile floating save button — only when dirty, above navbar */}
       <AnimatePresence>
         {dirty && upcomingEditable.length > 0 && (
           <motion.div
@@ -190,6 +216,7 @@ function MatchCard({
   onDirty,
   pointsExact,
   pointsSign,
+  pointsAdvance,
 }: {
   match: MatchWithPrediction;
   dict: Dict["predictions"];
@@ -198,15 +225,63 @@ function MatchCard({
   onDirty?: () => void;
   pointsExact: number;
   pointsSign: number;
+  pointsAdvance: number;
 }) {
   const [homeScore, setHomeScore] = useState<PredScore | "">((match.prediction?.home_score ?? "") as PredScore | "");
   const [awayScore, setAwayScore] = useState<PredScore | "">((match.prediction?.away_score ?? "") as PredScore | "");
+  const [qualifierChoice, setQualifierChoice] = useState<'home' | 'away' | null>(
+    (match.prediction?.qualifier ?? null) as 'home' | 'away' | null
+  );
 
-  function handleRandomize() {
-    setHomeScore(randomPick());
-    setAwayScore(randomPick());
+  const isKnockout = isKnockoutRound(match.stage);
+
+  // Derive forced qualifier from current score (non-draw → locked to winner side)
+  const forcedQualifier = (homeScore && awayScore)
+    ? deriveQualifierFromScore(homeScore as PredScore, awayScore as PredScore)
+    : null;
+
+  // Effective qualifier: forced (non-draw) takes precedence over user choice
+  const effectiveQualifier = forcedQualifier ?? qualifierChoice;
+
+  // When score changes to non-draw, clear the user choice (forced takes over)
+  function handleHomeScore(v: PredScore | '') {
+    setHomeScore(v);
+    if (v && awayScore) {
+      const forced = deriveQualifierFromScore(v as PredScore, awayScore as PredScore);
+      if (forced) setQualifierChoice(null);
+    }
     onDirty?.();
   }
+
+  function handleAwayScore(v: PredScore | '') {
+    setAwayScore(v);
+    if (homeScore && v) {
+      const forced = deriveQualifierFromScore(homeScore as PredScore, v as PredScore);
+      if (forced) setQualifierChoice(null);
+    }
+    onDirty?.();
+  }
+
+  function handleRandomize() {
+    const h = randomPick();
+    const a = randomPick();
+    setHomeScore(h);
+    setAwayScore(a);
+    const forced = deriveQualifierFromScore(h, a);
+    if (forced) setQualifierChoice(null);
+    onDirty?.();
+  }
+
+  // For finished knockout matches: show if advance was correct
+  const advanceResult = (isKnockout && match.status === "finished" && match.prediction)
+    ? (() => {
+        const pred = match.prediction!;
+        if (!pred.qualifier) return null;
+        const actual = whoAdvances(match.home_score!, match.away_score!, match.home_advances);
+        if (!actual) return null;
+        return pred.qualifier === actual ? "correct" : "wrong";
+      })()
+    : null;
 
   return (
     <div
@@ -215,6 +290,10 @@ function MatchCard({
       }`}
     >
       {editable && <input type="hidden" name="match_id" value={match.id} />}
+      {/* Send effective qualifier as hidden input */}
+      {editable && isKnockout && effectiveQualifier && (
+        <input type="hidden" name={`qualifier_${match.id}`} value={effectiveQualifier} />
+      )}
 
       <div className="flex items-center justify-between">
         <span className="text-xs text-blue-400 font-medium">
@@ -257,7 +336,7 @@ function MatchCard({
         <ScoreButtons
           name={editable ? `home_${match.id}` : ""}
           value={homeScore}
-          onSelect={(v) => { setHomeScore(v); onDirty?.(); }}
+          onSelect={editable ? handleHomeScore : undefined}
           disabled={!editable}
         />
         <div className="flex items-center justify-center shrink-0 px-1">
@@ -272,10 +351,69 @@ function MatchCard({
         <ScoreButtons
           name={editable ? `away_${match.id}` : ""}
           value={awayScore}
-          onSelect={(v) => { setAwayScore(v); onDirty?.(); }}
+          onSelect={editable ? handleAwayScore : undefined}
           disabled={!editable}
         />
       </div>
+
+      {/* Qualifier row for knockout matches */}
+      {isKnockout && (homeScore || match.prediction) && (
+        <div className="space-y-1.5">
+          <p className="text-xs text-blue-400/70 text-center">{dict.qualifier_label}</p>
+          {forcedQualifier ? (
+            // Non-draw: locked to predicted winner
+            <div className="flex justify-center">
+              <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-500/10 border border-blue-500/20 text-blue-300">
+                {forcedQualifier === 'home'
+                  ? (match.home_team ? translateTeam(match.home_team, locale) : dict.qualifier_home)
+                  : (match.away_team ? translateTeam(match.away_team, locale) : dict.qualifier_away)}
+                {' · '}{dict.qualifier_locked}
+              </span>
+            </div>
+          ) : (
+            // Draw: user picks
+            editable ? (
+              <div className="flex gap-2 justify-center">
+                <button
+                  type="button"
+                  onClick={() => { setQualifierChoice('home'); onDirty?.(); }}
+                  className={`flex-1 py-1.5 rounded-lg text-sm font-semibold border transition ${
+                    qualifierChoice === 'home'
+                      ? 'bg-amber-500/30 border-amber-400/50 text-amber-300'
+                      : 'bg-white/5 border-white/10 text-blue-400 hover:bg-white/10'
+                  }`}
+                >
+                  {match.home_team ? translateTeam(match.home_team, locale) : dict.qualifier_home}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setQualifierChoice('away'); onDirty?.(); }}
+                  className={`flex-1 py-1.5 rounded-lg text-sm font-semibold border transition ${
+                    qualifierChoice === 'away'
+                      ? 'bg-amber-500/30 border-amber-400/50 text-amber-300'
+                      : 'bg-white/5 border-white/10 text-blue-400 hover:bg-white/10'
+                  }`}
+                >
+                  {match.away_team ? translateTeam(match.away_team, locale) : dict.qualifier_away}
+                </button>
+              </div>
+            ) : (
+              // Read-only draw display
+              <div className="flex justify-center">
+                {match.prediction?.qualifier ? (
+                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-500/10 border border-amber-500/20 text-amber-300">
+                    {match.prediction.qualifier === 'home'
+                      ? (match.home_team ? translateTeam(match.home_team, locale) : dict.qualifier_home)
+                      : (match.away_team ? translateTeam(match.away_team, locale) : dict.qualifier_away)}
+                  </span>
+                ) : (
+                  <span className="text-xs text-blue-400/40">—</span>
+                )}
+              </div>
+            )
+          )}
+        </div>
+      )}
 
       <p className="text-center text-xs text-blue-400">
         {new Date(match.match_date).toLocaleDateString(DATE_LOCALE[locale], {
@@ -288,8 +426,13 @@ function MatchCard({
       </p>
 
       {match.prediction && match.status === "finished" && (
-        <div className="text-center">
-          <PointsBadge points={match.prediction.points} exactPts={pointsExact} signPts={pointsSign} dict={dict} />
+        <div className="flex flex-col items-center gap-1.5">
+          <PointsBadge points={match.prediction.points} exactPts={pointsExact} signPts={pointsSign} advancePts={pointsAdvance} dict={dict} />
+          {advanceResult && (
+            <span className={`text-xs font-medium ${advanceResult === 'correct' ? 'text-emerald-400' : 'text-red-400'}`}>
+              {advanceResult === 'correct' ? `✓ ${dict.advance_correct}` : `✗ ${dict.advance_wrong}`}
+            </span>
+          )}
         </div>
       )}
     </div>
@@ -320,23 +463,36 @@ function PointsBadge({
   points,
   exactPts,
   signPts,
+  advancePts,
   dict,
 }: {
   points: number;
   exactPts: number;
   signPts: number;
+  advancePts: number;
   dict: Dict["predictions"];
 }) {
-  if (points === exactPts)
+  // Points may include advance bonus, so check base score ranges
+  const base = points % 1 === 0 ? points : 0;
+  const isExact = base >= exactPts && base <= exactPts + advancePts;
+  const isSign = !isExact && base >= signPts && base <= signPts + advancePts && base > 0;
+
+  if (isExact && base >= exactPts)
     return (
       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-500/30 text-emerald-300 text-sm font-bold">
-        {dict.pill_exact}
+        {dict.pill_exact} {points > exactPts ? `+${points - exactPts}` : ''}
       </span>
     );
-  if (points === signPts)
+  if (isSign || (base > 0 && base < exactPts))
     return (
       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-500/30 text-blue-300 text-sm font-bold">
-        {dict.pill_winner}
+        {dict.pill_winner} {points > signPts ? `+${points - signPts}` : ''}
+      </span>
+    );
+  if (points > 0)
+    return (
+      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-sm font-bold">
+        +{points} pts
       </span>
     );
   return (

@@ -1,14 +1,22 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Loader2, Lock, RotateCcw, ShieldCheck } from 'lucide-react'
-import { adminUpdateMatchScore, adminFinishMatch, adminReopenMatch, ratifyMatch } from '@/app/actions/admin'
+import { Loader2, Lock, RotateCcw, ShieldCheck, Pencil } from 'lucide-react'
+import {
+  adminUpdateMatchScore,
+  adminFinishMatch,
+  adminReopenMatch,
+  ratifyMatch,
+  adminSetHomeAdvances,
+  adminUpdateMatchTeams,
+} from '@/app/actions/admin'
 import { LiveScoreButtons } from '@/app/_components/ScoreSelector'
 import { FlagImage } from '@/app/_components/FlagImage'
 import type { Match } from '@/lib/types'
 import type { Dict, Locale } from '@/lib/i18n/dictionaries'
 import { stageLabel } from '@/lib/stages'
 import { translateTeam } from '@/lib/team-flags'
+import { isKnockoutRound } from '@/lib/rounds'
 
 const DATE_LOCALE: Record<Locale, string> = { en: 'en-US', es: 'es-ES', de: 'de-DE' }
 
@@ -73,9 +81,15 @@ function MatchRow({
   const [awayScore, setAwayScore] = useState(match.away_score ?? 0)
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [editingTeams, setEditingTeams] = useState(false)
+  const [homeTeamInput, setHomeTeamInput] = useState(match.home_team ?? '')
+  const [awayTeamInput, setAwayTeamInput] = useState(match.away_team ?? '')
 
   const dirty = homeScore !== (match.home_score ?? 0) || awayScore !== (match.away_score ?? 0)
   const locked = match.ratified
+  const knockout = isKnockoutRound(match.stage)
+  const isDraw = match.home_score !== null && match.away_score !== null && match.home_score === match.away_score
+  const needsAdvance = knockout && isDraw && match.home_advances == null && match.status === 'finished'
 
   function handleSaveScore() {
     setError(null)
@@ -111,6 +125,23 @@ function MatchRow({
     })
   }
 
+  function handleSetAdvances(homeAdvances: boolean) {
+    setError(null)
+    startTransition(async () => {
+      const res = await adminSetHomeAdvances(match.id, homeAdvances)
+      if (res.error) setError(res.error)
+    })
+  }
+
+  function handleSaveTeams() {
+    setError(null)
+    startTransition(async () => {
+      const res = await adminUpdateMatchTeams(match.id, homeTeamInput.trim(), awayTeamInput.trim())
+      if (res.error) setError(res.error)
+      else setEditingTeams(false)
+    })
+  }
+
   return (
     <div className="rounded-xl bg-white/5 border border-white/10 p-4 space-y-3">
       <div className="flex items-center justify-between">
@@ -140,6 +171,44 @@ function MatchRow({
         })}
       </p>
 
+      {/* Team name editor */}
+      {!locked && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setEditingTeams((v) => !v)}
+            className="flex items-center gap-1 text-xs text-blue-400/60 hover:text-blue-300 transition"
+          >
+            <Pencil className="w-3 h-3" />
+            {dict.edit_teams_label}
+          </button>
+        </div>
+      )}
+
+      {editingTeams && !locked && (
+        <div className="flex gap-2 items-center">
+          <input
+            value={homeTeamInput}
+            onChange={(e) => setHomeTeamInput(e.target.value)}
+            className="flex-1 px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          <span className="text-blue-400/40 font-bold">–</span>
+          <input
+            value={awayTeamInput}
+            onChange={(e) => setAwayTeamInput(e.target.value)}
+            className="flex-1 px-2 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          <button
+            type="button"
+            onClick={handleSaveTeams}
+            disabled={pending}
+            className="px-3 py-1.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 text-sm font-semibold transition disabled:opacity-60"
+          >
+            {pending ? <Loader2 className="w-3 h-3 animate-spin" /> : dict.save_teams}
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
         <div className="flex flex-col items-center gap-1.5 min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
@@ -163,6 +232,44 @@ function MatchRow({
           <LiveScoreButtons value={awayScore} onChange={setAwayScore} disabled={pending || locked} />
         </div>
       </div>
+
+      {/* Knockout draw: pick who advances */}
+      {knockout && isDraw && !locked && (
+        <div className="space-y-1.5 pt-1 border-t border-white/10">
+          <p className="text-xs text-amber-400/80 text-center">{dict.home_advances_label}</p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => handleSetAdvances(true)}
+              disabled={pending}
+              className={`flex-1 py-1.5 rounded-lg text-sm font-semibold border transition disabled:opacity-60 ${
+                match.home_advances === true
+                  ? 'bg-amber-500/30 border-amber-400/50 text-amber-300'
+                  : 'bg-white/5 border-white/10 text-blue-400 hover:bg-white/10'
+              }`}
+            >
+              {match.home_team ? translateTeam(match.home_team, locale) : dict.home_advances_home}
+              {match.home_advances === true && ' ✓'}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetAdvances(false)}
+              disabled={pending}
+              className={`flex-1 py-1.5 rounded-lg text-sm font-semibold border transition disabled:opacity-60 ${
+                match.home_advances === false
+                  ? 'bg-amber-500/30 border-amber-400/50 text-amber-300'
+                  : 'bg-white/5 border-white/10 text-blue-400 hover:bg-white/10'
+              }`}
+            >
+              {match.away_team ? translateTeam(match.away_team, locale) : dict.home_advances_away}
+              {match.home_advances === false && ' ✓'}
+            </button>
+          </div>
+          {needsAdvance && (
+            <p className="text-xs text-amber-400/70 text-center">⚠ Pendiente de confirmar quien pasa</p>
+          )}
+        </div>
+      )}
 
       {locked ? (
         <p className="text-center text-xs text-emerald-400/80">{dict.ratified_hint}</p>

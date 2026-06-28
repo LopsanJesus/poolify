@@ -2,8 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { calculatePoints } from '@/lib/scoring'
-import { matchRound, getRoundDeadlines } from '@/lib/rounds'
+import { calculatePoints, calculateAdvancePoints, deriveQualifierFromScore } from '@/lib/scoring'
+import { matchRound, getRoundDeadlines, isKnockoutRound } from '@/lib/rounds'
 import type { Match, Prediction, ClanSettings, PredScore } from '@/lib/types'
 import { DEFAULT_CLAN_SETTINGS } from '@/lib/types'
 
@@ -13,6 +13,7 @@ export type ClanPredictionEntry = {
   home_score: PredScore
   away_score: PredScore
   points: number
+  qualifier: 'home' | 'away' | null
 }
 
 /**
@@ -28,7 +29,7 @@ export async function getClanPredictionsForMatch(
 
   const { data } = await supabase
     .from('predictions')
-    .select('user_id, home_score, away_score, points, profiles(username)')
+    .select('user_id, home_score, away_score, points, qualifier, profiles(username)')
     .eq('clan_id', clanId)
     .eq('match_id', matchId)
 
@@ -39,6 +40,7 @@ export async function getClanPredictionsForMatch(
     home_score: PredScore
     away_score: PredScore
     points: number
+    qualifier: 'home' | 'away' | null
     profiles: { username: string } | null
   }
   const rows = data as unknown as Row[]
@@ -50,6 +52,7 @@ export async function getClanPredictionsForMatch(
       home_score: r.home_score,
       away_score: r.away_score,
       points: r.points ?? 0,
+      qualifier: r.qualifier ?? null,
     }))
     .sort((a, b) => b.points - a.points || a.username.localeCompare(b.username))
 }
@@ -93,10 +96,23 @@ export async function getAllMatches(clanId?: string) {
   return (data ?? []) as Match[]
 }
 
-export async function getMatchesWithPredictions(clanId: string) {
+export type MatchWithPrediction = Match & {
+  prediction: Prediction | null
+  matchDeadlinePassed: boolean
+}
+
+export type RoundDeadlineInfo = {
+  round: string
+  deadline: Date
+}
+
+export async function getMatchesWithPredictions(clanId: string): Promise<{
+  matches: MatchWithPrediction[]
+  roundDeadlines: RoundDeadlineInfo[]
+}> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return []
+  if (!user) return { matches: [], roundDeadlines: [] }
 
   const [{ data: matchData }, { data: predData }, tournamentIds] = await Promise.all([
     supabase.from('matches').select('*').order('match_date'),
@@ -112,15 +128,23 @@ export async function getMatchesWithPredictions(clanId: string) {
 
   const predictions = (predData ?? []) as Prediction[]
   const now = new Date()
-  const roundDeadlines = getRoundDeadlines(matches)
-  return matches.map((match) => {
-    const deadline = roundDeadlines.get(matchRound(match.stage))
+  const deadlinesMap = getRoundDeadlines(matches)
+
+  const matchesWithPreds: MatchWithPrediction[] = matches.map((match) => {
+    const deadline = deadlinesMap.get(matchRound(match.stage))
     return {
       ...match,
       prediction: predictions.find((p) => p.match_id === match.id) ?? null,
       matchDeadlinePassed: deadline ? now >= deadline : false,
     }
   })
+
+  const roundDeadlines: RoundDeadlineInfo[] = Array.from(deadlinesMap.entries()).map(([round, deadline]) => ({
+    round,
+    deadline,
+  }))
+
+  return { matches: matchesWithPreds, roundDeadlines }
 }
 
 export async function savePredictions(_: unknown, formData: FormData) {
@@ -156,18 +180,40 @@ export async function savePredictions(_: unknown, formData: FormData) {
 
     const match = matches.find((m) => m.id === matchId)
 
-    // Server-side round deadline check: skip matches whose round has already started
+    // Server-side round deadline check
     if (match) {
       const deadline = roundDeadlines.get(matchRound(match.stage))
       if (deadline && now >= deadline) return []
     }
+
+    // Derive qualifier for knockout matches
+    let qualifier: 'home' | 'away' | null = null
+    if (match && isKnockoutRound(match.stage)) {
+      const forcedQualifier = deriveQualifierFromScore(homeScore, awayScore)
+      if (forcedQualifier) {
+        // Non-draw: qualifier is forced by score
+        qualifier = forcedQualifier
+      } else {
+        // Draw: user must pick
+        const rawQualifier = (formData.get(`qualifier_${matchId}`) as string)?.trim()
+        if (rawQualifier === 'home' || rawQualifier === 'away') {
+          qualifier = rawQualifier
+        }
+        // If not provided, qualifier stays null (no advance pts)
+      }
+    }
+
     let points = 0
     if (
       match?.status === 'finished' &&
       match.home_score != null &&
       match.away_score != null
     ) {
-      points = calculatePoints(homeScore, awayScore, match.home_score, match.away_score, settings)
+      const scorePts = calculatePoints(homeScore, awayScore, match.home_score, match.away_score, settings)
+      const advancePts = match && isKnockoutRound(match.stage)
+        ? calculateAdvancePoints(qualifier, match.home_score, match.away_score, match.home_advances, settings)
+        : 0
+      points = scorePts + advancePts
     }
 
     return [{
@@ -176,6 +222,7 @@ export async function savePredictions(_: unknown, formData: FormData) {
       clan_id: clanId,
       home_score: homeScore,
       away_score: awayScore,
+      qualifier,
       points,
       updated_at: new Date().toISOString(),
     }]

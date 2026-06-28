@@ -18,6 +18,7 @@ export interface FinalPredictionsConfig {
 export interface ClanSettings {
   points_exact: number
   points_sign: number
+  points_advance: number
   can_members_invite: boolean
   live_results_all_members?: boolean
   final_predictions?: FinalPredictionsConfig
@@ -35,6 +36,7 @@ export const DEFAULT_FINAL_PREDICTIONS_CONFIG: FinalPredictionsConfig = {
 export const DEFAULT_CLAN_SETTINGS: ClanSettings = {
   points_exact: 4,
   points_sign: 1,
+  points_advance: 2,
   can_members_invite: true,
 }
 
@@ -111,6 +113,7 @@ export interface Database {
           stage: string; status: 'upcoming' | 'live' | 'finished'
           tournament_id: string | null; created_at: string
           ratified: boolean
+          home_advances: boolean | null
         }
         Insert: {
           id?: string; home_team?: string | null; away_team?: string | null; match_date: string
@@ -118,12 +121,15 @@ export interface Database {
           stage?: string; status?: 'upcoming' | 'live' | 'finished'
           tournament_id?: string | null
           ratified?: boolean
+          home_advances?: boolean | null
         }
         Update: {
+          home_team?: string | null; away_team?: string | null
           home_score?: number | null; away_score?: number | null
           status?: 'upcoming' | 'live' | 'finished'
           tournament_id?: string | null
           ratified?: boolean
+          home_advances?: boolean | null
         }
         Relationships: []
       }
@@ -131,14 +137,17 @@ export interface Database {
         Row: {
           id: string; user_id: string; match_id: string; clan_id: string
           home_score: PredScore; away_score: PredScore; points: number
+          qualifier: 'home' | 'away' | null
           created_at: string; updated_at: string
         }
         Insert: {
           id?: string; user_id: string; match_id: string; clan_id: string
           home_score: PredScore; away_score: PredScore; points?: number
+          qualifier?: 'home' | 'away' | null
         }
         Update: {
-          home_score?: PredScore; away_score?: PredScore; points?: number; updated_at?: string
+          home_score?: PredScore; away_score?: PredScore; points?: number
+          qualifier?: 'home' | 'away' | null; updated_at?: string
         }
         Relationships: [
           { foreignKeyName: 'predictions_user_id_fkey'; columns: ['user_id']; referencedRelation: 'profiles'; referencedColumns: ['id'] },

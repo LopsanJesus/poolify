@@ -149,11 +149,13 @@ export async function updateClanSettings(_: unknown, formData: FormData) {
   const clanId = formData.get('clan_id') as string
   const pointsExact = parseInt(formData.get('points_exact') as string, 10)
   const pointsSign = parseInt(formData.get('points_sign') as string, 10)
+  const pointsAdvance = parseInt(formData.get('points_advance') as string, 10)
   const canMembersInvite = formData.get('can_members_invite') === 'on'
   const liveResultsAllMembers = formData.get('live_results_all_members') === 'on'
 
   if (isNaN(pointsExact) || pointsExact < 0) return { error: dict.common.error }
   if (isNaN(pointsSign) || pointsSign < 0) return { error: dict.common.error }
+  if (isNaN(pointsAdvance) || pointsAdvance < 0) return { error: dict.common.error }
 
   // Preserve existing final_predictions when saving scoring/access
   const { data: existing } = await supabase
@@ -166,6 +168,7 @@ export async function updateClanSettings(_: unknown, formData: FormData) {
   const settings: ClanSettings = {
     points_exact: pointsExact,
     points_sign: pointsSign,
+    points_advance: pointsAdvance,
     can_members_invite: canMembersInvite,
     live_results_all_members: liveResultsAllMembers,
     ...(existingSettings?.final_predictions ? { final_predictions: existingSettings.final_predictions } : {}),
@@ -208,7 +211,7 @@ export async function updateFinalPredictionsConfig(_: unknown, formData: FormDat
   const existingSettings = existing?.settings as ClanSettings | null
 
   const settings: ClanSettings = {
-    ...(existingSettings ?? { points_exact: 4, points_sign: 1, can_members_invite: true }),
+    ...(existingSettings ?? { points_exact: 4, points_sign: 1, points_advance: 2, can_members_invite: true }),
     final_predictions: {
       winner_pts: winnerPts,
       runner_up_pts: runnerUpPts,

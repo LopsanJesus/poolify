@@ -83,6 +83,11 @@ export function ClanSettingsForm({
               <input type="number" name="points_sign" min={0} max={100} defaultValue={settings.points_sign} disabled={readOnly}
                 className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition disabled:opacity-60 disabled:cursor-default" />
             </div>
+            <div>
+              <label className="block text-sm text-blue-300 mb-1.5">{dict.points_advance_label}</label>
+              <input type="number" name="points_advance" min={0} max={100} defaultValue={settings.points_advance ?? 2} disabled={readOnly}
+                className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition disabled:opacity-60 disabled:cursor-default" />
+            </div>
           </div>
         </section>
 

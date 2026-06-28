@@ -36,3 +36,42 @@ export function calculatePoints(
 
   return 0
 }
+
+// Derives which team advances based on 90-min score + (if draw) explicit home_advances flag.
+export function whoAdvances(
+  homeScore: number,
+  awayScore: number,
+  homeAdvances: boolean | null,
+): 'home' | 'away' | null {
+  if (homeScore > awayScore) return 'home'
+  if (awayScore > homeScore) return 'away'
+  if (homeAdvances === true) return 'home'
+  if (homeAdvances === false) return 'away'
+  return null // draw but home_advances not set yet
+}
+
+// Derives the forced qualifier from a predicted score (non-draw → locked, draw → user picks).
+export function deriveQualifierFromScore(
+  predHome: PredScore,
+  predAway: PredScore,
+): 'home' | 'away' | null {
+  const h = predToMin(predHome)
+  const a = predToMin(predAway)
+  if (h > a) return 'home'
+  if (a > h) return 'away'
+  return null // draw → free choice
+}
+
+export function calculateAdvancePoints(
+  qualifier: 'home' | 'away' | null,
+  homeScore: number,
+  awayScore: number,
+  homeAdvances: boolean | null,
+  settings?: ClanSettings,
+): number {
+  if (!qualifier) return 0
+  const advancing = whoAdvances(homeScore, awayScore, homeAdvances)
+  if (!advancing) return 0
+  const advancePts = settings?.points_advance ?? DEFAULT_CLAN_SETTINGS.points_advance
+  return qualifier === advancing ? advancePts : 0
+}
