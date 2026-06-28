@@ -32,11 +32,9 @@ function emptyMatch(): MatchEntry {
   return { id: nextId++, home_team: '', away_team: '', date: '', time: '' }
 }
 
-// Convert Madrid date+time (CEST = UTC+2) to UTC ISO string.
-// Using explicit +02:00 offset so the parser ignores the browser's timezone.
-function madridToUtc(date: string, time: string): string {
+function toUtcIso(date: string, time: string): string {
   if (!date || !time) return ''
-  return new Date(`${date}T${time}:00+02:00`).toISOString()
+  return `${date}T${time}:00.000Z`
 }
 
 type Props = {
@@ -83,7 +81,7 @@ export function AddRoundForm({ teams, dict }: Props) {
     const newMatches = matches.map((m) => ({
       home_team: m.home_team,
       away_team: m.away_team,
-      match_date: madridToUtc(m.date, m.time),
+      match_date: toUtcIso(m.date, m.time),
     }))
 
     const invalid = newMatches.some((m) => !m.match_date)
