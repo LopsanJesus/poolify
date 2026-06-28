@@ -15,6 +15,17 @@ import { formatMatchScore } from '@/lib/scoring'
 
 const DATE_LOCALE: Record<Locale, string> = { en: 'en-US', es: 'es-ES', de: 'de-DE' }
 
+function qualifierLabel(
+  qualifier: 'home' | 'away',
+  homeTeam: string | null,
+  awayTeam: string | null,
+): string {
+  const h = (homeTeam ?? '?').slice(0, 3).toUpperCase()
+  const a = (awayTeam ?? '?').slice(0, 3).toUpperCase()
+  if (h === a) return qualifier === 'home' ? '1' : '2'
+  return qualifier === 'home' ? h : a
+}
+
 type MatchWithPrediction = Match & { prediction: Prediction | null }
 
 export function MatchCard({
@@ -170,9 +181,7 @@ export function MatchCard({
                       </span>
                       {reveal && isKnockoutRound(match.stage) && r.qualifier && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-medium whitespace-nowrap">
-                          {r.qualifier === 'home'
-                            ? (match.home_team ?? '?')
-                            : (match.away_team ?? '?')}
+                          {qualifierLabel(r.qualifier, match.home_team, match.away_team)}
                         </span>
                       )}
                       {isFinished && <PointsBadge points={r.points} exactPts={pointsExact} signPts={pointsSign} small />}
