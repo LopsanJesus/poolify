@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Trash2 } from 'lucide-react'
 import { createRoundWithMatches } from '@/app/actions/admin'
+import { TeamPickerModal, TeamPickerButton } from '@/app/_components/TeamPickerModal'
 import type { Team } from '@/lib/types'
 import type { Dict } from '@/lib/i18n/dictionaries'
 
@@ -55,6 +56,8 @@ export function AddRoundForm({ teams, dict }: Props) {
   const [pointsAdvance, setPointsAdvance] = useState(2)
   const [matches, setMatches] = useState<MatchEntry[]>([emptyMatch()])
   const [error, setError] = useState<string | null>(null)
+  // picker state: { matchId, side }
+  const [picker, setPicker] = useState<{ matchId: number; side: 'home' | 'away' } | null>(null)
 
   const stageLabel: Record<Stage, string> = {
     round_of_32: dict.round_of_32,
@@ -186,50 +189,21 @@ export function AddRoundForm({ teams, dict }: Props) {
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
                 <label className="text-xs text-blue-300">{dict.add_round_home_team}</label>
-                {teams.length > 0 ? (
-                  <select
-                    value={m.home_team}
-                    onChange={(e) => updateMatch(m.id, 'home_team', e.target.value)}
-                    className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-400"
-                  >
-                    <option value="" className="bg-slate-800">—</option>
-                    {teams.map((t) => (
-                      <option key={t.id} value={t.name} className="bg-slate-800">{t.name}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    type="text"
-                    value={m.home_team}
-                    onChange={(e) => updateMatch(m.id, 'home_team', e.target.value)}
-                    placeholder="1A"
-                    className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-400"
-                  />
-                )}
+                <TeamPickerButton
+                  value={m.home_team}
+                  placeholder="—"
+                  onClick={() => setPicker({ matchId: m.id, side: 'home' })}
+                  accentClass="ring-blue-400"
+                />
               </div>
-
               <div className="space-y-1">
                 <label className="text-xs text-blue-300">{dict.add_round_away_team}</label>
-                {teams.length > 0 ? (
-                  <select
-                    value={m.away_team}
-                    onChange={(e) => updateMatch(m.id, 'away_team', e.target.value)}
-                    className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-400"
-                  >
-                    <option value="" className="bg-slate-800">—</option>
-                    {teams.map((t) => (
-                      <option key={t.id} value={t.name} className="bg-slate-800">{t.name}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    type="text"
-                    value={m.away_team}
-                    onChange={(e) => updateMatch(m.id, 'away_team', e.target.value)}
-                    placeholder="2B"
-                    className="w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-400"
-                  />
-                )}
+                <TeamPickerButton
+                  value={m.away_team}
+                  placeholder="—"
+                  onClick={() => setPicker({ matchId: m.id, side: 'away' })}
+                  accentClass="ring-blue-400"
+                />
               </div>
             </div>
 
@@ -277,6 +251,27 @@ export function AddRoundForm({ teams, dict }: Props) {
       >
         {isPending ? '…' : dict.add_round_submit}
       </button>
+
+      {picker && (() => {
+        const activeMatch = matches.find((m) => m.id === picker.matchId)
+        const excluded = activeMatch
+          ? [picker.side === 'home' ? activeMatch.away_team : activeMatch.home_team].filter(Boolean)
+          : []
+        const currentValue = activeMatch
+          ? (picker.side === 'home' ? activeMatch.home_team : activeMatch.away_team)
+          : ''
+        return (
+          <TeamPickerModal
+            open
+            onClose={() => setPicker(null)}
+            title={picker.side === 'home' ? dict.add_round_home_team : dict.add_round_away_team}
+            teams={teams}
+            value={currentValue}
+            onChange={(name) => updateMatch(picker.matchId, picker.side === 'home' ? 'home_team' : 'away_team', name)}
+            excluded={excluded}
+          />
+        )
+      })()}
     </form>
   )
 }
