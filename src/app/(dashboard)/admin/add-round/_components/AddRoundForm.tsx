@@ -32,14 +32,11 @@ function emptyMatch(): MatchEntry {
   return { id: nextId++, home_team: '', away_team: '', date: '', time: '' }
 }
 
-// Convert Madrid date+time (CEST = UTC+2) to UTC ISO string
+// Convert Madrid date+time (CEST = UTC+2) to UTC ISO string.
+// Using explicit +02:00 offset so the parser ignores the browser's timezone.
 function madridToUtc(date: string, time: string): string {
   if (!date || !time) return ''
-  const localIso = `${date}T${time}:00`
-  const dt = new Date(localIso)
-  // CEST is UTC+2
-  dt.setHours(dt.getHours() - 2)
-  return dt.toISOString()
+  return new Date(`${date}T${time}:00+02:00`).toISOString()
 }
 
 type Props = {
