@@ -48,7 +48,7 @@ export function calculatePoints(
   const exactPts = settings?.points_exact ?? DEFAULT_CLAN_SETTINGS.points_exact
   const signPts  = settings?.points_sign  ?? DEFAULT_CLAN_SETTINGS.points_sign
 
-  if (predMatches(predHome, realHome) && predMatches(predAway, realAway)) return exactPts
+  if (predMatches(predHome, realHome) && predMatches(predAway, realAway)) return exactPts + signPts
 
   const predSign = Math.sign(predToMin(predHome) - predToMin(predAway))
   const realSign = Math.sign(realHome - realAway)
