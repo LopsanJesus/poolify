@@ -80,6 +80,13 @@ export function MatchCard({
     return scorePts + advancePts
   }
 
+  // Once the match is finished, points are already persisted (computed server-side with the
+  // round-specific scoring config, same as /ranking). Reuse that value instead of recomputing
+  // it client-side with only the clan-level config, which can disagree for knockout rounds.
+  function matchPtsFor(pred: ClanPredictionEntry): number {
+    return isFinished ? pred.points : liveMatchPts(pred)
+  }
+
   return (
     <div className="rounded-xl bg-white/5 border border-white/10 overflow-hidden">
       <div className="p-4">
@@ -184,8 +191,8 @@ export function MatchCard({
             )
 
             const sorted = [...rows].sort((a, b) => {
-              const aTotal = a.total_points - a.points + (hasScore ? liveMatchPts(a) : 0)
-              const bTotal = b.total_points - b.points + (hasScore ? liveMatchPts(b) : 0)
+              const aTotal = a.total_points - a.points + (hasScore ? matchPtsFor(a) : 0)
+              const bTotal = b.total_points - b.points + (hasScore ? matchPtsFor(b) : 0)
               return bTotal - aTotal || a.username.localeCompare(b.username)
             })
 
@@ -196,7 +203,7 @@ export function MatchCard({
                 {sorted.map((r) => {
                   const isYou = r.user_id === currentUserId
                   const reveal = canRevealOthers || isYou
-                  const matchPts = hasScore ? liveMatchPts(r) : null
+                  const matchPts = hasScore ? matchPtsFor(r) : null
                   const totalWithMatch = r.total_points - r.points + (matchPts ?? 0)
                   const posBefore = rankBefore.get(r.user_id) ?? 0
                   const posAfter = rankAfter.get(r.user_id) ?? 0
