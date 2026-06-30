@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Loader2, RefreshCw } from 'lucide-react'
 import type { AuditClanOption, AuditEntry, ClanAudit } from '@/app/actions/audit'
+import { recalcAllFinishedMatchPoints } from '@/app/actions/admin'
 import type { Dict, Locale } from '@/lib/i18n/dictionaries'
 import { stageLabel } from '@/lib/stages'
 import { translateTeam } from '@/lib/team-flags'
@@ -28,6 +29,21 @@ export function ClanAuditView({
   locale: Locale
 }) {
   const router = useRouter()
+  const [pending, startTransition] = useTransition()
+  const [fixMsg, setFixMsg] = useState<string | null>(null)
+
+  function handleFix() {
+    if (!window.confirm(dict.audit_fix_confirm)) return
+    setFixMsg(null)
+    startTransition(async () => {
+      const res = await recalcAllFinishedMatchPoints()
+      if (res.error) setFixMsg(`Error: ${res.error}`)
+      else {
+        setFixMsg(dict.audit_fix_success.replace('{n}', String(res.updated ?? 0)))
+        router.refresh()
+      }
+    })
+  }
 
   if (clans.length === 0) {
     return <p className="text-center text-blue-400/70 text-sm py-6">{dict.audit_no_clans}</p>
@@ -35,6 +51,23 @@ export function ClanAuditView({
 
   return (
     <div className="space-y-4">
+      <div className="space-y-2">
+        <button
+          type="button"
+          onClick={handleFix}
+          disabled={pending}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-300 text-sm font-semibold transition disabled:opacity-60"
+        >
+          {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+          {dict.audit_fix_button}
+        </button>
+        {fixMsg && (
+          <p className={`text-xs ${fixMsg.startsWith('Error') ? 'text-red-400' : 'text-emerald-400'}`}>
+            {fixMsg}
+          </p>
+        )}
+      </div>
+
       <select
         value={selectedClanId ?? ''}
         onChange={(e) => router.push(`/admin/auditar?clan=${e.target.value}`)}

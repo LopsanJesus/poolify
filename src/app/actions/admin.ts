@@ -186,6 +186,39 @@ export async function adminSetHomeAdvances(
   return {}
 }
 
+// Re-runs recalcPredictionPoints for every finished match, across all clans.
+// Needed after a scoring-formula bug fix (e.g. calculatePoints) so already-finished
+// matches get their persisted `points` updated to match the corrected formula —
+// recalcPredictionPoints only ever runs automatically when a match transitions to
+// finished or its result is corrected, so older matches stay stale otherwise.
+export async function recalcAllFinishedMatchPoints(): Promise<{ error?: string; updated?: number }> {
+  const { dict } = await getDict()
+  if (!await getAdminUserId()) return { error: dict.common.error }
+
+  const admin = createAdminClient()
+  const { data: matches, error } = await admin
+    .from('matches')
+    .select('id, home_score, away_score, stage, home_advances, tournament_id')
+    .eq('status', 'finished')
+    .not('home_score', 'is', null)
+    .not('away_score', 'is', null) as {
+      data: { id: string; home_score: number; away_score: number; stage: string; home_advances: boolean | null; tournament_id: string | null }[] | null
+      error: { message: string } | null
+    }
+
+  if (error) return { error: error.message }
+
+  for (const m of matches ?? []) {
+    await recalcPredictionPoints(admin, m.id, m.home_score, m.away_score, m.stage, m.home_advances, m.tournament_id)
+  }
+
+  revalidatePath('/admin/auditar')
+  revalidatePath('/ranking')
+  revalidatePath('/clan/[id]', 'layout')
+
+  return { updated: matches?.length ?? 0 }
+}
+
 export async function seedRoundOf32(): Promise<{ error?: string; inserted?: number }> {
   const { dict } = await getDict()
   if (!await getAdminUserId()) return { error: dict.common.error }
