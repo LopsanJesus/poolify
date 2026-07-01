@@ -86,7 +86,12 @@ export async function getClanRanking(clanId: string, settings?: ClanSettings) {
     settings ? Promise.resolve({ data: null }) : supabase.from('clans').select('settings').eq('id', clanId).single(),
   ])
 
-  const exactPts = settings?.points_exact ?? (clanRow?.settings as ClanSettings | null)?.points_exact ?? DEFAULT_CLAN_SETTINGS.points_exact
+  const resolvedSettings = settings ?? (clanRow?.settings as ClanSettings | null) ?? DEFAULT_CLAN_SETTINGS
+  // Minimum pts for an exact score hit = exactPts + signPts (additive formula).
+  // Using exactPts alone as threshold would miscategorise sign+advance (1+1=2)
+  // as exact when clan settings have points_exact=2.
+  const exactThreshold = (resolvedSettings.points_exact ?? DEFAULT_CLAN_SETTINGS.points_exact)
+    + (resolvedSettings.points_sign ?? DEFAULT_CLAN_SETTINGS.points_sign)
 
   type MemberRow = { user_id: string; joined_at: string | null; profiles: { username: string } | null }
   type PredRow   = { user_id: string; points: number | null }
@@ -103,7 +108,7 @@ export async function getClanRanking(clanId: string, settings?: ClanSettings) {
     if (!entry) continue
     const pts = row.points ?? 0
     entry.total += pts
-    if (pts >= exactPts) entry.exact += 1
+    if (pts >= exactThreshold) entry.exact += 1
     else if (pts > 0) entry.winner += 1
   }
 

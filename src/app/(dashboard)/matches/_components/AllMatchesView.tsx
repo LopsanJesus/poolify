@@ -335,10 +335,10 @@ function StatusChip({ status, clanDict }: { status: string; clanDict: Dict['clan
   )
 }
 
-function PointsBadge({ points, exactPts }: { points: number; exactPts: number; signPts: number }) {
+function PointsBadge({ points, exactPts, signPts }: { points: number; exactPts: number; signPts: number }) {
   if (points <= 0)
     return <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400">+0</span>
-  if (points >= exactPts)
+  if (points >= exactPts + signPts)
     return <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 font-bold">+{points}</span>
   return <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/30 text-blue-300 font-bold">+{points}</span>
 }
