@@ -32,6 +32,8 @@ export function ClanSettingsForm({
 }) {
   const [state, action, pending] = useActionState(updateClanSettings, undefined)
   const [finalState, finalAction, finalPending] = useActionState(updateFinalPredictionsConfig, undefined)
+  const [sign, setSign] = useState(settings.points_sign ?? 1)
+  const [exact, setExact] = useState(settings.points_exact ?? 2)
   async function saveResults(_: { error?: string; success?: boolean } | undefined, fd: FormData) {
     return saveTournamentResults(clanId, fd)
   }
@@ -74,19 +76,44 @@ export function ClanSettingsForm({
           </div>
           <div className="space-y-3">
             <div>
-              <label className="block text-sm text-blue-300 mb-1.5">{dict.points_exact_label}</label>
-              <input type="number" name="points_exact" min={0} max={100} defaultValue={settings.points_exact} disabled={readOnly}
-                className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition disabled:opacity-60 disabled:cursor-default" />
-            </div>
-            <div>
               <label className="block text-sm text-blue-300 mb-1.5">{dict.points_sign_label}</label>
-              <input type="number" name="points_sign" min={0} max={100} defaultValue={settings.points_sign} disabled={readOnly}
-                className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition disabled:opacity-60 disabled:cursor-default" />
+              <input
+                type="number" name="points_sign" min={0} max={100}
+                value={sign} onChange={e => setSign(Math.max(0, parseInt(e.target.value) || 0))}
+                disabled={readOnly}
+                className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition disabled:opacity-60 disabled:cursor-default"
+              />
             </div>
             <div>
-              <label className="block text-sm text-blue-300 mb-1.5">{dict.points_advance_label}</label>
-              <input type="number" name="points_advance" min={0} max={100} defaultValue={settings.points_advance ?? 2} disabled={readOnly}
-                className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition disabled:opacity-60 disabled:cursor-default" />
+              <label className="block text-sm text-blue-300 mb-1.5">{dict.points_exact_label}</label>
+              <input
+                type="number" name="points_exact" min={0} max={100}
+                value={exact} onChange={e => setExact(Math.max(0, parseInt(e.target.value) || 0))}
+                disabled={readOnly}
+                className="w-full px-4 py-2.5 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition disabled:opacity-60 disabled:cursor-default"
+              />
+            </div>
+            {/* Live scoring preview */}
+            <div className="mt-1 rounded-xl bg-black/20 border border-white/8 p-3 space-y-2">
+              <p className="text-[10px] uppercase tracking-wide text-blue-400/60 font-semibold">
+                {dict.section_scoring}
+              </p>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-blue-300">{dict.scoring_preview_sign}</span>
+                <span className="font-mono font-bold text-blue-200">+{sign}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-blue-300">{dict.scoring_preview_exact}</span>
+                <span className="font-mono font-bold text-emerald-300">
+                  +{sign + exact}
+                  <span className="text-white/30 font-normal text-xs ml-1.5">
+                    ({dict.scoring_preview_sign_part} {sign} + {dict.scoring_preview_bonus_part} {exact})
+                  </span>
+                </span>
+              </div>
+              <p className="text-[10px] text-blue-400/40 pt-1 border-t border-white/5">
+                {dict.scoring_knockout_note}
+              </p>
             </div>
           </div>
         </section>
