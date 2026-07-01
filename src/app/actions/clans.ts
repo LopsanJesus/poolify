@@ -103,7 +103,7 @@ export async function getClanRanking(clanId: string, settings?: ClanSettings) {
     if (!entry) continue
     const pts = row.points ?? 0
     entry.total += pts
-    if (pts === exactPts) entry.exact += 1
+    if (pts >= exactPts) entry.exact += 1
     else if (pts > 0) entry.winner += 1
   }
 
