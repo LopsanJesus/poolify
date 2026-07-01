@@ -178,6 +178,11 @@ function AuditRow({
                   {' → '}
                   {dict.audit_mismatch_audited}: <span className="text-emerald-300 font-semibold">{m.audited_points}</span>
                 </p>
+                {m.debug_scoring && (
+                  <p className="text-yellow-400/60 font-mono text-[10px]">
+                    cfg: sign={m.debug_scoring.points_sign} exact={m.debug_scoring.points_exact} adv={m.debug_scoring.points_advance} | score={m.debug_scoring.score_pts} adv={m.debug_scoring.advance_pts} rc={m.debug_scoring.used_round_config ? 'yes' : 'no'}
+                  </p>
+                )}
               </div>
             )
           })}

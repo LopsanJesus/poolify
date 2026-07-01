@@ -32,6 +32,7 @@ export type AuditMismatch = {
   qualifier: 'home' | 'away' | null
   stored_points: number
   audited_points: number
+  debug_scoring?: { points_sign: number; points_exact: number; points_advance: number; score_pts: number; advance_pts: number; used_round_config: boolean }
 }
 
 export type AuditEntry = {
@@ -106,7 +107,8 @@ export async function getClanAudit(clanId: string): Promise<ClanAudit | null> {
 
   const roundConfigMap = new Map<string, RoundConfig>()
   if (tournamentIds.size > 0) {
-    const { data: rcData } = await (supabase as any)
+    const admin = createAdminClient()
+    const { data: rcData } = await (admin as any)
       .from('round_configs')
       .select('*')
       .in('tournament_id', [...tournamentIds])
@@ -142,11 +144,32 @@ export async function getClanAudit(clanId: string): Promise<ClanAudit | null> {
         ? calculateAdvancePoints(pred.qualifier, match.home_score, match.away_score, match.home_advances, scoring)
         : 0
       audited = scorePts + advancePts
-    }
 
-    entry.audited_total += audited
-
-    if (match && audited !== stored) {
+      if (audited !== stored) {
+        entry.mismatches.push({
+          match_id: match.id,
+          home_team: match.home_team,
+          away_team: match.away_team,
+          stage: match.stage,
+          home_score: match.home_score,
+          away_score: match.away_score,
+          pred_home: pred.home_score,
+          pred_away: pred.away_score,
+          qualifier: pred.qualifier,
+          stored_points: stored,
+          audited_points: audited,
+          debug_scoring: {
+            points_sign: scoring.points_sign,
+            points_exact: scoring.points_exact,
+            points_advance: scoring.points_advance,
+            score_pts: scorePts,
+            advance_pts: advancePts,
+            used_round_config: roundConfig !== null,
+          },
+        })
+      }
+    } else if (match && stored !== 0) {
+      // Unfinished match with non-zero stored points
       entry.mismatches.push({
         match_id: match.id,
         home_team: match.home_team,
@@ -158,9 +181,11 @@ export async function getClanAudit(clanId: string): Promise<ClanAudit | null> {
         pred_away: pred.away_score,
         qualifier: pred.qualifier,
         stored_points: stored,
-        audited_points: audited,
+        audited_points: 0,
       })
     }
+
+    entry.audited_total += audited
   }
 
   const currentTotals = new Map(currentRanking.map((r) => [r.user_id, r.total]))

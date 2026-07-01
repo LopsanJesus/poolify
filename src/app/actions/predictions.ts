@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { calculatePoints, calculateAdvancePoints, deriveQualifierFromScore, resolveScoringConfig } from '@/lib/scoring'
 import { matchRound, getRoundDeadlines, isKnockoutRound } from '@/lib/rounds'
 import type { Match, Prediction, ClanSettings, PredScore, RoundConfig } from '@/lib/types'
@@ -182,7 +183,8 @@ export async function savePredictions(_: unknown, formData: FormData) {
   )
   let roundConfigMap = new Map<string, RoundConfig>()
   if (knockoutMatchIds.size > 0) {
-    const { data: rcData } = await (supabase as any)
+    const admin = createAdminClient()
+    const { data: rcData } = await (admin as any)
       .from('round_configs')
       .select('*')
       .in('tournament_id', [...knockoutMatchIds])
