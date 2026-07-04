@@ -150,6 +150,7 @@ const en = {
     qualifier_locked: 'Auto (winner in 90 min)',
     advance_correct: 'Advance correct',
     advance_wrong: 'Advance wrong',
+    admin_override: 'Admin override · deadline bypassed',
   },
   create_clan: {
     title: 'Create pool',
@@ -567,6 +568,7 @@ const es: typeof en = {
     qualifier_locked: 'Auto (gana en 90 min)',
     advance_correct: 'Pase correcto',
     advance_wrong: 'Pase fallado',
+    admin_override: 'Modo admin · fecha límite omitida',
   },
   create_clan: {
     title: 'Crear porra',
@@ -985,6 +987,7 @@ const de: typeof en = {
     qualifier_locked: 'Auto (Sieger nach 90 Min)',
     advance_correct: 'Weiterkommen richtig',
     advance_wrong: 'Weiterkommen falsch',
+    admin_override: 'Admin-Modus · Frist umgangen',
   },
   create_clan: {
     title: 'Tippspiel erstellen',

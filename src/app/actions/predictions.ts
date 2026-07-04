@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getAdminUserId } from '@/lib/admin'
 import { calculatePoints, calculateAdvancePoints, deriveQualifierFromScore, resolveScoringConfig } from '@/lib/scoring'
 import { matchRound, getRoundDeadlines, isKnockoutRound } from '@/lib/rounds'
 import type { Match, Prediction, ClanSettings, PredScore, RoundConfig } from '@/lib/types'
@@ -123,16 +124,20 @@ export type RoundDeadlineInfo = {
 export async function getMatchesWithPredictions(clanId: string): Promise<{
   matches: MatchWithPrediction[]
   roundDeadlines: RoundDeadlineInfo[]
+  isAdmin: boolean
 }> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { matches: [], roundDeadlines: [] }
+  if (!user) return { matches: [], roundDeadlines: [], isAdmin: false }
 
-  const [{ data: matchData }, { data: predData }, tournamentIds] = await Promise.all([
+  const [{ data: matchData }, { data: predData }, tournamentIds, { data: profile }] = await Promise.all([
     supabase.from('matches').select('*').order('match_date'),
     supabase.from('predictions').select('*').eq('clan_id', clanId).eq('user_id', user.id),
     getTournamentIdsForClan(supabase, clanId),
+    supabase.from('profiles').select('is_admin').eq('id', user.id).single(),
   ])
+
+  const isAdmin = !!profile?.is_admin
 
   let matches = (matchData ?? []) as Match[]
   if (tournamentIds) {
@@ -158,7 +163,7 @@ export async function getMatchesWithPredictions(clanId: string): Promise<{
     deadline,
   }))
 
-  return { matches: matchesWithPreds, roundDeadlines }
+  return { matches: matchesWithPreds, roundDeadlines, isAdmin }
 }
 
 export async function savePredictions(_: unknown, formData: FormData) {
@@ -168,6 +173,7 @@ export async function savePredictions(_: unknown, formData: FormData) {
 
   const clanId = formData.get('clan_id') as string
   const matchIds = formData.getAll('match_id') as string[]
+  const isAdmin = !!(await getAdminUserId())
 
   const [{ data: matchData }, { data: clanData }] = await Promise.all([
     supabase.from('matches').select('*'),
@@ -210,8 +216,8 @@ export async function savePredictions(_: unknown, formData: FormData) {
 
     const match = matches.find((m) => m.id === matchId)
 
-    // Server-side round deadline check
-    if (match) {
+    // Server-side round deadline check (admins may override)
+    if (match && !isAdmin) {
       const deadline = roundDeadlines.get(matchRound(match.stage))
       if (deadline && now >= deadline) return []
     }

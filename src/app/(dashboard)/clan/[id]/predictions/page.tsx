@@ -14,7 +14,7 @@ export default async function PredictionsPage({ params }: { params: Promise<{ id
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
 
-  const [clan, { matches: matchesWithPreds, roundDeadlines }] = await Promise.all([
+  const [clan, { matches: matchesWithPreds, roundDeadlines, isAdmin }] = await Promise.all([
     getClanData(id),
     getMatchesWithPredictions(id),
   ])
@@ -68,6 +68,7 @@ export default async function PredictionsPage({ params }: { params: Promise<{ id
         clanId={id}
         matchesWithPreds={matchesWithPreds}
         roundDeadlines={roundDeadlines}
+        isAdmin={isAdmin}
         dict={dict.predictions}
         commonDict={dict.common}
         locale={locale}
