@@ -27,6 +27,7 @@ export function PredictionsForm({
   clanId,
   matchesWithPreds,
   roundDeadlines,
+  isAdmin,
   dict,
   commonDict,
   locale,
@@ -37,6 +38,7 @@ export function PredictionsForm({
   clanId: string;
   matchesWithPreds: MatchWithPrediction[];
   roundDeadlines: RoundDeadlineInfo[];
+  isAdmin: boolean;
   dict: Dict["predictions"];
   commonDict: Dict["common"];
   locale: Locale;
@@ -55,15 +57,17 @@ export function PredictionsForm({
     }
   }, [state?.success]);
 
-  const allUpcoming = matchesWithPreds
-    .filter((m) => m.status === "upcoming")
+  // Admins may keep predicting on matches that are live or past their round deadline.
+  const editableCandidates = matchesWithPreds
+    .filter((m) => m.status === "upcoming" || (isAdmin && m.status === "live"))
     .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
 
-  const upcomingEditable = allUpcoming.filter((m) => !m.matchDeadlinePassed);
+  const upcomingEditable = editableCandidates.filter((m) => isAdmin || !m.matchDeadlinePassed);
   const upcomingEmpty  = upcomingEditable.filter((m) => m.prediction === null);
   const upcomingFilled = upcomingEditable.filter((m) => m.prediction !== null);
 
-  const locked = matchesWithPreds.filter((m) => m.status !== "upcoming" || m.matchDeadlinePassed);
+  const editableIds = new Set(upcomingEditable.map((m) => m.id));
+  const locked = matchesWithPreds.filter((m) => !editableIds.has(m.id));
 
   return (
     <>
@@ -84,6 +88,7 @@ export function PredictionsForm({
                   dict={dict}
                   locale={locale}
                   editable
+                  adminOverride={isAdmin && (match.matchDeadlinePassed || match.status === "live")}
                   onDirty={() => setDirty(true)}
                   pointsExact={pointsExact}
                   pointsSign={pointsSign}
@@ -107,6 +112,7 @@ export function PredictionsForm({
                       dict={dict}
                       locale={locale}
                       editable
+                      adminOverride={isAdmin && (match.matchDeadlinePassed || match.status === "live")}
                       onDirty={() => setDirty(true)}
                       pointsExact={pointsExact}
                       pointsSign={pointsSign}
@@ -191,6 +197,7 @@ function MatchCard({
   dict,
   locale,
   editable,
+  adminOverride,
   onDirty,
   pointsExact,
   pointsSign,
@@ -200,6 +207,7 @@ function MatchCard({
   dict: Dict["predictions"];
   locale: Locale;
   editable: boolean;
+  adminOverride?: boolean;
   onDirty?: () => void;
   pointsExact: number;
   pointsSign: number;
@@ -271,6 +279,12 @@ function MatchCard({
       {/* Send effective qualifier as hidden input */}
       {editable && isKnockout && effectiveQualifier && (
         <input type="hidden" name={`qualifier_${match.id}`} value={effectiveQualifier} />
+      )}
+
+      {adminOverride && (
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px] font-semibold w-fit">
+          {dict.admin_override}
+        </div>
       )}
 
       <div className="flex items-center justify-between">
