@@ -57,12 +57,16 @@ export function PredictionsForm({
     }
   }, [state?.success]);
 
-  // Admins may keep predicting on matches that are live or past their round deadline.
+  // Admins may keep predicting on matches that are live or past their round deadline,
+  // but only to fill in a prediction that doesn't exist yet — not to modify one they already made.
   const editableCandidates = matchesWithPreds
     .filter((m) => m.status === "upcoming" || (isAdmin && m.status === "live"))
     .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime());
 
-  const upcomingEditable = editableCandidates.filter((m) => isAdmin || !m.matchDeadlinePassed);
+  const upcomingEditable = editableCandidates.filter((m) => {
+    if (!m.matchDeadlinePassed) return true;
+    return isAdmin && m.prediction === null;
+  });
   const upcomingEmpty  = upcomingEditable.filter((m) => m.prediction === null);
   const upcomingFilled = upcomingEditable.filter((m) => m.prediction !== null);
 
@@ -148,7 +152,17 @@ export function PredictionsForm({
               {dict.status_finished_ro}
             </p>
             {locked.map((match) => (
-              <MatchCard key={match.id} match={match} dict={dict} locale={locale} editable={false} pointsExact={pointsExact} pointsSign={pointsSign} pointsAdvance={pointsAdvance} />
+              <MatchCard
+                key={match.id}
+                match={match}
+                dict={dict}
+                locale={locale}
+                editable={false}
+                adminLockedAfterFill={isAdmin && match.matchDeadlinePassed && match.prediction !== null && match.status !== "finished"}
+                pointsExact={pointsExact}
+                pointsSign={pointsSign}
+                pointsAdvance={pointsAdvance}
+              />
             ))}
           </div>
         )}
@@ -198,6 +212,7 @@ function MatchCard({
   locale,
   editable,
   adminOverride,
+  adminLockedAfterFill,
   onDirty,
   pointsExact,
   pointsSign,
@@ -208,6 +223,7 @@ function MatchCard({
   locale: Locale;
   editable: boolean;
   adminOverride?: boolean;
+  adminLockedAfterFill?: boolean;
   onDirty?: () => void;
   pointsExact: number;
   pointsSign: number;
@@ -284,6 +300,12 @@ function MatchCard({
       {adminOverride && (
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px] font-semibold w-fit">
           {dict.admin_override}
+        </div>
+      )}
+
+      {adminLockedAfterFill && (
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/15 border border-red-500/30 text-red-300 text-[11px] font-semibold w-fit">
+          {dict.admin_locked}
         </div>
       )}
 

@@ -151,6 +151,7 @@ const en = {
     advance_correct: 'Advance correct',
     advance_wrong: 'Advance wrong',
     admin_override: 'Admin override · deadline bypassed',
+    admin_locked: 'Admin · filled after deadline, can no longer be edited',
   },
   create_clan: {
     title: 'Create pool',
@@ -569,6 +570,7 @@ const es: typeof en = {
     advance_correct: 'Pase correcto',
     advance_wrong: 'Pase fallado',
     admin_override: 'Modo admin · fecha límite omitida',
+    admin_locked: 'Admin · rellenado fuera de plazo, ya no editable',
   },
   create_clan: {
     title: 'Crear porra',
@@ -988,6 +990,7 @@ const de: typeof en = {
     advance_correct: 'Weiterkommen richtig',
     advance_wrong: 'Weiterkommen falsch',
     admin_override: 'Admin-Modus · Frist umgangen',
+    admin_locked: 'Admin · nach Frist eingetragen, nicht mehr bearbeitbar',
   },
   create_clan: {
     title: 'Tippspiel erstellen',

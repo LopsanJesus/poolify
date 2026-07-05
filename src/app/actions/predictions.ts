@@ -175,10 +175,18 @@ export async function savePredictions(_: unknown, formData: FormData) {
   const matchIds = formData.getAll('match_id') as string[]
   const isAdmin = !!(await getAdminUserId())
 
-  const [{ data: matchData }, { data: clanData }] = await Promise.all([
+  const [{ data: matchData }, { data: clanData }, { data: existingPredsData }] = await Promise.all([
     supabase.from('matches').select('*'),
     supabase.from('clans').select('settings').eq('id', clanId).single(),
+    supabase
+      .from('predictions')
+      .select('match_id')
+      .eq('clan_id', clanId)
+      .eq('user_id', user.id)
+      .in('match_id', matchIds),
   ])
+
+  const existingMatchIds = new Set((existingPredsData ?? []).map((p) => p.match_id as string))
 
   const matches = (matchData ?? []) as Match[]
   const clanSettings: ClanSettings = ((clanData as { settings?: ClanSettings } | null)?.settings ?? DEFAULT_CLAN_SETTINGS)
@@ -216,10 +224,13 @@ export async function savePredictions(_: unknown, formData: FormData) {
 
     const match = matches.find((m) => m.id === matchId)
 
-    // Server-side round deadline check (admins may override)
-    if (match && !isAdmin) {
+    // Server-side round deadline check.
+    // Admins may fill in a prediction that was never made even after the deadline,
+    // but once it exists it can no longer be modified past the deadline (same as everyone else).
+    if (match) {
       const deadline = roundDeadlines.get(matchRound(match.stage))
-      if (deadline && now >= deadline) return []
+      const deadlinePassed = !!deadline && now >= deadline
+      if (deadlinePassed && (!isAdmin || existingMatchIds.has(matchId))) return []
     }
 
     // Derive qualifier for knockout matches
