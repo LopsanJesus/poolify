@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getDict } from '@/lib/i18n/server'
 import type { Clan, ClanSettings, FinalPredictionsCustomField } from '@/lib/types'
-import { DEFAULT_CLAN_SETTINGS } from '@/lib/types'
 
 export async function createClan(_: unknown, formData: FormData) {
   const supabase = await createClient()
@@ -77,24 +76,16 @@ export async function getUserClans(): Promise<Pick<Clan, 'id' | 'name' | 'invite
     .filter((c): c is ClanRow => c !== null)
 }
 
-export async function getClanRanking(clanId: string, settings?: ClanSettings) {
+export async function getClanRanking(clanId: string) {
   const supabase = await createClient()
 
-  const [{ data: memberData }, { data: predData }, { data: clanRow }] = await Promise.all([
+  const [{ data: memberData }, { data: predData }] = await Promise.all([
     supabase.from('clan_members').select('user_id, joined_at, profiles(username)').eq('clan_id', clanId),
-    supabase.from('predictions').select('user_id, points').eq('clan_id', clanId),
-    settings ? Promise.resolve({ data: null }) : supabase.from('clans').select('settings').eq('id', clanId).single(),
+    supabase.from('predictions').select('user_id, points, is_exact').eq('clan_id', clanId),
   ])
 
-  const resolvedSettings = settings ?? (clanRow?.settings as ClanSettings | null) ?? DEFAULT_CLAN_SETTINGS
-  // Minimum pts for an exact score hit = exactPts + signPts (additive formula).
-  // Using exactPts alone as threshold would miscategorise sign+advance (1+1=2)
-  // as exact when clan settings have points_exact=2.
-  const exactThreshold = (resolvedSettings.points_exact ?? DEFAULT_CLAN_SETTINGS.points_exact)
-    + (resolvedSettings.points_sign ?? DEFAULT_CLAN_SETTINGS.points_sign)
-
   type MemberRow = { user_id: string; joined_at: string | null; profiles: { username: string } | null }
-  type PredRow   = { user_id: string; points: number | null }
+  type PredRow   = { user_id: string; points: number | null; is_exact: boolean | null }
 
   const members = (memberData ?? []) as unknown as MemberRow[]
   const preds   = (predData   ?? []) as unknown as PredRow[]
@@ -108,7 +99,7 @@ export async function getClanRanking(clanId: string, settings?: ClanSettings) {
     if (!entry) continue
     const pts = row.points ?? 0
     entry.total += pts
-    if (pts >= exactThreshold) entry.exact += 1
+    if (row.is_exact) entry.exact += 1
     else if (pts > 0) entry.winner += 1
   }
 

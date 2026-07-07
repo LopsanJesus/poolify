@@ -137,17 +137,17 @@ export interface Database {
         Row: {
           id: string; user_id: string; match_id: string; clan_id: string
           home_score: PredScore; away_score: PredScore; points: number
-          qualifier: 'home' | 'away' | null
+          qualifier: 'home' | 'away' | null; is_exact: boolean
           created_at: string; updated_at: string
         }
         Insert: {
           id?: string; user_id: string; match_id: string; clan_id: string
           home_score: PredScore; away_score: PredScore; points?: number
-          qualifier?: 'home' | 'away' | null
+          qualifier?: 'home' | 'away' | null; is_exact?: boolean
         }
         Update: {
           home_score?: PredScore; away_score?: PredScore; points?: number
-          qualifier?: 'home' | 'away' | null; updated_at?: string
+          qualifier?: 'home' | 'away' | null; is_exact?: boolean; updated_at?: string
         }
         Relationships: [
           { foreignKeyName: 'predictions_user_id_fkey'; columns: ['user_id']; referencedRelation: 'profiles'; referencedColumns: ['id'] },

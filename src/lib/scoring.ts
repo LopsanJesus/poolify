@@ -31,6 +31,15 @@ function predMatches(pred: PredScore, actual: number): boolean {
   return pred === '+' ? actual >= 3 : parseInt(pred, 10) === actual
 }
 
+export function isExactScore(
+  predHome: PredScore,
+  predAway: PredScore,
+  realHome: number,
+  realAway: number,
+): boolean {
+  return predMatches(predHome, realHome) && predMatches(predAway, realAway)
+}
+
 // Real match scores follow the same 0/1/2/+ convention as predictions:
 // any team that scored 3 or more goals is displayed as "+".
 export function formatMatchScore(score: number | null): string {

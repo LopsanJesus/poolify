@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getAdminUserId } from '@/lib/admin'
-import { calculatePoints, calculateAdvancePoints, deriveQualifierFromScore, resolveScoringConfig } from '@/lib/scoring'
+import { calculatePoints, calculateAdvancePoints, deriveQualifierFromScore, resolveScoringConfig, isExactScore } from '@/lib/scoring'
 import { matchRound, getRoundDeadlines, isKnockoutRound } from '@/lib/rounds'
 import type { Match, Prediction, ClanSettings, PredScore, RoundConfig } from '@/lib/types'
 import { DEFAULT_CLAN_SETTINGS } from '@/lib/types'
@@ -248,6 +248,7 @@ export async function savePredictions(_: unknown, formData: FormData) {
     }
 
     let points = 0
+    let isExact = false
     if (match?.status === 'finished' && match.home_score != null && match.away_score != null) {
       const roundConfig = match.tournament_id
         ? (roundConfigMap.get(`${match.tournament_id}:${match.stage}`) ?? null)
@@ -258,6 +259,7 @@ export async function savePredictions(_: unknown, formData: FormData) {
         ? calculateAdvancePoints(qualifier, match.home_score, match.away_score, match.home_advances, scoring)
         : 0
       points = scorePts + advancePts
+      isExact = isExactScore(homeScore, awayScore, match.home_score, match.away_score)
     }
 
     return [{
@@ -268,6 +270,7 @@ export async function savePredictions(_: unknown, formData: FormData) {
       away_score: awayScore,
       qualifier,
       points,
+      is_exact: isExact,
       updated_at: new Date().toISOString(),
     }]
   })

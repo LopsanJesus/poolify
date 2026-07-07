@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { calculatePoints, calculateAdvancePoints, resolveScoringConfig } from '@/lib/scoring'
+import { calculatePoints, calculateAdvancePoints, resolveScoringConfig, isExactScore } from '@/lib/scoring'
 import { isKnockoutRound } from '@/lib/rounds'
 import type { ClanSettings, RoundConfig } from '@/lib/types'
 import { DEFAULT_CLAN_SETTINGS } from '@/lib/types'
@@ -154,9 +154,10 @@ export async function recalcPredictionPoints(
       ? calculateAdvancePoints(pred.qualifier, homeScore, awayScore, homeAdvances ?? null, scoring)
       : 0
     const points = scorePts + advancePts
+    const isExact = isExactScore(pred.home_score, pred.away_score, homeScore, awayScore)
     await supabase
       .from('predictions')
-      .update({ points, updated_at: new Date().toISOString() })
+      .update({ points, is_exact: isExact, updated_at: new Date().toISOString() })
       .eq('id', pred.id)
   }
 }
