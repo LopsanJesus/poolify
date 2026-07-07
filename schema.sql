@@ -337,3 +337,11 @@ create policy "Clan owner can manage clan_tournaments"
 --   alter table public.matches add column if not exists ratified boolean not null default false;
 --   -- Promote a user to admin manually:
 --   --   update public.profiles set is_admin = true where username = 'your_username';
+--
+-- NEW (knockout qualifier + per-round scoring overrides):
+--   See migration-knockout.sql.
+--
+-- NEW (exact-score flag on predictions, used by the ranking's "exactos" column):
+--   See migration-is-exact.sql. After applying it, re-run the admin panel's
+--   "recalculate all finished matches" action to backfill is_exact on
+--   existing predictions.
