@@ -384,7 +384,7 @@ function MatchCard({
       </div>
 
       {/* Qualifier row for knockout matches */}
-      {isKnockout && (homeScore || match.prediction) && (
+      {isKnockout && (forcedQualifier || (homeScore !== "" && awayScore !== "" && homeScore === awayScore)) && (
         <div className="space-y-1.5">
           <p className="text-xs text-blue-400/70 text-center">{dict.qualifier_label}</p>
           {forcedQualifier ? (
