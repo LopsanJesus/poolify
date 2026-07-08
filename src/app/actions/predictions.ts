@@ -96,6 +96,20 @@ async function getTournamentIdsForClan(supabase: Awaited<ReturnType<typeof creat
   return (data as { tournament_id: string }[]).map(r => r.tournament_id)
 }
 
+export async function getRoundConfigsForClan(clanId: string): Promise<RoundConfig[]> {
+  const supabase = await createClient()
+  const tournamentIds = await getTournamentIdsForClan(supabase, clanId)
+  if (!tournamentIds || tournamentIds.length === 0) return []
+
+  const admin = createAdminClient()
+  const { data } = await (admin as any)
+    .from('round_configs')
+    .select('*')
+    .in('tournament_id', tournamentIds)
+
+  return (data ?? []) as RoundConfig[]
+}
+
 export async function getAllMatches(clanId?: string) {
   const supabase = await createClient()
   let query = supabase.from('matches').select('*').order('match_date')

@@ -3,7 +3,7 @@
 import { savePredictions } from "@/app/actions/predictions";
 import type { Dict, Locale } from "@/lib/i18n/dictionaries";
 import { stageLabel } from "@/lib/stages";
-import type { Match, Prediction, PredScore } from "@/lib/types";
+import type { Match, Prediction, PredScore, RoundConfig } from "@/lib/types";
 import { Loader2, Shuffle } from "lucide-react";
 import { useActionState, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -12,7 +12,7 @@ import { translateTeam } from "@/lib/team-flags";
 import { SuccessToast } from "@/app/_components/SuccessToast";
 import { ScoreButtons, SCORE_OPTIONS } from "@/app/_components/ScoreSelector";
 import { isKnockoutRound } from "@/lib/rounds";
-import { deriveQualifierFromScore, whoAdvances } from "@/lib/scoring";
+import { deriveQualifierFromScore, whoAdvances, type ScoringConfig } from "@/lib/scoring";
 import type { RoundDeadlineInfo } from "@/app/actions/predictions";
 
 type MatchWithPrediction = Match & { prediction: Prediction | null; matchDeadlinePassed: boolean };
@@ -31,9 +31,8 @@ export function PredictionsForm({
   dict,
   commonDict,
   locale,
-  pointsExact,
-  pointsSign,
-  pointsAdvance,
+  clanScoring,
+  roundConfigs,
 }: {
   clanId: string;
   matchesWithPreds: MatchWithPrediction[];
@@ -42,13 +41,18 @@ export function PredictionsForm({
   dict: Dict["predictions"];
   commonDict: Dict["common"];
   locale: Locale;
-  pointsExact: number;
-  pointsSign: number;
-  pointsAdvance: number;
+  clanScoring: ScoringConfig;
+  roundConfigs: RoundConfig[];
 }) {
   const [state, action, pending] = useActionState(savePredictions, undefined);
   const [dirty, setDirty] = useState(false);
   const [showToast, setShowToast] = useState(false);
+
+  const roundConfigMap = new Map(roundConfigs.map((rc) => [`${rc.tournament_id}:${rc.stage}`, rc]));
+  const scoringForMatch = (match: MatchWithPrediction): ScoringConfig => {
+    const rc = match.tournament_id ? roundConfigMap.get(`${match.tournament_id}:${match.stage}`) : undefined;
+    return rc ?? clanScoring;
+  };
 
   useEffect(() => {
     if (state?.success) {
@@ -85,20 +89,23 @@ export function PredictionsForm({
             </p>
           ) : (
             <>
-              {upcomingEmpty.map((match) => (
-                <MatchCard
-                  key={match.id}
-                  match={match}
-                  dict={dict}
-                  locale={locale}
-                  editable
-                  adminOverride={isAdmin && (match.matchDeadlinePassed || match.status === "live")}
-                  onDirty={() => setDirty(true)}
-                  pointsExact={pointsExact}
-                  pointsSign={pointsSign}
-                  pointsAdvance={pointsAdvance}
-                />
-              ))}
+              {upcomingEmpty.map((match) => {
+                const scoring = scoringForMatch(match);
+                return (
+                  <MatchCard
+                    key={match.id}
+                    match={match}
+                    dict={dict}
+                    locale={locale}
+                    editable
+                    adminOverride={isAdmin && (match.matchDeadlinePassed || match.status === "live")}
+                    onDirty={() => setDirty(true)}
+                    pointsExact={scoring.points_exact}
+                    pointsSign={scoring.points_sign}
+                    pointsAdvance={scoring.points_advance}
+                  />
+                );
+              })}
 
               {upcomingFilled.length > 0 && (
                 <>
@@ -109,20 +116,23 @@ export function PredictionsForm({
                     </span>
                     <div className="flex-1 h-px bg-white/10" />
                   </div>
-                  {upcomingFilled.map((match) => (
-                    <MatchCard
-                      key={match.id}
-                      match={match}
-                      dict={dict}
-                      locale={locale}
-                      editable
-                      adminOverride={isAdmin && (match.matchDeadlinePassed || match.status === "live")}
-                      onDirty={() => setDirty(true)}
-                      pointsExact={pointsExact}
-                      pointsSign={pointsSign}
-                      pointsAdvance={pointsAdvance}
-                    />
-                  ))}
+                  {upcomingFilled.map((match) => {
+                    const scoring = scoringForMatch(match);
+                    return (
+                      <MatchCard
+                        key={match.id}
+                        match={match}
+                        dict={dict}
+                        locale={locale}
+                        editable
+                        adminOverride={isAdmin && (match.matchDeadlinePassed || match.status === "live")}
+                        onDirty={() => setDirty(true)}
+                        pointsExact={scoring.points_exact}
+                        pointsSign={scoring.points_sign}
+                        pointsAdvance={scoring.points_advance}
+                      />
+                    );
+                  })}
                 </>
               )}
             </>
@@ -151,19 +161,22 @@ export function PredictionsForm({
             <p className="text-xs font-semibold text-blue-400/60 uppercase tracking-wide">
               {dict.status_finished_ro}
             </p>
-            {locked.map((match) => (
-              <MatchCard
-                key={match.id}
-                match={match}
-                dict={dict}
-                locale={locale}
-                editable={false}
-                adminLockedAfterFill={isAdmin && match.matchDeadlinePassed && match.prediction !== null && match.status !== "finished"}
-                pointsExact={pointsExact}
-                pointsSign={pointsSign}
-                pointsAdvance={pointsAdvance}
-              />
-            ))}
+            {locked.map((match) => {
+              const scoring = scoringForMatch(match);
+              return (
+                <MatchCard
+                  key={match.id}
+                  match={match}
+                  dict={dict}
+                  locale={locale}
+                  editable={false}
+                  adminLockedAfterFill={isAdmin && match.matchDeadlinePassed && match.prediction !== null && match.status !== "finished"}
+                  pointsExact={scoring.points_exact}
+                  pointsSign={scoring.points_sign}
+                  pointsAdvance={scoring.points_advance}
+                />
+              );
+            })}
           </div>
         )}
       </div>
