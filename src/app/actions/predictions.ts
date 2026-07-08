@@ -116,9 +116,8 @@ export async function getAllMatches(clanId?: string) {
 
   if (clanId) {
     const tournamentIds = await getTournamentIdsForClan(supabase, clanId)
-    if (tournamentIds) {
-      query = query.in('tournament_id', tournamentIds)
-    }
+    if (!tournamentIds || tournamentIds.length === 0) return []
+    query = query.in('tournament_id', tournamentIds)
   }
 
   const { data } = await query
@@ -153,10 +152,10 @@ export async function getMatchesWithPredictions(clanId: string): Promise<{
 
   const isAdmin = !!profile?.is_admin
 
-  let matches = (matchData ?? []) as Match[]
-  if (tournamentIds) {
+  let matches: Match[] = []
+  if (tournamentIds && tournamentIds.length > 0) {
     const idSet = new Set(tournamentIds)
-    matches = matches.filter(m => m.tournament_id != null && idSet.has(m.tournament_id))
+    matches = ((matchData ?? []) as Match[]).filter(m => m.tournament_id != null && idSet.has(m.tournament_id))
   }
 
   const predictions = (predData ?? []) as Prediction[]
