@@ -2,11 +2,11 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getClanData } from '@/app/actions/clans'
-import { getMatchesWithPredictions } from '@/app/actions/predictions'
+import { getMatchesWithPredictions, getRoundConfigsForClan } from '@/app/actions/predictions'
 import { ArrowLeft, Lock } from 'lucide-react'
 import { PredictionsForm } from './_components/PredictionsForm'
 import { getDict } from '@/lib/i18n/server'
-import { DEFAULT_CLAN_SETTINGS } from '@/lib/types'
+import { resolveScoringConfig } from '@/lib/scoring'
 
 export default async function PredictionsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -14,18 +14,39 @@ export default async function PredictionsPage({ params }: { params: Promise<{ id
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
 
-  const [clan, { matches: matchesWithPreds, roundDeadlines, isAdmin }] = await Promise.all([
+  const [clan, { matches: matchesWithPreds, roundDeadlines, isAdmin }, roundConfigs] = await Promise.all([
     getClanData(id),
     getMatchesWithPredictions(id),
+    getRoundConfigsForClan(id),
   ])
 
   if (!clan) notFound()
 
   const { dict, locale } = await getDict()
 
-  const exactPts   = clan.settings?.points_exact   ?? DEFAULT_CLAN_SETTINGS.points_exact
-  const signPts    = clan.settings?.points_sign    ?? DEFAULT_CLAN_SETTINGS.points_sign
-  const advancePts = clan.settings?.points_advance ?? DEFAULT_CLAN_SETTINGS.points_advance
+  const clanScoring = resolveScoringConfig(clan.settings)
+  const roundConfigMap = new Map(roundConfigs.map((rc) => [`${rc.tournament_id}:${rc.stage}`, rc]))
+
+  // The "Sistema de puntos" panel should reflect the round the user is about
+  // to predict, not always the clan's group-stage defaults — mirrors the
+  // editable-match filtering in PredictionsForm.
+  const editableCandidates = matchesWithPreds
+    .filter((m) => m.status === 'upcoming' || (isAdmin && m.status === 'live'))
+    .sort((a, b) => new Date(a.match_date).getTime() - new Date(b.match_date).getTime())
+  const activeMatch = editableCandidates.find((m) => {
+    if (!m.matchDeadlinePassed) return true
+    return isAdmin && m.prediction === null
+  }) ?? null
+
+  const activeRoundConfig = activeMatch?.tournament_id
+    ? roundConfigMap.get(`${activeMatch.tournament_id}:${activeMatch.stage}`) ?? null
+    : null
+
+  const panelScoring = resolveScoringConfig(clan.settings, activeRoundConfig)
+
+  const exactPts   = panelScoring.points_exact
+  const signPts    = panelScoring.points_sign
+  const advancePts = panelScoring.points_advance
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -72,9 +93,8 @@ export default async function PredictionsPage({ params }: { params: Promise<{ id
         dict={dict.predictions}
         commonDict={dict.common}
         locale={locale}
-        pointsExact={exactPts}
-        pointsSign={signPts}
-        pointsAdvance={advancePts}
+        clanScoring={clanScoring}
+        roundConfigs={roundConfigs}
       />
     </div>
   )
