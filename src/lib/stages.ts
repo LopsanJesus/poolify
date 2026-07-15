@@ -6,6 +6,7 @@ const LABELS: Record<string, Record<Locale, string>> = {
   round_of_16:   { en: 'Round of 16',    es: 'Octavos de Final',        de: 'Achtelfinale'    },
   quarter_final: { en: 'Quarter-final',  es: 'Cuartos de Final',        de: 'Viertelfinale'   },
   semi_final:    { en: 'Semi-final',     es: 'Semifinal',               de: 'Halbfinale'      },
+  third_place:   { en: 'Third place play-off', es: 'Tercer y cuarto puesto', de: 'Spiel um Platz drei' },
   final:         { en: 'Final',          es: 'Final',                   de: 'Finale'          },
 }
 

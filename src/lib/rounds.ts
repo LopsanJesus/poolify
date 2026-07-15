@@ -2,7 +2,7 @@
 // share a single prediction deadline (the kickoff of the very first group match).
 // Knockout stages (round_of_32, round_of_16, ...) each get their own deadline.
 export const KNOCKOUT_STAGES = new Set([
-  'round_of_32', 'round_of_16', 'quarter_final', 'semi_final', 'final',
+  'round_of_32', 'round_of_16', 'quarter_final', 'semi_final', 'third_place', 'final',
 ])
 
 export function isKnockoutRound(stage: string): boolean {
