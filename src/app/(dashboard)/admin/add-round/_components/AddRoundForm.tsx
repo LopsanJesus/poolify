@@ -13,6 +13,7 @@ const KNOCKOUT_STAGE_ORDER = [
   'round_of_16',
   'quarter_final',
   'semi_final',
+  'third_place',
   'final',
 ] as const
 
@@ -61,6 +62,7 @@ export function AddRoundForm({ teams, dict }: Props) {
     round_of_16: dict.round_of_16,
     quarter_final: dict.quarter_final,
     semi_final: dict.semi_final,
+    third_place: dict.third_place,
     final: dict.final,
   }
 

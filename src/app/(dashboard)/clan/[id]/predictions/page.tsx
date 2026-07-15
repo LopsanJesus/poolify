@@ -7,6 +7,7 @@ import { ArrowLeft, Lock } from 'lucide-react'
 import { PredictionsForm } from './_components/PredictionsForm'
 import { getDict } from '@/lib/i18n/server'
 import { resolveScoringConfig } from '@/lib/scoring'
+import { stageLabel } from '@/lib/stages'
 
 export default async function PredictionsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -48,6 +49,16 @@ export default async function PredictionsPage({ params }: { params: Promise<{ id
   const signPts    = panelScoring.points_sign
   const advancePts = panelScoring.points_advance
 
+  // Consecutive knockout rounds (e.g. semi-final → third place → final) can carry
+  // different points, so flag it when more than one pending round is in play.
+  const hasMixedScoring = new Set(
+    editableCandidates.map((m) => {
+      const rc = m.tournament_id ? roundConfigMap.get(`${m.tournament_id}:${m.stage}`) : undefined
+      const s = resolveScoringConfig(clan.settings, rc ?? null)
+      return `${s.points_exact}-${s.points_sign}-${s.points_advance}`
+    }),
+  ).size > 1
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
@@ -66,9 +77,17 @@ export default async function PredictionsPage({ params }: { params: Promise<{ id
       </div>
 
       <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
-        <p className="text-xs font-semibold text-blue-400/70 uppercase tracking-wide">
-          {dict.predictions.scoring_title}
-        </p>
+        <div className="space-y-0.5">
+          <p className="text-xs font-semibold text-blue-400/70 uppercase tracking-wide">
+            {dict.predictions.scoring_title}
+          </p>
+          {activeMatch && (
+            <p className="text-[11px] text-blue-400/60">
+              {dict.predictions.scoring_for_round.replace('{round}', stageLabel(activeMatch.stage, locale))}
+              {hasMixedScoring && ` · ${dict.predictions.scoring_mixed_hint}`}
+            </p>
+          )}
+        </div>
         <div className="grid grid-cols-3 gap-2">
           <div className="flex flex-col items-center gap-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2 py-3">
             <span className="text-emerald-400 font-black text-lg leading-none tabular-nums">+{exactPts}</span>
