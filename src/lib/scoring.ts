@@ -37,7 +37,12 @@ export function isExactScore(
   realHome: number,
   realAway: number,
 ): boolean {
-  return predMatches(predHome, realHome) && predMatches(predAway, realAway)
+  if (!predMatches(predHome, realHome) || !predMatches(predAway, realAway)) return false
+  // "+" vs "+" predicts a draw at 3+ goals each side (see deriveQualifierFromScore).
+  // Only count it as exact if the real result was actually a draw, otherwise fall
+  // through to the sign comparison in calculatePoints.
+  if (predHome === '+' && predAway === '+') return realHome === realAway
+  return true
 }
 
 // Real match scores follow the same 0/1/2/+ convention as predictions:
@@ -57,7 +62,7 @@ export function calculatePoints(
   const exactPts = settings?.points_exact ?? DEFAULT_CLAN_SETTINGS.points_exact
   const signPts  = settings?.points_sign  ?? DEFAULT_CLAN_SETTINGS.points_sign
 
-  if (predMatches(predHome, realHome) && predMatches(predAway, realAway)) return exactPts + signPts
+  if (isExactScore(predHome, predAway, realHome, realAway)) return exactPts + signPts
 
   const predSign = Math.sign(predToMin(predHome) - predToMin(predAway))
   const realSign = Math.sign(realHome - realAway)

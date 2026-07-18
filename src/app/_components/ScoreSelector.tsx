@@ -11,11 +11,16 @@ export function ScoreButtons({
   value,
   onSelect,
   disabled,
+  allowDeselect = true,
 }: {
   name?: string
   value: PredScore | ''
   onSelect?: (v: PredScore | '') => void
   disabled?: boolean
+  // Clicking the already-active option clears the pick. The live score
+  // editor sets this to false, since "+" there must keep incrementing
+  // (3, 4, 5…) instead of toggling off once the score reaches 3.
+  allowDeselect?: boolean
 }) {
   if (disabled) {
     return (
@@ -40,7 +45,7 @@ export function ScoreButtons({
         <button
           key={opt}
           type="button"
-          onClick={() => onSelect?.(opt === value ? '' : opt)}
+          onClick={() => onSelect?.(allowDeselect && opt === value ? '' : opt)}
           className={`h-9 w-full rounded-lg font-bold text-sm transition-all border ${
             value === opt
               ? opt === '+'
@@ -76,5 +81,12 @@ export function LiveScoreButtons({
     else onChange(parseInt(opt, 10))
   }
 
-  return <ScoreButtons value={selected} onSelect={handleSelect} disabled={disabled} />
+  return (
+    <div className="space-y-1">
+      {value >= 3 && (
+        <div className="text-center text-xs font-mono font-bold text-amber-300">{value}</div>
+      )}
+      <ScoreButtons value={selected} onSelect={handleSelect} disabled={disabled} allowDeselect={false} />
+    </div>
+  )
 }
