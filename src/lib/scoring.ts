@@ -37,12 +37,10 @@ export function isExactScore(
   realHome: number,
   realAway: number,
 ): boolean {
-  if (!predMatches(predHome, realHome) || !predMatches(predAway, realAway)) return false
-  // "+" vs "+" predicts a draw at 3+ goals each side (see deriveQualifierFromScore).
-  // Only count it as exact if the real result was actually a draw, otherwise fall
-  // through to the sign comparison in calculatePoints.
-  if (predHome === '+' && predAway === '+') return realHome === realAway
-  return true
+  // Each side is matched independently: "+" hits any real score >= 3,
+  // regardless of who wins. "+/+" is not a draw prediction, it just means
+  // both teams scored 3 or more.
+  return predMatches(predHome, realHome) && predMatches(predAway, realAway)
 }
 
 // Real match scores follow the same 0/1/2/+ convention as predictions:
