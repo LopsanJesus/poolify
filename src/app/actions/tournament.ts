@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import type { TournamentPrediction, TournamentResult, FinalPredictionsConfig, Team } from '@/lib/types'
+import { DEFAULT_FINAL_PREDICTIONS_CONFIG, type TournamentPrediction, type TournamentResult, type FinalPredictionsConfig, type Team } from '@/lib/types'
 import { getClanData } from './clans'
 
 // Returns teams for the first tournament a clan is subscribed to.
@@ -153,10 +153,8 @@ export async function saveTournamentResults(
 async function awardTournamentPointsInternal(
   clanId: string,
   results: TournamentResult,
-  config?: FinalPredictionsConfig,
+  config: FinalPredictionsConfig = DEFAULT_FINAL_PREDICTIONS_CONFIG,
 ) {
-  if (!config) return
-
   const supabase = await createClient()
   const { data: preds } = await supabase
     .from('tournament_predictions')
