@@ -79,16 +79,19 @@ export async function getUserClans(): Promise<Pick<Clan, 'id' | 'name' | 'invite
 export async function getClanRanking(clanId: string) {
   const supabase = await createClient()
 
-  const [{ data: memberData }, { data: predData }] = await Promise.all([
+  const [{ data: memberData }, { data: predData }, { data: finalPredData }] = await Promise.all([
     supabase.from('clan_members').select('user_id, joined_at, profiles(username)').eq('clan_id', clanId),
     supabase.from('predictions').select('user_id, points, is_exact').eq('clan_id', clanId),
+    supabase.from('tournament_predictions').select('user_id, points').eq('clan_id', clanId),
   ])
 
   type MemberRow = { user_id: string; joined_at: string | null; profiles: { username: string } | null }
   type PredRow   = { user_id: string; points: number | null; is_exact: boolean | null }
+  type FinalPredRow = { user_id: string; points: number | null }
 
-  const members = (memberData ?? []) as unknown as MemberRow[]
-  const preds   = (predData   ?? []) as unknown as PredRow[]
+  const members   = (memberData ?? []) as unknown as MemberRow[]
+  const preds     = (predData ?? []) as unknown as PredRow[]
+  const finalPreds = (finalPredData ?? []) as unknown as FinalPredRow[]
 
   const map = new Map<string, { username: string; total: number; exact: number; winner: number; joined_at: string | null }>()
   for (const m of members) {
@@ -101,6 +104,11 @@ export async function getClanRanking(clanId: string) {
     entry.total += pts
     if (row.is_exact) entry.exact += 1
     else if (pts > 0) entry.winner += 1
+  }
+  for (const row of finalPreds) {
+    const entry = map.get(row.user_id)
+    if (!entry) continue
+    entry.total += row.points ?? 0
   }
 
   return [...map.entries()]
