@@ -130,7 +130,7 @@ function AuditRow({
   locale: Locale
 }) {
   const [expanded, setExpanded] = useState(false)
-  const hasMismatches = entry.mismatches.length > 0
+  const hasMismatches = entry.mismatches.length > 0 || entry.final_mismatch !== null
 
   return (
     <div className="bg-white/[0.02]">
@@ -159,6 +159,19 @@ function AuditRow({
 
       {expanded && hasMismatches && (
         <div className="px-4 pb-3 space-y-2">
+          {entry.final_mismatch && (
+            <div className="rounded-lg bg-black/20 border border-purple-400/20 p-3 text-xs space-y-1">
+              <p className="text-purple-400/60 uppercase tracking-wide text-[10px]">{dict.audit_final_predictions_title}</p>
+              <p className="text-blue-400/70">
+                {dict.audit_mismatch_stored}: <span className="text-red-300 font-semibold">{entry.final_mismatch.stored_points}</span>
+                {' → '}
+                {dict.audit_mismatch_audited}: <span className="text-emerald-300 font-semibold">{entry.final_mismatch.audited_points}</span>
+              </p>
+              <p className="text-yellow-400/60 font-mono text-[10px]">
+                {entry.final_mismatch.breakdown.filter((b) => b.picked).map((b) => `${b.field}=${b.points}`).join(' | ')}
+              </p>
+            </div>
+          )}
           {entry.mismatches.map((m) => {
             const homeName = m.home_team ? translateTeam(m.home_team, locale) : '?'
             const awayName = m.away_team ? translateTeam(m.away_team, locale) : '?'

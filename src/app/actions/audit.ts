@@ -6,8 +6,9 @@ import { getAdminUserId } from '@/lib/admin'
 import { getClanRanking } from './clans'
 import { calculatePoints, calculateAdvancePoints, resolveScoringConfig } from '@/lib/scoring'
 import { isKnockoutRound } from '@/lib/rounds'
+import { calculateTournamentPoints } from '@/lib/tournament-scoring'
 import type { ClanSettings, PredScore, RoundConfig } from '@/lib/types'
-import { DEFAULT_CLAN_SETTINGS } from '@/lib/types'
+import { DEFAULT_CLAN_SETTINGS, DEFAULT_FINAL_PREDICTIONS_CONFIG } from '@/lib/types'
 
 export type AuditClanOption = { id: string; name: string }
 
@@ -35,6 +36,12 @@ export type AuditMismatch = {
   debug_scoring?: { points_sign: number; points_exact: number; points_advance: number; score_pts: number; advance_pts: number; used_round_config: boolean }
 }
 
+export type AuditFinalMismatch = {
+  stored_points: number
+  audited_points: number
+  breakdown: { field: string; picked: string | null; points: number }[]
+}
+
 export type AuditEntry = {
   user_id: string
   username: string
@@ -42,6 +49,7 @@ export type AuditEntry = {
   audited_total: number
   diff: number
   mismatches: AuditMismatch[]
+  final_mismatch: AuditFinalMismatch | null
 }
 
 export type ClanAudit = {
@@ -73,6 +81,19 @@ type PredRow = {
 
 type MemberRow = { user_id: string; profiles: { username: string } | null }
 
+type TourPredRow = {
+  user_id: string
+  winner: string | null; runner_up: string | null
+  semi1: string | null; semi2: string | null; top_scorer: string | null
+  custom_answers: Record<string, string> | null
+  points: number | null
+}
+
+type TourResultRow = {
+  winner: string | null; runner_up: string | null; semis: string[] | null
+  top_scorer: string | null; custom_results: Record<string, string> | null
+}
+
 // Recomputes every prediction's points from scratch (group + knockout scoring
 // criteria), one by one, ignoring the stored `points` column entirely, then
 // compares the resulting totals against the live /ranking figures.
@@ -81,21 +102,29 @@ export async function getClanAudit(clanId: string): Promise<ClanAudit | null> {
 
   const supabase = await createClient()
 
-  const [{ data: clanRow }, { data: memberData }, { data: predData }, currentRanking] = await Promise.all([
+  const [{ data: clanRow }, { data: memberData }, { data: predData }, { data: tourPredData }, { data: tourResultData }, currentRanking] = await Promise.all([
     supabase.from('clans').select('name, settings').eq('id', clanId).single(),
     supabase.from('clan_members').select('user_id, profiles(username)').eq('clan_id', clanId),
     supabase
       .from('predictions')
       .select('user_id, home_score, away_score, qualifier, points, matches(id, home_team, away_team, stage, home_score, away_score, status, home_advances, tournament_id)')
       .eq('clan_id', clanId),
+    supabase
+      .from('tournament_predictions')
+      .select('user_id, winner, runner_up, semi1, semi2, top_scorer, custom_answers, points')
+      .eq('clan_id', clanId),
+    supabase.from('tournament_results').select('*').eq('clan_id', clanId).single(),
     getClanRanking(clanId),
   ])
 
   if (!clanRow) return null
 
   const clanSettings = (clanRow.settings as ClanSettings | null) ?? DEFAULT_CLAN_SETTINGS
+  const finalConfig = clanSettings.final_predictions ?? DEFAULT_FINAL_PREDICTIONS_CONFIG
   const members = (memberData ?? []) as unknown as MemberRow[]
   const preds = (predData ?? []) as unknown as PredRow[]
+  const tourPreds = (tourPredData ?? []) as unknown as TourPredRow[]
+  const tourResults = tourResultData as TourResultRow | null
 
   // Batch-fetch every round config (knockout scoring criteria) referenced by these predictions.
   const tournamentIds = new Set<string>()
@@ -117,10 +146,10 @@ export async function getClanAudit(clanId: string): Promise<ClanAudit | null> {
     }
   }
 
-  type Accumulator = { username: string; audited_total: number; mismatches: AuditMismatch[] }
+  type Accumulator = { username: string; audited_total: number; mismatches: AuditMismatch[]; final_mismatch: AuditFinalMismatch | null }
   const usersMap = new Map<string, Accumulator>()
   for (const m of members) {
-    usersMap.set(m.user_id, { username: m.profiles?.username ?? m.user_id, audited_total: 0, mismatches: [] })
+    usersMap.set(m.user_id, { username: m.profiles?.username ?? m.user_id, audited_total: 0, mismatches: [], final_mismatch: null })
   }
 
   for (const pred of preds) {
@@ -188,6 +217,23 @@ export async function getClanAudit(clanId: string): Promise<ClanAudit | null> {
     entry.audited_total += audited
   }
 
+  // Recompute final-predictions (winner/runner-up/semis/top scorer/custom) points
+  // and fold them into the audited total, so it matches getClanRanking's totals.
+  if (tourResults) {
+    for (const tp of tourPreds) {
+      const entry = usersMap.get(tp.user_id)
+      if (!entry) continue
+
+      const stored = tp.points ?? 0
+      const { total: audited, breakdown } = calculateTournamentPoints(tp, tourResults, finalConfig)
+
+      entry.audited_total += audited
+      if (audited !== stored) {
+        entry.final_mismatch = { stored_points: stored, audited_points: audited, breakdown }
+      }
+    }
+  }
+
   const currentTotals = new Map(currentRanking.map((r) => [r.user_id, r.total]))
 
   const entries: AuditEntry[] = [...usersMap.entries()]
@@ -200,6 +246,7 @@ export async function getClanAudit(clanId: string): Promise<ClanAudit | null> {
         audited_total: v.audited_total,
         diff: v.audited_total - current_total,
         mismatches: v.mismatches,
+        final_mismatch: v.final_mismatch,
       }
     })
     .sort((a, b) => {

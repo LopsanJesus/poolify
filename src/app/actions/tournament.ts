@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { DEFAULT_FINAL_PREDICTIONS_CONFIG, type TournamentPrediction, type TournamentResult, type FinalPredictionsConfig, type Team } from '@/lib/types'
 import { getClanData } from './clans'
+import { calculateTournamentPoints } from '@/lib/tournament-scoring'
 
 // Returns teams for the first tournament a clan is subscribed to.
 // Used to populate dropdowns in final predictions.
@@ -162,24 +163,9 @@ async function awardTournamentPointsInternal(
     .eq('clan_id', clanId)
 
   const admin = createAdminClient()
-  const atLeastFinal = [results.winner, results.runner_up].filter(Boolean) as string[]
-  const atLeastSemi  = [...atLeastFinal, ...(results.semis ?? [])].filter(Boolean)
 
   for (const pred of (preds ?? []) as unknown as TournamentPrediction[]) {
-    let pts = 0
-
-    if (pred.winner    && results.winner === pred.winner) pts += config.winner_pts
-    if (pred.runner_up && atLeastFinal.includes(pred.runner_up))  pts += config.runner_up_pts
-    if (pred.semi1     && atLeastSemi.includes(pred.semi1))       pts += config.semi1_pts
-    if (pred.semi2     && atLeastSemi.includes(pred.semi2))       pts += config.semi2_pts
-    if (pred.top_scorer && results.top_scorer &&
-        pred.top_scorer.toLowerCase() === results.top_scorer.toLowerCase()) pts += config.top_scorer_pts
-
-    for (const f of config.custom_fields ?? []) {
-      const pVal = pred.custom_answers?.[f.id]?.toLowerCase()
-      const rVal = results.custom_results?.[f.id]?.toLowerCase()
-      if (pVal && rVal && pVal === rVal) pts += f.points
-    }
+    const { total: pts } = calculateTournamentPoints(pred, results, config)
 
     await admin
       .from('tournament_predictions')
