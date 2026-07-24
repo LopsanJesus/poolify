@@ -173,6 +173,7 @@ export type FinalAuditEntry = {
   elimination_points: number
   final_prediction_points: number
   total: number
+  exact_count: number
   matches: FinalAuditMatchItem[]
   final_predictions: FinalAuditPredictionItem[]
 }
@@ -264,6 +265,7 @@ export async function getFinalAudit(
     group_points: number
     elimination_points: number
     final_prediction_points: number
+    exact_count: number
     matches: FinalAuditMatchItem[]
     final_predictions: FinalAuditPredictionItem[]
   }
@@ -271,7 +273,7 @@ export async function getFinalAudit(
   for (const m of members) {
     usersMap.set(m.user_id, {
       username: m.profiles?.username ?? m.user_id,
-      group_points: 0, elimination_points: 0, final_prediction_points: 0,
+      group_points: 0, elimination_points: 0, final_prediction_points: 0, exact_count: 0,
       matches: [], final_predictions: [],
     })
   }
@@ -311,6 +313,11 @@ export async function getFinalAudit(
 
     if (elimination) entry.elimination_points += points
     else entry.group_points += points
+
+    // Tiebreaker: exact-result count, counted across group + elimination matches.
+    if (isExactHit(pred.home_score, pred.away_score, match.home_score, match.away_score)) {
+      entry.exact_count += 1
+    }
   }
 
   if (tourResults) {
@@ -332,10 +339,11 @@ export async function getFinalAudit(
       elimination_points: v.elimination_points,
       final_prediction_points: v.final_prediction_points,
       total: v.group_points + v.elimination_points + v.final_prediction_points,
+      exact_count: v.exact_count,
       matches: [...v.matches].sort((a, b) => a.match_date.localeCompare(b.match_date)),
       final_predictions: v.final_predictions,
     }))
-    .sort((a, b) => b.total - a.total || a.username.localeCompare(b.username))
+    .sort((a, b) => b.total - a.total || b.exact_count - a.exact_count || a.username.localeCompare(b.username))
 
   return { clan_name: clanRow.name, entries }
 }

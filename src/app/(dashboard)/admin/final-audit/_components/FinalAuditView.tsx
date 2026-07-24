@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronDown, ChevronUp, Star } from 'lucide-react'
+import { ChevronDown, ChevronUp, Star, Target } from 'lucide-react'
 import type { AuditClanOption } from '@/app/actions/audit'
 import type { FinalAuditEntry, FinalAuditMatchItem, FinalAuditResult } from '@/app/actions/final-audit'
 import type { Dict, Locale } from '@/lib/i18n/dictionaries'
@@ -49,11 +49,12 @@ export function FinalAuditView({
 
       {audit && audit.entries.length > 0 && (
         <div className="rounded-2xl border border-white/10 divide-y divide-white/5 overflow-hidden">
-          <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 px-4 py-2 text-xs font-semibold text-blue-400/70 uppercase tracking-wide bg-white/5">
+          <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-2 px-4 py-2 text-xs font-semibold text-blue-400/70 uppercase tracking-wide bg-white/5">
             <span>{dict.audit_table_user}</span>
             <span className="text-right">{dict.final_audit_table_group}</span>
             <span className="text-right">{dict.final_audit_table_elimination}</span>
             <span className="text-right">{dict.final_audit_table_final}</span>
+            <span className="text-right"><Target className="w-3.5 h-3.5 inline" /></span>
             <span className="text-right">{dict.final_audit_table_total}</span>
           </div>
           {audit.entries.map((entry, i) => (
@@ -86,7 +87,7 @@ function FinalAuditRow({
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="w-full grid grid-cols-[1fr_auto_auto_auto_auto] gap-2 px-4 py-3 items-center text-left"
+        className="w-full grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-2 px-4 py-3 items-center text-left"
       >
         <span className="flex items-center gap-2 min-w-0">
           <span className="text-blue-400/50 text-xs w-5 shrink-0">{position}</span>
@@ -100,6 +101,7 @@ function FinalAuditRow({
         <span className="text-blue-200 text-sm text-right">{entry.group_points}</span>
         <span className="text-blue-200 text-sm text-right">{entry.elimination_points}</span>
         <span className="text-purple-300 text-sm text-right">{entry.final_prediction_points}</span>
+        <span className="text-blue-200 text-sm text-right">{entry.exact_count}</span>
         <span className="text-white text-sm font-bold text-right">{entry.total}</span>
       </button>
 
