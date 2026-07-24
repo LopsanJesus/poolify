@@ -53,20 +53,26 @@ function whoQualifies(realHome: number, realAway: number, homeAdvances: boolean 
   return null
 }
 
-function predictedQualifier(predHome: PredScore, predAway: PredScore): 'home' | 'away' | null {
+// A non-draw score prediction locks in the qualifier (whoever it predicts to win).
+// A drawn score prediction leaves it open — the user picks the qualifier separately
+// via the `qualifier` field, which is the only source of truth in that case.
+function predictedQualifier(
+  predHome: PredScore, predAway: PredScore,
+  storedQualifier: 'home' | 'away' | null,
+): 'home' | 'away' | null {
   const h = predToNumber(predHome)
   const a = predToNumber(predAway)
   if (h > a) return 'home'
   if (a > h) return 'away'
-  return null
+  return storedQualifier
 }
 
 function scoreQualifierBonus(
-  predHome: PredScore, predAway: PredScore,
+  predHome: PredScore, predAway: PredScore, storedQualifier: 'home' | 'away' | null,
   realHome: number, realAway: number,
   homeAdvances: boolean | null, advancePts: number,
 ): number {
-  const predicted = predictedQualifier(predHome, predAway)
+  const predicted = predictedQualifier(predHome, predAway, storedQualifier)
   if (!predicted) return 0
   const actual = whoQualifies(realHome, realAway, homeAdvances)
   return actual && predicted === actual ? advancePts : 0
@@ -285,7 +291,7 @@ export async function getFinalAudit(
 
     const basePts = scoreMatch(pred.home_score, pred.away_score, match.home_score, match.away_score, scoring.exact, scoring.sign)
     const bonusPts = elimination
-      ? scoreQualifierBonus(pred.home_score, pred.away_score, match.home_score, match.away_score, match.home_advances, scoring.advance)
+      ? scoreQualifierBonus(pred.home_score, pred.away_score, pred.qualifier, match.home_score, match.away_score, match.home_advances, scoring.advance)
       : 0
     const points = basePts + bonusPts
 
