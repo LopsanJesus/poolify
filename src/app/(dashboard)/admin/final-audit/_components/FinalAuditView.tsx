@@ -105,6 +105,13 @@ function FinalAuditRow({
 
       {expanded && (
         <div className="px-4 pb-3 space-y-3">
+          {groupMatches.length > 0 && (
+            <MatchGroup title={dict.final_audit_section_group} matches={groupMatches} locale={locale} />
+          )}
+          {eliminationMatches.length > 0 && (
+            <MatchGroup title={dict.final_audit_section_elimination} matches={eliminationMatches} locale={locale} />
+          )}
+
           {entry.final_predictions.length > 0 && (
             <div className="rounded-lg bg-black/20 border border-purple-400/20 p-3 space-y-1.5">
               <p className="text-purple-400/80 text-xs uppercase tracking-wide font-semibold flex items-center gap-1.5">
@@ -123,13 +130,6 @@ function FinalAuditRow({
                 </div>
               ))}
             </div>
-          )}
-
-          {groupMatches.length > 0 && (
-            <MatchGroup title={dict.final_audit_section_group} matches={groupMatches} locale={locale} />
-          )}
-          {eliminationMatches.length > 0 && (
-            <MatchGroup title={dict.final_audit_section_elimination} matches={eliminationMatches} locale={locale} />
           )}
         </div>
       )}

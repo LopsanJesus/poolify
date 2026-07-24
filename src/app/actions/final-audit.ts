@@ -148,6 +148,7 @@ export type FinalAuditMatchItem = {
   match_id: string
   stage: string
   is_elimination: boolean
+  match_date: string
   home_team: string | null
   away_team: string | null
   home_score: number
@@ -179,6 +180,7 @@ type MemberRow = { user_id: string; profiles: { username: string } | null }
 
 type MatchRow = {
   id: string; home_team: string | null; away_team: string | null; stage: string
+  match_date: string
   home_score: number | null; away_score: number | null; status: string
   home_advances: boolean | null; tournament_id: string | null
 }
@@ -213,7 +215,7 @@ export async function getFinalAudit(
     supabase.from('clan_members').select('user_id, profiles(username)').eq('clan_id', clanId),
     supabase
       .from('predictions')
-      .select('user_id, home_score, away_score, qualifier, matches(id, home_team, away_team, stage, home_score, away_score, status, home_advances, tournament_id)')
+      .select('user_id, home_score, away_score, qualifier, matches(id, home_team, away_team, stage, match_date, home_score, away_score, status, home_advances, tournament_id)')
       .eq('clan_id', clanId),
     supabase
       .from('tournament_predictions')
@@ -291,6 +293,7 @@ export async function getFinalAudit(
       match_id: match.id,
       stage: match.stage,
       is_elimination: elimination,
+      match_date: match.match_date,
       home_team: match.home_team,
       away_team: match.away_team,
       home_score: match.home_score,
@@ -323,7 +326,7 @@ export async function getFinalAudit(
       elimination_points: v.elimination_points,
       final_prediction_points: v.final_prediction_points,
       total: v.group_points + v.elimination_points + v.final_prediction_points,
-      matches: v.matches,
+      matches: [...v.matches].sort((a, b) => a.match_date.localeCompare(b.match_date)),
       final_predictions: v.final_predictions,
     }))
     .sort((a, b) => b.total - a.total || a.username.localeCompare(b.username))
