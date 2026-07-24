@@ -9,7 +9,6 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getAdminUserId } from '@/lib/admin'
 import { DEFAULT_CLAN_SETTINGS, DEFAULT_FINAL_PREDICTIONS_CONFIG } from '@/lib/types'
 import type { ClanSettings, FinalPredictionsConfig, PredScore, RoundConfig } from '@/lib/types'
 
@@ -213,9 +212,18 @@ export async function getFinalAudit(
   clanId: string,
   labels: FinalPredictionsLabels = DEFAULT_LABELS,
 ): Promise<FinalAuditResult | null> {
-  if (!await getAdminUserId()) return null
-
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  // Any member of the clan can audit it — not just admins.
+  const { data: membership } = await supabase
+    .from('clan_members')
+    .select('user_id')
+    .eq('clan_id', clanId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (!membership) return null
 
   const [{ data: clanRow }, { data: memberData }, { data: predData }, { data: tourPredData }, { data: tourResultData }] = await Promise.all([
     supabase.from('clans').select('name, settings').eq('id', clanId).single(),

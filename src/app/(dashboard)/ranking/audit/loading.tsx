@@ -1,4 +1,4 @@
-export default function AdminAuditLoading() {
+export default function RankingAuditLoading() {
   return (
     <div className="max-w-2xl mx-auto space-y-4">
       <div className="flex items-center gap-3">
@@ -9,8 +9,6 @@ export default function AdminAuditLoading() {
         </div>
       </div>
 
-      <div className="skeleton h-11 rounded-xl" />
-      <div className="skeleton h-12 rounded-xl" />
       <div className="skeleton h-48 rounded-2xl" />
     </div>
   )

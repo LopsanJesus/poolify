@@ -1,9 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { ChevronDown, ChevronUp, Star, Target } from 'lucide-react'
-import type { AuditClanOption } from '@/app/actions/audit'
 import type { FinalAuditEntry, FinalAuditMatchItem, FinalAuditResult } from '@/app/actions/final-audit'
 import type { Dict, Locale } from '@/lib/i18n/dictionaries'
 import { stageLabel } from '@/lib/stages'
@@ -11,57 +9,31 @@ import { translateTeam } from '@/lib/team-flags'
 import { formatMatchScore } from '@/lib/scoring'
 
 export function FinalAuditView({
-  clans,
-  selectedClanId,
   audit,
   dict,
   locale,
 }: {
-  clans: AuditClanOption[]
-  selectedClanId: string | null
   audit: FinalAuditResult | null
-  dict: Dict['admin']
+  dict: Dict['ranking_audit']
   locale: Locale
 }) {
-  const router = useRouter()
-
-  if (clans.length === 0) {
-    return <p className="text-center text-blue-400/70 text-sm py-6">{dict.audit_no_clans}</p>
+  if (!audit || audit.entries.length === 0) {
+    return <p className="text-center text-blue-400/70 text-sm py-6">{dict.no_data}</p>
   }
 
   return (
-    <div className="space-y-4">
-      <select
-        value={selectedClanId ?? ''}
-        onChange={(e) => router.push(`/admin/final-audit?clan=${e.target.value}`)}
-        className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/15 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-      >
-        {clans.map((c) => (
-          <option key={c.id} value={c.id} className="bg-slate-900">
-            {c.name}
-          </option>
-        ))}
-      </select>
-
-      {audit && audit.entries.length === 0 && (
-        <p className="text-center text-blue-400/70 text-sm py-6">{dict.final_audit_no_data}</p>
-      )}
-
-      {audit && audit.entries.length > 0 && (
-        <div className="rounded-2xl border border-white/10 divide-y divide-white/5 overflow-hidden">
-          <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-2 px-4 py-2 text-xs font-semibold text-blue-400/70 uppercase tracking-wide bg-white/5">
-            <span>{dict.audit_table_user}</span>
-            <span className="text-right">{dict.final_audit_table_group}</span>
-            <span className="text-right">{dict.final_audit_table_elimination}</span>
-            <span className="text-right">{dict.final_audit_table_final}</span>
-            <span className="text-right"><Target className="w-3.5 h-3.5 inline" /></span>
-            <span className="text-right">{dict.final_audit_table_total}</span>
-          </div>
-          {audit.entries.map((entry, i) => (
-            <FinalAuditRow key={entry.user_id} entry={entry} position={i + 1} dict={dict} locale={locale} />
-          ))}
-        </div>
-      )}
+    <div className="rounded-2xl border border-white/10 divide-y divide-white/5 overflow-hidden">
+      <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-2 px-4 py-2 text-xs font-semibold text-blue-400/70 uppercase tracking-wide bg-white/5">
+        <span>{dict.table_user}</span>
+        <span className="text-right">{dict.table_group}</span>
+        <span className="text-right">{dict.table_elimination}</span>
+        <span className="text-right">{dict.table_final}</span>
+        <span className="text-right"><Target className="w-3.5 h-3.5 inline" /></span>
+        <span className="text-right">{dict.table_total}</span>
+      </div>
+      {audit.entries.map((entry, i) => (
+        <FinalAuditRow key={entry.user_id} entry={entry} position={i + 1} dict={dict} locale={locale} />
+      ))}
     </div>
   )
 }
@@ -74,7 +46,7 @@ function FinalAuditRow({
 }: {
   entry: FinalAuditEntry
   position: number
-  dict: Dict['admin']
+  dict: Dict['ranking_audit']
   locale: Locale
 }) {
   const [expanded, setExpanded] = useState(false)
@@ -108,17 +80,17 @@ function FinalAuditRow({
       {expanded && (
         <div className="px-4 pb-3 space-y-3">
           {groupMatches.length > 0 && (
-            <MatchGroup title={dict.final_audit_section_group} matches={groupMatches} locale={locale} />
+            <MatchGroup title={dict.section_group} matches={groupMatches} locale={locale} />
           )}
           {eliminationMatches.length > 0 && (
-            <MatchGroup title={dict.final_audit_section_elimination} matches={eliminationMatches} locale={locale} />
+            <MatchGroup title={dict.section_elimination} matches={eliminationMatches} locale={locale} />
           )}
 
           {entry.final_predictions.length > 0 && (
             <div className="rounded-lg bg-black/20 border border-purple-400/20 p-3 space-y-1.5">
               <p className="text-purple-400/80 text-xs uppercase tracking-wide font-semibold flex items-center gap-1.5">
                 <Star className="w-3 h-3" />
-                {dict.final_audit_section_final}
+                {dict.section_final}
               </p>
               {entry.final_predictions.map((item) => (
                 <div key={item.label} className="flex items-center justify-between text-xs">

@@ -4,7 +4,8 @@ import { getDict } from "@/lib/i18n/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserPersonalInfo } from "@/app/actions/personal-info";
 import { getAllTournamentPredictions } from "@/app/actions/tournament";
-import { Trophy } from "lucide-react";
+import { Trophy, ListChecks } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { RankingWithModal } from "./_components/RankingWithModal";
 
@@ -78,6 +79,16 @@ export default async function RankingPage() {
           finalPredictionsDict={dict.final_predictions}
           locale={locale}
         />
+      )}
+
+      {ranking.length > 0 && (
+        <Link
+          href="/ranking/audit"
+          className="flex items-center justify-center gap-2 rounded-xl bg-white/5 border border-white/10 p-3 text-sm font-semibold text-blue-300 hover:bg-white/10 hover:text-white transition"
+        >
+          <ListChecks className="w-4 h-4" />
+          {dict.clan.ranking_audit_button}
+        </Link>
       )}
     </div>
   );
