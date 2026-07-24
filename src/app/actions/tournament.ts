@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { DEFAULT_FINAL_PREDICTIONS_CONFIG, type TournamentPrediction, type TournamentResult, type FinalPredictionsConfig, type Team } from '@/lib/types'
 import { getClanData } from './clans'
 import { calculateTournamentPoints } from '@/lib/tournament-scoring'
+import { getAdminUserId } from '@/lib/admin'
 
 // Returns teams for the first tournament a clan is subscribed to.
 // Used to populate dropdowns in final predictions.
@@ -177,4 +178,32 @@ async function awardTournamentPointsInternal(
     .from('tournament_results')
     .update({ awarded_at: new Date().toISOString() })
     .eq('clan_id', clanId)
+}
+
+// Re-runs the award against the already-stored tournament_results, without
+// requiring the admin to re-submit them. Needed after a scoring-formula fix
+// (e.g. the top-scorer accent-matching fix) so already-awarded points get
+// updated — awardTournamentPointsInternal only ever runs automatically when
+// results are (re)saved, so previously awarded clans stay stale otherwise.
+export async function recalcTournamentPoints(clanId: string): Promise<{ error?: string }> {
+  if (!await getAdminUserId()) return { error: 'unauthorized' }
+
+  const admin = createAdminClient()
+  const { data: results } = await admin
+    .from('tournament_results')
+    .select('*')
+    .eq('clan_id', clanId)
+    .single()
+
+  if (!results) return {}
+
+  const clan = await getClanData(clanId)
+  await awardTournamentPointsInternal(clanId, results as unknown as TournamentResult, clan?.settings?.final_predictions)
+
+  revalidatePath('/admin/auditar')
+  revalidatePath('/ranking')
+  revalidatePath(`/clan/${clanId}/final-predictions`)
+  revalidatePath('/clan/[id]', 'layout')
+
+  return {}
 }

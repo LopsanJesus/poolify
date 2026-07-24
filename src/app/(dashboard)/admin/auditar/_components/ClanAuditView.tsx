@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, Loader2, RefreshCw } from 'lucide-react'
 import type { AuditClanOption, AuditEntry, ClanAudit } from '@/app/actions/audit'
 import { recalcAllFinishedMatchPoints } from '@/app/actions/admin'
+import { recalcTournamentPoints } from '@/app/actions/tournament'
 import type { Dict, Locale } from '@/lib/i18n/dictionaries'
 import { stageLabel } from '@/lib/stages'
 import { translateTeam } from '@/lib/team-flags'
@@ -31,6 +32,8 @@ export function ClanAuditView({
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [fixMsg, setFixMsg] = useState<string | null>(null)
+  const [finalFixPending, startFinalFixTransition] = useTransition()
+  const [finalFixMsg, setFinalFixMsg] = useState<string | null>(null)
 
   function handleFix() {
     if (!window.confirm(dict.audit_fix_confirm)) return
@@ -40,6 +43,20 @@ export function ClanAuditView({
       if (res.error) setFixMsg(`Error: ${res.error}`)
       else {
         setFixMsg(dict.audit_fix_success.replace('{n}', String(res.updated ?? 0)))
+        router.refresh()
+      }
+    })
+  }
+
+  function handleFinalFix() {
+    if (!selectedClanId) return
+    if (!window.confirm(dict.audit_final_fix_confirm)) return
+    setFinalFixMsg(null)
+    startFinalFixTransition(async () => {
+      const res = await recalcTournamentPoints(selectedClanId)
+      if (res.error) setFinalFixMsg(`Error: ${res.error}`)
+      else {
+        setFinalFixMsg(dict.audit_final_fix_success)
         router.refresh()
       }
     })
@@ -64,6 +81,21 @@ export function ClanAuditView({
         {fixMsg && (
           <p className={`text-xs ${fixMsg.startsWith('Error') ? 'text-red-400' : 'text-emerald-400'}`}>
             {fixMsg}
+          </p>
+        )}
+
+        <button
+          type="button"
+          onClick={handleFinalFix}
+          disabled={finalFixPending || !selectedClanId}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-pink-500/20 hover:bg-pink-500/30 border border-pink-500/30 text-pink-300 text-sm font-semibold transition disabled:opacity-60"
+        >
+          {finalFixPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+          {dict.audit_final_fix_button}
+        </button>
+        {finalFixMsg && (
+          <p className={`text-xs ${finalFixMsg.startsWith('Error') ? 'text-red-400' : 'text-emerald-400'}`}>
+            {finalFixMsg}
           </p>
         )}
       </div>
